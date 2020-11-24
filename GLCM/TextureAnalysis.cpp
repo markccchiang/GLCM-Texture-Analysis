@@ -699,3 +699,222 @@ void TextureAnalysis::GetMaximalCorrelationCoefficient(Features& f) {
 
     f(eigens_H[1], eigens_V[1], eigens_LD[1], eigens_RD[1]);
 }
+
+void TextureAnalysis::GetAutoCorrelation(Features& f) {
+    double f_H = 0.0;
+    double f_V = 0.0;
+    double f_LD = 0.0;
+    double f_RD = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            f_H = i * j * _p_H[i][j];
+            f_V = i * j * _p_V[i][j];
+            f_LD = i * j * _p_LD[i][j];
+            f_RD = i * j * _p_RD[i][j];
+        }
+    }
+
+    f(f_H, f_V, f_LD, f_RD);
+}
+
+void TextureAnalysis::GetCorrelation_I(Features& f) {
+    // Calculate means
+    double mu_x_H = CalculateMean(_px_H);
+    double mu_x_V = CalculateMean(_px_V);
+    double mu_x_LD = CalculateMean(_px_LD);
+    double mu_x_RD = CalculateMean(_px_RD);
+
+    double mu_y_H = CalculateMean(_py_H);
+    double mu_y_V = CalculateMean(_py_V);
+    double mu_y_LD = CalculateMean(_py_LD);
+    double mu_y_RD = CalculateMean(_py_RD);
+
+    // Calculate STDs
+    double sigma_x_H = CalculateSTD(_px_H);
+    double sigma_x_V = CalculateSTD(_px_V);
+    double sigma_x_LD = CalculateSTD(_px_LD);
+    double sigma_x_RD = CalculateSTD(_px_RD);
+
+    double sigma_y_H = CalculateSTD(_py_H);
+    double sigma_y_V = CalculateSTD(_py_V);
+    double sigma_y_LD = CalculateSTD(_py_LD);
+    double sigma_y_RD = CalculateSTD(_py_RD);
+
+    double f_H = 0.0;
+    double f_V = 0.0;
+    double f_LD = 0.0;
+    double f_RD = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            f_H += (i - mu_x_H) * (j - mu_y_H) * _p_H[i][j];
+            f_V += (i - mu_x_V) * (j - mu_y_V) * _p_V[i][j];
+            f_LD += (i - mu_x_LD) * (j - mu_y_LD) * _p_LD[i][j];
+            f_RD += (i - mu_x_RD) * (j - mu_y_RD) * _p_RD[i][j];
+        }
+    }
+
+    f_H = f_H / (sigma_x_H * sigma_y_H);
+    f_V = f_V / (sigma_x_V * sigma_y_V);
+    f_LD = f_LD / (sigma_x_LD * sigma_y_LD);
+    f_RD = f_RD / (sigma_x_RD * sigma_y_RD);
+
+    f(f_H, f_V, f_LD, f_RD);
+}
+
+void TextureAnalysis::GetClusterProminence(Features& f) {
+    // Calculate means
+    double mu_x_H = CalculateMean(_px_H);
+    double mu_x_V = CalculateMean(_px_V);
+    double mu_x_LD = CalculateMean(_px_LD);
+    double mu_x_RD = CalculateMean(_px_RD);
+
+    double mu_y_H = CalculateMean(_py_H);
+    double mu_y_V = CalculateMean(_py_V);
+    double mu_y_LD = CalculateMean(_py_LD);
+    double mu_y_RD = CalculateMean(_py_RD);
+
+    double f_H = 0.0;
+    double f_V = 0.0;
+    double f_LD = 0.0;
+    double f_RD = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            f_H += pow((i + j - mu_x_H - mu_y_H), 4) * _p_H[i][j];
+            f_V += pow((i + j - mu_x_V - mu_y_V), 4) * _p_V[i][j];
+            f_LD += pow((i + j - mu_x_LD - mu_y_LD), 4) * _p_LD[i][j];
+            f_RD += pow((i + j - mu_x_RD - mu_y_RD), 4) * _p_RD[i][j];
+        }
+    }
+
+    f(f_H, f_V, f_LD, f_RD);
+}
+
+void TextureAnalysis::GetClusterShade(Features& f) {
+    // Calculate means
+    double mu_x_H = CalculateMean(_px_H);
+    double mu_x_V = CalculateMean(_px_V);
+    double mu_x_LD = CalculateMean(_px_LD);
+    double mu_x_RD = CalculateMean(_px_RD);
+
+    double mu_y_H = CalculateMean(_py_H);
+    double mu_y_V = CalculateMean(_py_V);
+    double mu_y_LD = CalculateMean(_py_LD);
+    double mu_y_RD = CalculateMean(_py_RD);
+
+    double f_H = 0.0;
+    double f_V = 0.0;
+    double f_LD = 0.0;
+    double f_RD = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            f_H += pow((i + j - mu_x_H - mu_y_H), 3) * _p_H[i][j];
+            f_V += pow((i + j - mu_x_V - mu_y_V), 3) * _p_V[i][j];
+            f_LD += pow((i + j - mu_x_LD - mu_y_LD), 3) * _p_LD[i][j];
+            f_RD += pow((i + j - mu_x_RD - mu_y_RD), 3) * _p_RD[i][j];
+        }
+    }
+
+    f(f_H, f_V, f_LD, f_RD);
+}
+
+void TextureAnalysis::GetDissimilarity(Features& f) {
+    double f_H = 0.0;
+    double f_V = 0.0;
+    double f_LD = 0.0;
+    double f_RD = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            f_H += fabs(i - j) * _p_H[i][j];
+            f_V += fabs(i - j) * _p_V[i][j];
+            f_LD += fabs(i - j) * _p_LD[i][j];
+            f_RD += fabs(i - j) * _p_RD[i][j];
+        }
+    }
+
+    f(f_H, f_V, f_LD, f_RD);
+}
+
+void TextureAnalysis::GetHomogeneity_I(Features& f) {
+    double f_H = 0.0;
+    double f_V = 0.0;
+    double f_LD = 0.0;
+    double f_RD = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            f_H += _p_H[i][j] / (1 + fabs(i - j));
+            f_V += _p_V[i][j] / (1 + fabs(i - j));
+            f_LD += _p_LD[i][j] / (1 + fabs(i - j));
+            f_RD += _p_RD[i][j] / (1 + fabs(i - j));
+        }
+    }
+
+    f(f_H, f_V, f_LD, f_RD);
+}
+
+void TextureAnalysis::GetMaximumProbability(Features& f) {
+    double f_H = 0.0;
+    double f_V = 0.0;
+    double f_LD = 0.0;
+    double f_RD = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            if (_p_H[i][j] > f_H) {
+                f_H = _p_H[i][j];
+            }
+            if (_p_V[i][j] > f_V) {
+                f_V = _p_V[i][j];
+            }
+            if (_p_LD[i][j] > f_LD) {
+                f_LD = _p_LD[i][j];
+            }
+            if (_p_RD[i][j] > f_RD) {
+                f_RD = _p_RD[i][j];
+            }
+        }
+    }
+
+    f(f_H, f_V, f_LD, f_RD);
+}
+
+void TextureAnalysis::GetInverseDifferenceNormalized(Features& f) {
+    double f_H = 0.0;
+    double f_V = 0.0;
+    double f_LD = 0.0;
+    double f_RD = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            f_H += _p_H[i][j] / (1 + fabs(i - j) * fabs(i - j) / _Ng);
+            f_V += _p_V[i][j] / (1 + fabs(i - j) * fabs(i - j) / _Ng);
+            f_LD += _p_LD[i][j] / (1 + fabs(i - j) * fabs(i - j) / _Ng);
+            f_RD += _p_RD[i][j] / (1 + fabs(i - j) * fabs(i - j) / _Ng);
+        }
+    }
+
+    f(f_H, f_V, f_LD, f_RD);
+}
+
+void TextureAnalysis::GetInverseDifferenceMomentNormalized(Features& f) {
+    double f_H = 0.0;
+    double f_V = 0.0;
+    double f_LD = 0.0;
+    double f_RD = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            f_H += _p_H[i][j] / (1 + (i - j) * (i - j) / _Ng);
+            f_V += _p_V[i][j] / (1 + (i - j) * (i - j) / _Ng);
+            f_LD += _p_LD[i][j] / (1 + (i - j) * (i - j) / _Ng);
+            f_RD += _p_RD[i][j] / (1 + (i - j) * (i - j) / _Ng);
+        }
+    }
+
+    f(f_H, f_V, f_LD, f_RD);
+}

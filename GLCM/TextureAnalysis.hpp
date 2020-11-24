@@ -66,6 +66,25 @@ public:
     // Calculate f14: Maximal Correlation Coefficient
     void GetMaximalCorrelationCoefficient(Features& f);
 
+    // F1: Auto Correlation
+    void GetAutoCorrelation(Features& f);
+    // F3: Correlation I
+    void GetCorrelation_I(Features& f);
+    // F5: Cluster Prominence
+    void GetClusterProminence(Features& f);
+    // F6: Cluster Shade
+    void GetClusterShade(Features& f);
+    // F7: Dissimilarity
+    void GetDissimilarity(Features& f);
+    // F10: Homogeneity I
+    void GetHomogeneity_I(Features& f);
+    // F12: Maximum Probability
+    void GetMaximumProbability(Features& f);
+    // F21: Inverse Difference Normalized
+    void GetInverseDifferenceNormalized(Features& f);
+    // F22: Inverse Difference Moment Normalized
+    void GetInverseDifferenceMomentNormalized(Features& f);
+
 private:
     void Calculate_px();
     void Calculate_py();
