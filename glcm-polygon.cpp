@@ -1,5 +1,3 @@
-#include <math.h>
-
 #include <iostream>
 #include <opencv2/opencv.hpp>
 
@@ -19,6 +17,8 @@ cv::Mat img;                     // original image
 cv::Mat ROI;                     // ROI image
 cv::Mat mask;                    // Mask is black and white where our ROI is
 std::vector<cv::Point> vertices; // polygon points
+int img_width;                   // image width
+int img_height;                  // image height
 
 void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata);
 void PrintResults(string title, glcm::Features f);
@@ -55,6 +55,8 @@ int main(int argc, char* argv[]) {
 
         // Read image from file
         img = imread(filename, IMREAD_GRAYSCALE);
+        img_width = img.cols;
+        img_height = img.rows;
 
         // Make a copy of the original image
         cv::Mat original_img = img.clone();
@@ -213,7 +215,7 @@ void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata) {
         }
 
         // Close polygon (Scalar(0) is black color, will not show image if the mask in this part is black!)
-        cv::line(img, vertices[vertices.size() - 1], vertices[0], Scalar(0));
+        cv::line(img, vertices[vertices.size() - 1], vertices[0], Scalar(white_color), 1);
 
         // Mask is black with white where our ROI is
         mask = Mat::zeros(img.rows, img.cols, CV_8UC1);
@@ -233,15 +235,16 @@ void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata) {
     // Left click the button to draw a polygon
     if (event == EVENT_LBUTTONDOWN) {
         // cout << "Left mouse button clicked at (" << x << ", " << y << ")" << endl;
-        if (vertices.empty()) {
-            // First click - just draw point
-            img.at<Vec3b>(x, y) = cv::Vec3b(white_color, 0, 0);
-        } else {
-            // Second, or later click, draw line to previous vertex
-            cv::line(img, cv::Point(x, y), vertices[vertices.size() - 1], Scalar(white_color), 2);
+        if (x >= 0 && x <= img_width && y >= 0 && y <= img_height) {
+            if (vertices.empty()) {
+                // First click - just draw point
+                img.at<Vec3b>(x, y) = cv::Vec3b(white_color, 0, 0);
+            } else {
+                // Second, or later click, draw line to previous vertex
+                cv::line(img, cv::Point(x, y), vertices[vertices.size() - 1], Scalar(white_color), 1);
+            }
+            vertices.push_back(cv::Point(x, y));
         }
-
-        vertices.push_back(cv::Point(x, y));
         return;
     }
 }
