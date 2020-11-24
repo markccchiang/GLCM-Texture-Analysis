@@ -576,16 +576,11 @@ void TextureAnalysis::GetDifferenceVariance(Features& f) {
     double f_LD = 0.0;
     double f_RD = 0.0;
 
-    double p_xny_H_mean = CalculateMean(_p_xny_H);
-    double p_xny_V_mean = CalculateMean(_p_xny_V);
-    double p_xny_LD_mean = CalculateMean(_p_xny_LD);
-    double p_xny_RD_mean = CalculateMean(_p_xny_RD);
-
     for (int i = 0; i < _Ng; ++i) {
-        f_H += (i - p_xny_H_mean) * (i - p_xny_H_mean) * _p_xny_H[i];
-        f_V += (i - p_xny_V_mean) * (i - p_xny_V_mean) * _p_xny_V[i];
-        f_LD += (i - p_xny_LD_mean) * (i - p_xny_LD_mean) * _p_xny_LD[i];
-        f_RD += (i - p_xny_RD_mean) * (i - p_xny_RD_mean) * _p_xny_RD[i];
+        f_H += i * i * _p_xny_H[i];
+        f_V += i * i * _p_xny_V[i];
+        f_LD += i * i * _p_xny_LD[i];
+        f_RD += i * i * _p_xny_RD[i];
     }
 
     f(f_H, f_V, f_LD, f_RD);
