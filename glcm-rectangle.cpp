@@ -9,11 +9,12 @@ using namespace std;
 using namespace cv;
 
 const int Ng = 256;
+int d; // neighborhood distance
 
 void PrintResults(string title, glcm::Features f);
 
 int main(int argc, char* argv[]) {
-    if (argc < 3) {
+    if (argc < 2) {
         cout << "Usage: ./glcm-rectangle <file name> <distance>" << endl;
         return 1;
     }
@@ -22,8 +23,12 @@ int main(int argc, char* argv[]) {
     string filename = argv[1];
 
     // Set the distance
-    string distance = argv[2];
-    int d = stoi(distance);
+    if (argc == 3) {
+        string distance = argv[2];
+        d = stoi(distance);
+    } else {
+        d = 1;
+    }
 
     // Read image
     Mat im = imread(filename, IMREAD_GRAYSCALE);

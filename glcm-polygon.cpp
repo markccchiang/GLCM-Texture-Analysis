@@ -19,12 +19,13 @@ cv::Mat mask;                    // Mask is black and white where our ROI is
 std::vector<cv::Point> vertices; // polygon points
 int img_width;                   // image width
 int img_height;                  // image height
+int d;                           // neighborhood distance
 
 void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata);
 void PrintResults(string title, glcm::Features f);
 
 int main(int argc, char* argv[]) {
-    if (argc < 3) {
+    if (argc < 2) {
         cout << "Usage: ./glcm-polygon <file name> <distance>" << endl;
         return 1;
     }
@@ -33,8 +34,12 @@ int main(int argc, char* argv[]) {
     string filename = argv[1];
 
     // Set the distance
-    string distance = argv[2];
-    int d = stoi(distance);
+    if (argc == 3) {
+        string distance = argv[2];
+        d = stoi(distance);
+    } else {
+        d = 1;
+    }
 
     // Initialize the texure analysis
     glcm::TextureAnalysis texture_analysis(Ng);
