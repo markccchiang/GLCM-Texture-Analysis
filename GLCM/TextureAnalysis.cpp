@@ -708,10 +708,10 @@ void TextureAnalysis::GetAutoCorrelation(Features& f) {
 
     for (int i = 0; i < _Ng; ++i) {
         for (int j = 0; j < _Ng; ++j) {
-            f_H = i * j * _p_H[i][j];
-            f_V = i * j * _p_V[i][j];
-            f_LD = i * j * _p_LD[i][j];
-            f_RD = i * j * _p_RD[i][j];
+            f_H += i * j * _p_H[i][j];
+            f_V += i * j * _p_V[i][j];
+            f_LD += i * j * _p_LD[i][j];
+            f_RD += i * j * _p_RD[i][j];
         }
     }
 
@@ -891,10 +891,10 @@ void TextureAnalysis::GetInverseDifferenceNormalized(Features& f) {
 
     for (int i = 0; i < _Ng; ++i) {
         for (int j = 0; j < _Ng; ++j) {
-            f_H += _p_H[i][j] / (1 + fabs(i - j) * fabs(i - j) / _Ng);
-            f_V += _p_V[i][j] / (1 + fabs(i - j) * fabs(i - j) / _Ng);
-            f_LD += _p_LD[i][j] / (1 + fabs(i - j) * fabs(i - j) / _Ng);
-            f_RD += _p_RD[i][j] / (1 + fabs(i - j) * fabs(i - j) / _Ng);
+            f_H += _p_H[i][j] / (1 + (abs(i - j) * abs(i - j) / _Ng));
+            f_V += _p_V[i][j] / (1 + (abs(i - j) * abs(i - j) / _Ng));
+            f_LD += _p_LD[i][j] / (1 + (abs(i - j) * abs(i - j) / _Ng));
+            f_RD += _p_RD[i][j] / (1 + (abs(i - j) * abs(i - j) / _Ng));
         }
     }
 
@@ -909,10 +909,10 @@ void TextureAnalysis::GetInverseDifferenceMomentNormalized(Features& f) {
 
     for (int i = 0; i < _Ng; ++i) {
         for (int j = 0; j < _Ng; ++j) {
-            f_H += _p_H[i][j] / (1 + (i - j) * (i - j) / _Ng);
-            f_V += _p_V[i][j] / (1 + (i - j) * (i - j) / _Ng);
-            f_LD += _p_LD[i][j] / (1 + (i - j) * (i - j) / _Ng);
-            f_RD += _p_RD[i][j] / (1 + (i - j) * (i - j) / _Ng);
+            f_H += _p_H[i][j] / (1 + ((i - j) * (i - j) / _Ng));
+            f_V += _p_V[i][j] / (1 + ((i - j) * (i - j) / _Ng));
+            f_LD += _p_LD[i][j] / (1 + ((i - j) * (i - j) / _Ng));
+            f_RD += _p_RD[i][j] / (1 + ((i - j) * (i - j) / _Ng));
         }
     }
 
