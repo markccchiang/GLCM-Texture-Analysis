@@ -194,6 +194,42 @@ int main(int argc, char* argv[]) {
         // texture_analysis.GetMaximalCorrelationCoefficient(f14);
         // PrintResults("14. Maximal Correlation Coefficient:", f14);
 
+        glcm::Features F_1;
+        texture_analysis.GetAutoCorrelation(F_1);
+        PrintResults("F1: Auto Correlation:", F_1);
+
+        glcm::Features F_3;
+        texture_analysis.GetCorrelation_I(F_3);
+        PrintResults("F3: Correlation I", F_3);
+
+        glcm::Features F_5;
+        texture_analysis.GetClusterProminence(F_5);
+        PrintResults("F5: Cluster Prominence", F_5);
+
+        glcm::Features F_6;
+        texture_analysis.GetClusterShade(F_6);
+        PrintResults("F6: Cluster Shade", F_6);
+
+        glcm::Features F_7;
+        texture_analysis.GetDissimilarity(F_7);
+        PrintResults("F7: Dissimilarity", F_7);
+
+        glcm::Features F_10;
+        texture_analysis.GetHomogeneity_I(F_10);
+        PrintResults("F10: Homogeneity I", F_10);
+
+        glcm::Features F_12;
+        texture_analysis.GetMaximumProbability(F_12);
+        PrintResults("F12: Maximum Probability", F_12);
+
+        glcm::Features F_21;
+        texture_analysis.GetInverseDifferenceNormalized(F_21);
+        PrintResults("F21: Inverse Difference Normalized", F_21);
+
+        glcm::Features F_22;
+        texture_analysis.GetInverseDifferenceMomentNormalized(F_22);
+        PrintResults("F22: Inverse Difference Moment Normalized", F_22);
+
         //
         // Show results
         //
