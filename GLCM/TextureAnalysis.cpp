@@ -221,11 +221,21 @@ double TextureAnalysis::CalculateSTD(const std::vector<double>& vec) {
     return sqrt(sum);
 }
 
-double TextureAnalysis::CalculateGLCMMean(const std::vector<std::vector<double>>& mat) {
+double TextureAnalysis::CalculateGLCMMean_i(const std::vector<std::vector<double>>& mat) {
     double mean = 0.0;
     for (int i = 0; i < _Ng; ++i) {
         for (int j = 0; j < _Ng; ++j) {
             mean += i * mat[i][j];
+        }
+    }
+    return mean;
+}
+
+double TextureAnalysis::CalculateGLCMMean_j(const std::vector<std::vector<double>>& mat) {
+    double mean = 0.0;
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            mean += j * mat[i][j];
         }
     }
     return mean;
@@ -445,10 +455,10 @@ void TextureAnalysis::GetCorrelation(Features& f) {
 }
 
 void TextureAnalysis::GetVariance(Features& f) {
-    double mean_H = CalculateGLCMMean(_p_H);
-    double mean_V = CalculateGLCMMean(_p_V);
-    double mean_LD = CalculateGLCMMean(_p_LD);
-    double mean_RD = CalculateGLCMMean(_p_RD);
+    double mean_H = CalculateGLCMMean_i(_p_H);
+    double mean_V = CalculateGLCMMean_i(_p_V);
+    double mean_LD = CalculateGLCMMean_i(_p_LD);
+    double mean_RD = CalculateGLCMMean_i(_p_RD);
 
     double f_H = 0.0;
     double f_V = 0.0;

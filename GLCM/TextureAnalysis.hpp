@@ -74,7 +74,8 @@ private:
 
     double CalculateMean(const std::vector<double>& vec);
     double CalculateSTD(const std::vector<double>& vec);
-    double CalculateGLCMMean(const std::vector<std::vector<double>>& mat);
+    double CalculateGLCMMean_i(const std::vector<std::vector<double>>& mat);
+    double CalculateGLCMMean_j(const std::vector<std::vector<double>>& mat);
     Features CalculateQ(int i, int j);
 
     void CalculateHX();
