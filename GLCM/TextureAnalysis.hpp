@@ -39,51 +39,28 @@ public:
 
     void Normalization();
 
-    // Calculate f1: Angular Second Moment
-    void GetAngularSecondMoment(Features& f);
-    // Calculate f2: Contrast
-    void GetContrast(Features& f);
-    // Calculate f3: Correlation
-    void GetCorrelation(Features& f);
-    // Calculate f4: Sum of Squares: Variance
-    void GetVariance(Features& f);
-    // Calculate f5: Inverse Difference Moment
-    void GetInverseDifferenceMoment(Features& f);
-    // Calculate f6: Sum Average
-    void GetSumAverage(Features& f);
-    // Calculate f7: Sum Variance
-    void GetSumVariance(Features& f);
-    // Calculate f8: Sum Entropy
-    void GetSumEntropy(Features& f);
-    // Calculate f9: Entropy
-    void GetEntropy(Features& f);
-    // Calculate f10: Difference Variance
-    void GetDifferenceVariance(Features& f);
-    // Calculate f11: Difference Entropy
-    void GetDifferenceEntropy(Features& f);
-    // Calculate f12, f13: Information Measures of Correlation
-    void GetInformationMeasuresOfCorrelation(Features& f1, Features& f2);
-    // Calculate f14: Maximal Correlation Coefficient
-    void GetMaximalCorrelationCoefficient(Features& f);
-
-    // F1: Auto Correlation
-    void GetAutoCorrelation(Features& f);
-    // F3: Correlation I
-    void GetCorrelation_I(Features& f);
-    // F5: Cluster Prominence
-    void GetClusterProminence(Features& f);
-    // F6: Cluster Shade
-    void GetClusterShade(Features& f);
-    // F7: Dissimilarity
-    void GetDissimilarity(Features& f);
-    // F10: Homogeneity I
-    void GetHomogeneity_I(Features& f);
-    // F12: Maximum Probability
-    void GetMaximumProbability(Features& f);
-    // F21: Inverse Difference Normalized
-    void GetInverseDifferenceNormalized(Features& f);
-    // F22: Inverse Difference Moment Normalized
-    void GetInverseDifferenceMomentNormalized(Features& f);
+    void GetAutoCorrelation(Features& f);                                 // F1: Auto Correlation
+    void GetContrast(Features& f);                                        // F2: Contrast
+    void GetCorrelation_I(Features& f);                                   // F3: Correlation - I
+    void GetCorrelation_II(Features& f);                                  // F4: Correlation - II
+    void GetClusterProminence(Features& f);                               // F5: Cluster Prominence
+    void GetClusterShade(Features& f);                                    // F6: Cluster Shade
+    void GetDissimilarity(Features& f);                                   // F7: Dissimilarity
+    void GetAngularSecondMoment(Features& f);                             // F8: Angular Second Moment (Energy)
+    void GetEntropy(Features& f);                                         // F9: Entropy
+    void GetHomogeneity_I(Features& f);                                   // F10: Homogeneity - I
+    void GetInverseDifferenceMoment(Features& f);                         // F11: Homogeneity - II (Inverse Difference Moment)
+    void GetMaximumProbability(Features& f);                              // F12: Maximum Probability
+    void GetVariance(Features& f);                                        // F13: Sum of Squares (Variance)
+    void GetSumAverage(Features& f);                                      // F14: Sum Average
+    void GetSumEntropy(Features& f);                                      // F15: Sum Entropy
+    void GetSumVariance(Features& f);                                     // F16: Sum Variance
+    void GetDifferenceVariance(Features& f);                              // F17: Difference Variance
+    void GetDifferenceEntropy(Features& f);                               // F18: Difference Entropy
+    void GetInformationMeasuresOfCorrelation(Features& f1, Features& f2); // F19, F20: Information Measures of Correlation - I/II
+    void GetInverseDifferenceNormalized(Features& f);                     // F21: Inverse Difference Normalized
+    void GetInverseDifferenceMomentNormalized(Features& f);               // F22: Inverse Difference Moment Normalized
+    void GetMaximalCorrelationCoefficient(Features& f);                   // Maximal Correlation Coefficient
 
 private:
     void Calculate_px();

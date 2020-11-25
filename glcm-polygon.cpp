@@ -148,7 +148,7 @@ int main(int argc, char* argv[]) {
         PrintResults("2. Contrast:", f2);
 
         glcm::Features f3;
-        texture_analysis.GetCorrelation(f3);
+        texture_analysis.GetCorrelation_II(f3);
         PrintResults("3. Correlation:", f3);
 
         glcm::Features f4;

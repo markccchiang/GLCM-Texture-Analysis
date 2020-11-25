@@ -409,7 +409,7 @@ void TextureAnalysis::GetContrast(Features& f) {
     f(f_H, f_V, f_LD, f_RD);
 }
 
-void TextureAnalysis::GetCorrelation(Features& f) {
+void TextureAnalysis::GetCorrelation_II(Features& f) {
     // Calculate means
     double mu_x_H = CalculateMean(_px_H);
     double mu_x_V = CalculateMean(_px_V);
