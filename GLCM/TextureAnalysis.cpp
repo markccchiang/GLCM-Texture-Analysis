@@ -409,7 +409,7 @@ void TextureAnalysis::GetContrast(Features& f) {
     f(f_H, f_V, f_LD, f_RD);
 }
 
-void TextureAnalysis::GetCorrelation_II(Features& f) {
+void TextureAnalysis::GetCorrelationII(Features& f) {
     // Calculate means
     double mu_x_H = CalculateMean(_px_H);
     double mu_x_V = CalculateMean(_px_V);
@@ -477,7 +477,7 @@ void TextureAnalysis::GetSumOfSquares(Features& f) {
     f(f_H, f_V, f_LD, f_RD);
 }
 
-void TextureAnalysis::GetHomogeneity_II(Features& f) {
+void TextureAnalysis::GetHomogeneityII(Features& f) {
     double f_H = 0.0;
     double f_V = 0.0;
     double f_LD = 0.0;
@@ -718,7 +718,7 @@ void TextureAnalysis::GetAutoCorrelation(Features& f) {
     f(f_H, f_V, f_LD, f_RD);
 }
 
-void TextureAnalysis::GetCorrelation_I(Features& f) {
+void TextureAnalysis::GetCorrelationI(Features& f) {
     // Calculate means
     double mu_x_H = CalculateMean(_px_H);
     double mu_x_V = CalculateMean(_px_V);
@@ -839,7 +839,7 @@ void TextureAnalysis::GetDissimilarity(Features& f) {
     f(f_H, f_V, f_LD, f_RD);
 }
 
-void TextureAnalysis::GetHomogeneity_I(Features& f) {
+void TextureAnalysis::GetHomogeneityI(Features& f) {
     double f_H = 0.0;
     double f_V = 0.0;
     double f_LD = 0.0;

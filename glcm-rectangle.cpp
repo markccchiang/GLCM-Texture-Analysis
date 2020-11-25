@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
         PrintResults("2. Contrast:", f2);
 
         glcm::Features f3;
-        texture_analysis.GetCorrelation_II(f3);
+        texture_analysis.GetCorrelationII(f3);
         PrintResults("3. Correlation:", f3);
 
         glcm::Features f4;
@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
         PrintResults("4: Sum of Squares: Variance:", f4);
 
         glcm::Features f5;
-        texture_analysis.GetHomogeneity_II(f5);
+        texture_analysis.GetHomogeneityII(f5);
         PrintResults("5. Inverse Difference Moment:", f5);
 
         glcm::Features f6;
@@ -155,7 +155,7 @@ int main(int argc, char* argv[]) {
         PrintResults("F1: Auto Correlation:", F_1);
 
         glcm::Features F_3;
-        texture_analysis.GetCorrelation_I(F_3);
+        texture_analysis.GetCorrelationI(F_3);
         PrintResults("F3: Correlation I", F_3);
 
         glcm::Features F_5;
@@ -171,7 +171,7 @@ int main(int argc, char* argv[]) {
         PrintResults("F7: Dissimilarity", F_7);
 
         glcm::Features F_10;
-        texture_analysis.GetHomogeneity_I(F_10);
+        texture_analysis.GetHomogeneityI(F_10);
         PrintResults("F10: Homogeneity I", F_10);
 
         glcm::Features F_12;

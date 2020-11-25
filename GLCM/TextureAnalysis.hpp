@@ -2,9 +2,35 @@
 #define GLCM_TEXTURE_FEATURE_ANALYSIS_HPP_
 
 #include <iostream>
+#include <map>
 #include <vector>
 
 namespace glcm {
+
+enum class Type {
+    AutoCorrelation,
+    Contrast,
+    CorrelationI,
+    CorrelationII,
+    ClusterProminence,
+    ClusterShade,
+    Dissimilarity,
+    Energy,
+    Entropy,
+    HomogeneityI,
+    HomogeneityII,
+    MaximumProbability,
+    SumOfSquares,
+    SumAverage,
+    SumEntropy,
+    SumVariance,
+    DifferenceVariance,
+    DifferenceEntropy,
+    InformationMeasuresOfCorrelationI,
+    InformationMeasuresOfCorrelationII,
+    InverseDifferenceNormalized,
+    InverseDifferenceMomentNormalized
+};
 
 struct Features {
     double H;
@@ -41,15 +67,15 @@ public:
 
     void GetAutoCorrelation(Features& f);                                 // F1: Auto Correlation
     void GetContrast(Features& f);                                        // F2: Contrast
-    void GetCorrelation_I(Features& f);                                   // F3: Correlation - I
-    void GetCorrelation_II(Features& f);                                  // F4: Correlation - II
+    void GetCorrelationI(Features& f);                                    // F3: Correlation - I
+    void GetCorrelationII(Features& f);                                   // F4: Correlation - II
     void GetClusterProminence(Features& f);                               // F5: Cluster Prominence
     void GetClusterShade(Features& f);                                    // F6: Cluster Shade
     void GetDissimilarity(Features& f);                                   // F7: Dissimilarity
     void GetEnergy(Features& f);                                          // F8: Energy (Angular Second Moment)
     void GetEntropy(Features& f);                                         // F9: Entropy
-    void GetHomogeneity_I(Features& f);                                   // F10: Homogeneity - I
-    void GetHomogeneity_II(Features& f);                                  // F11: Homogeneity - II (Inverse Difference Moment)
+    void GetHomogeneityI(Features& f);                                    // F10: Homogeneity - I
+    void GetHomogeneityII(Features& f);                                   // F11: Homogeneity - II (Inverse Difference Moment)
     void GetMaximumProbability(Features& f);                              // F12: Maximum Probability
     void GetSumOfSquares(Features& f);                                    // F13: Sum of Squares (Variance)
     void GetSumAverage(Features& f);                                      // F14: Sum Average
@@ -147,6 +173,8 @@ private:
     double _HXY2_V;
     double _HXY2_LD;
     double _HXY2_RD;
+
+    std::map<Type, Features> _features;
 };
 
 } // namespace glcm
