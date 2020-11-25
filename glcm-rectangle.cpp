@@ -1,5 +1,3 @@
-#include <math.h>
-
 #include <opencv2/opencv.hpp>
 #include <opencv2/tracking.hpp> // selectROI is part of tracking API
 
@@ -98,7 +96,7 @@ int main(int argc, char* argv[]) {
         texture_analysis.Normalization();
 
         glcm::Features f1;
-        texture_analysis.GetAngularSecondMoment(f1);
+        texture_analysis.GetEnergy(f1);
         PrintResults("1. Angular Second Moment:", f1);
 
         glcm::Features f2;
@@ -110,11 +108,11 @@ int main(int argc, char* argv[]) {
         PrintResults("3. Correlation:", f3);
 
         glcm::Features f4;
-        texture_analysis.GetVariance(f4);
+        texture_analysis.GetSumOfSquares(f4);
         PrintResults("4: Sum of Squares: Variance:", f4);
 
         glcm::Features f5;
-        texture_analysis.GetInverseDifferenceMoment(f5);
+        texture_analysis.GetHomogeneity_II(f5);
         PrintResults("5. Inverse Difference Moment:", f5);
 
         glcm::Features f6;

@@ -360,7 +360,7 @@ Features TextureAnalysis::CalculateQ(int i, int j) {
 // Calculate texture feature coefficients
 //===============================================================================================================
 
-void TextureAnalysis::GetAngularSecondMoment(Features& f) {
+void TextureAnalysis::GetEnergy(Features& f) {
     double f_H = 0.0;
     double f_V = 0.0;
     double f_LD = 0.0;
@@ -454,7 +454,7 @@ void TextureAnalysis::GetCorrelation_II(Features& f) {
     f(f_H, f_V, f_LD, f_RD);
 }
 
-void TextureAnalysis::GetVariance(Features& f) {
+void TextureAnalysis::GetSumOfSquares(Features& f) {
     double mean_H = CalculateGLCMMean_i(_p_H);
     double mean_V = CalculateGLCMMean_i(_p_V);
     double mean_LD = CalculateGLCMMean_i(_p_LD);
@@ -477,7 +477,7 @@ void TextureAnalysis::GetVariance(Features& f) {
     f(f_H, f_V, f_LD, f_RD);
 }
 
-void TextureAnalysis::GetInverseDifferenceMoment(Features& f) {
+void TextureAnalysis::GetHomogeneity_II(Features& f) {
     double f_H = 0.0;
     double f_V = 0.0;
     double f_LD = 0.0;

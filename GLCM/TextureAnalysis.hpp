@@ -46,12 +46,12 @@ public:
     void GetClusterProminence(Features& f);                               // F5: Cluster Prominence
     void GetClusterShade(Features& f);                                    // F6: Cluster Shade
     void GetDissimilarity(Features& f);                                   // F7: Dissimilarity
-    void GetAngularSecondMoment(Features& f);                             // F8: Angular Second Moment (Energy)
+    void GetEnergy(Features& f);                                          // F8: Energy (Angular Second Moment)
     void GetEntropy(Features& f);                                         // F9: Entropy
     void GetHomogeneity_I(Features& f);                                   // F10: Homogeneity - I
-    void GetInverseDifferenceMoment(Features& f);                         // F11: Homogeneity - II (Inverse Difference Moment)
+    void GetHomogeneity_II(Features& f);                                  // F11: Homogeneity - II (Inverse Difference Moment)
     void GetMaximumProbability(Features& f);                              // F12: Maximum Probability
-    void GetVariance(Features& f);                                        // F13: Sum of Squares (Variance)
+    void GetSumOfSquares(Features& f);                                    // F13: Sum of Squares (Variance)
     void GetSumAverage(Features& f);                                      // F14: Sum Average
     void GetSumEntropy(Features& f);                                      // F15: Sum Entropy
     void GetSumVariance(Features& f);                                     // F16: Sum Variance
