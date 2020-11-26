@@ -33,6 +33,8 @@ enum class Type {
     InverseDifferenceMomentNormalized
 };
 
+enum class Direction { H, V, LD, RD, Avg };
+
 struct Features {
     double H;
     double V;
@@ -92,8 +94,7 @@ public:
     std::map<Type, Features> Calculate(const std::set<Type>& types); // Calculate selected features
 
     void Print(const std::map<Type, Features>& features);
-
-    std::string TypeToString(const Type& type);
+    void SaveAsCSV(const std::map<Type, Features>& features, const std::string& filename);
 
 private:
     void Calculate_px();
@@ -114,6 +115,9 @@ private:
     void CalculateHXY2();
 
     void ResetFactors();
+
+    std::string TypeToString(const Type& type);
+    std::string DirectionToString(const Direction& direction);
 
     int _Ng; // grey scale number, 256 (0 ~ 255) for example
 

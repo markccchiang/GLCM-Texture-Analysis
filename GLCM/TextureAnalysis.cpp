@@ -1084,13 +1084,39 @@ std::string TextureAnalysis::TypeToString(const Type& type) {
     return result;
 }
 
+std::string TextureAnalysis::DirectionToString(const Direction& direction) {
+    std::string result;
+    switch (direction) {
+        case Direction::H:
+            result = "H (0 deg)";
+            break;
+        case Direction::V:
+            result = "V (90 deg)";
+            break;
+        case Direction::LD:
+            result = "LD (135 deg)";
+            break;
+        case Direction::RD:
+            result = "RD (45 deg)";
+            break;
+        case Direction::Avg:
+            result = "Average";
+            break;
+        default:
+            std::cerr << "Unknown feature type!\n";
+            break;
+    }
+
+    return result;
+}
+
 void TextureAnalysis::Print(const std::map<Type, Features>& features) {
     for (auto feature : features) {
         std::cout << TypeToString(feature.first) << std::endl;
-        std::cout << std::setw(30) << "H (0 deg) = " << feature.second.H << std::endl;
-        std::cout << std::setw(30) << "V (90 deg) = " << feature.second.V << std::endl;
-        std::cout << std::setw(30) << "LD (135 deg) = " << feature.second.LD << std::endl;
-        std::cout << std::setw(30) << "RD (45 deg) = " << feature.second.RD << std::endl;
-        std::cout << std::setw(30) << "Average = " << feature.second.Avg() << std::endl;
+        std::cout << std::setw(30) << DirectionToString(Direction::H) << " = " << feature.second.H << std::endl;
+        std::cout << std::setw(30) << DirectionToString(Direction::V) << " = " << feature.second.V << std::endl;
+        std::cout << std::setw(30) << DirectionToString(Direction::LD) << " = " << feature.second.LD << std::endl;
+        std::cout << std::setw(30) << DirectionToString(Direction::RD) << " = " << feature.second.RD << std::endl;
+        std::cout << std::setw(30) << DirectionToString(Direction::Avg) << " = " << feature.second.Avg() << std::endl;
     }
 }
