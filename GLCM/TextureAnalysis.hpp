@@ -89,7 +89,9 @@ public:
     void GetInverseDifferenceMomentNormalized(Features& f);               // F22: Inverse Difference Moment Normalized
     void GetMaximalCorrelationCoefficient(Features& f);                   // Maximal Correlation Coefficient
 
-    std::map<Type, Features> Calculate(std::set<Type> types); // Calculate selected features
+    std::map<Type, Features> Calculate(const std::set<Type>& types); // Calculate selected features
+
+    std::string TypeToString(const Type& type);
 
 private:
     void Calculate_px();

@@ -919,7 +919,7 @@ void TextureAnalysis::GetInverseDifferenceMomentNormalized(Features& f) {
     f(f_H, f_V, f_LD, f_RD);
 }
 
-std::map<Type, Features> TextureAnalysis::Calculate(std::set<Type> types) {
+std::map<Type, Features> TextureAnalysis::Calculate(const std::set<Type>& types) {
     std::map<Type, Features> results;
     bool information_measures_of_correlation_done = false;
     for (auto type : types) {
@@ -1005,4 +1005,80 @@ std::map<Type, Features> TextureAnalysis::Calculate(std::set<Type> types) {
     }
 
     return results;
+}
+
+std::string TextureAnalysis::TypeToString(const Type& type) {
+    std::string result;
+    switch (type) {
+        case Type::AutoCorrelation:
+            result = "F1: Auto Correlation";
+            break;
+        case Type::Contrast:
+            result = "F2: Contrast";
+            break;
+        case Type::CorrelationI:
+            result = "F3: Correlation - I";
+            break;
+        case Type::CorrelationII:
+            result = "F4: Correlation - II";
+            break;
+        case Type::ClusterProminence:
+            result = "F5: Cluster Prominence";
+            break;
+        case Type::ClusterShade:
+            result = "F6: Cluster Shade";
+            break;
+        case Type::Dissimilarity:
+            result = "F7: Dissimilarity";
+            break;
+        case Type::Energy:
+            result = "F8: Energy";
+            break;
+        case Type::Entropy:
+            result = "F9: Entropy";
+            break;
+        case Type::HomogeneityI:
+            result = "F10: Homogeneity - I";
+            break;
+        case Type::HomogeneityII:
+            result = "F11: Homogeneity - II";
+            break;
+        case Type::MaximumProbability:
+            result = "F12: Maximum Probability";
+            break;
+        case Type::SumOfSquares:
+            result = "F13: Sum of Squares";
+            break;
+        case Type::SumAverage:
+            result = "F14: Sum Average";
+            break;
+        case Type::SumEntropy:
+            result = "F15: Sum Entropy";
+            break;
+        case Type::SumVariance:
+            result = "F16: Sum Variance";
+            break;
+        case Type::DifferenceVariance:
+            result = "F17: Difference Variance";
+            break;
+        case Type::DifferenceEntropy:
+            result = "F18: Difference Entropy";
+            break;
+        case Type::InformationMeasuresOfCorrelationI:
+            result = "F19: Information Measures of Correlation - I";
+            break;
+        case Type::InformationMeasuresOfCorrelationII:
+            result = "F20: Information Measures of Correlation - II";
+            break;
+        case Type::InverseDifferenceNormalized:
+            result = "F21: Inverse Difference Normalized";
+            break;
+        case Type::InverseDifferenceMomentNormalized:
+            result = "F22: Inverse Difference Moment Normalized";
+            break;
+        default:
+            std::cerr << "Unknown feature type!\n";
+            break;
+    }
+    return result;
 }
