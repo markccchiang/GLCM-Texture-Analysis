@@ -94,7 +94,7 @@ public:
     std::map<Type, Features> Calculate(const std::set<Type>& types); // Calculate selected features
 
     void Print(const std::map<Type, Features>& features);
-    void SaveAsCSV(const std::map<Type, Features>& features, const std::string& filename);
+    void SaveAsCSV(const std::string& image_name, std::map<Type, Features> features, const std::string& csv_name);
 
 private:
     void Calculate_px();

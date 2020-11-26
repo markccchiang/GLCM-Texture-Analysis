@@ -4,9 +4,13 @@
 
 #include <Eigen/Eigenvalues>
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
 #include <iomanip>
 
 using namespace glcm;
+
+namespace fs = std::filesystem;
 
 TextureAnalysis::TextureAnalysis(int Ng) : _Ng(Ng) {
     if (Ng > 0) {
@@ -1119,4 +1123,61 @@ void TextureAnalysis::Print(const std::map<Type, Features>& features) {
         std::cout << std::setw(30) << DirectionToString(Direction::RD) << " = " << feature.second.RD << std::endl;
         std::cout << std::setw(30) << DirectionToString(Direction::Avg) << " = " << feature.second.Avg() << std::endl;
     }
+}
+
+void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Features> features, const std::string& csv_name) {
+    // get image file base name
+    std::string image_base_name = fs::path(image_name).filename().string();
+
+    // open the csv file
+    std::ofstream csv_file;
+    csv_file.open(csv_name, std::ios::out | std::ios::app); // write (append) the csv file at the end
+
+    if (!csv_file) {
+        std::cerr << "Can't open file!" << std::endl;
+        return;
+    }
+
+    // write a row of titles
+    for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
+        csv_file << ",";
+        csv_file << ",";
+        csv_file << TypeToString(it->first) << ",";
+    }
+    csv_file << "\n";
+
+    // write a row of H values
+    for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
+        csv_file << image_base_name << ",";
+        csv_file << DirectionToString(Direction::H) << ",";
+        csv_file << it->second.H << ",";
+    }
+    csv_file << "\n";
+
+    // write a row of V values
+    for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
+        csv_file << image_base_name << ",";
+        csv_file << DirectionToString(Direction::V) << ",";
+        csv_file << it->second.V << ",";
+    }
+    csv_file << "\n";
+
+    // write a row of LD values
+    for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
+        csv_file << image_base_name << ",";
+        csv_file << DirectionToString(Direction::LD) << ",";
+        csv_file << it->second.LD << ",";
+    }
+    csv_file << "\n";
+
+    // write a row of RD values
+    for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
+        csv_file << image_base_name << ",";
+        csv_file << DirectionToString(Direction::RD) << ",";
+        csv_file << it->second.RD << ",";
+    }
+    csv_file << "\n";
+
+    // close the csv file
+    csv_file.close();
 }
