@@ -9,8 +9,6 @@ using namespace cv;
 const int Ng = 256;
 int d; // neighborhood distance
 
-void PrintResults(string title, glcm::Features f);
-
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         cout << "Usage: ./glcm-rectangle <file name> <distance>" << endl;
@@ -95,96 +93,16 @@ int main(int argc, char* argv[]) {
         // Normalize the matrices
         texture_analysis.Normalization();
 
-        glcm::Features f1;
-        texture_analysis.GetEnergy(f1);
-        PrintResults("1. Angular Second Moment:", f1);
+        std::set<glcm::Type> features{glcm::Type::AutoCorrelation, glcm::Type::Contrast, glcm::Type::CorrelationI,
+            glcm::Type::CorrelationII, glcm::Type::ClusterProminence, glcm::Type::ClusterShade, glcm::Type::Dissimilarity,
+            glcm::Type::Energy, glcm::Type::Entropy, glcm::Type::HomogeneityI, glcm::Type::HomogeneityII, glcm::Type::MaximumProbability,
+            glcm::Type::SumOfSquares, glcm::Type::SumAverage, glcm::Type::SumEntropy, glcm::Type::SumVariance,
+            glcm::Type::DifferenceVariance, glcm::Type::DifferenceEntropy, glcm::Type::InformationMeasuresOfCorrelationI,
+            glcm::Type::InformationMeasuresOfCorrelationII, glcm::Type::InverseDifferenceNormalized,
+            glcm::Type::InverseDifferenceMomentNormalized};
 
-        glcm::Features f2;
-        texture_analysis.GetContrast(f2);
-        PrintResults("2. Contrast:", f2);
-
-        glcm::Features f3;
-        texture_analysis.GetCorrelationII(f3);
-        PrintResults("3. Correlation:", f3);
-
-        glcm::Features f4;
-        texture_analysis.GetSumOfSquares(f4);
-        PrintResults("4: Sum of Squares: Variance:", f4);
-
-        glcm::Features f5;
-        texture_analysis.GetHomogeneityII(f5);
-        PrintResults("5. Inverse Difference Moment:", f5);
-
-        glcm::Features f6;
-        texture_analysis.GetSumAverage(f6);
-        PrintResults("6. Sum Average:", f6);
-
-        glcm::Features f7;
-        texture_analysis.GetSumVariance(f7);
-        PrintResults("7. Sum Variance:", f7);
-
-        glcm::Features f8;
-        texture_analysis.GetSumEntropy(f8);
-        PrintResults("8. Sum Entropy:", f8);
-
-        glcm::Features f9;
-        texture_analysis.GetEntropy(f9);
-        PrintResults("9. Entropy:", f9);
-
-        glcm::Features f10;
-        texture_analysis.GetDifferenceVariance(f10);
-        PrintResults("10. Difference Variance:", f10);
-
-        glcm::Features f11;
-        texture_analysis.GetDifferenceEntropy(f11);
-        PrintResults("11. Difference Entropy:", f11);
-
-        glcm::Features f12;
-        glcm::Features f13;
-        texture_analysis.GetInformationMeasuresOfCorrelation(f12, f13);
-        PrintResults("12. Information Measures of Correlation:", f12);
-        PrintResults("13. Information Measures of Correlation:", f13);
-
-        // cout << "Calculating Maximal Correlation Coefficient...\n";
-        // glcm::Features f14;
-        // texture_analysis.GetMaximalCorrelationCoefficient(f14);
-        // PrintResults("14. Maximal Correlation Coefficient:", f14);
-
-        glcm::Features F_1;
-        texture_analysis.GetAutoCorrelation(F_1);
-        PrintResults("F1: Auto Correlation:", F_1);
-
-        glcm::Features F_3;
-        texture_analysis.GetCorrelationI(F_3);
-        PrintResults("F3: Correlation I", F_3);
-
-        glcm::Features F_5;
-        texture_analysis.GetClusterProminence(F_5);
-        PrintResults("F5: Cluster Prominence", F_5);
-
-        glcm::Features F_6;
-        texture_analysis.GetClusterShade(F_6);
-        PrintResults("F6: Cluster Shade", F_6);
-
-        glcm::Features F_7;
-        texture_analysis.GetDissimilarity(F_7);
-        PrintResults("F7: Dissimilarity", F_7);
-
-        glcm::Features F_10;
-        texture_analysis.GetHomogeneityI(F_10);
-        PrintResults("F10: Homogeneity I", F_10);
-
-        glcm::Features F_12;
-        texture_analysis.GetMaximumProbability(F_12);
-        PrintResults("F12: Maximum Probability", F_12);
-
-        glcm::Features F_21;
-        texture_analysis.GetInverseDifferenceNormalized(F_21);
-        PrintResults("F21: Inverse Difference Normalized", F_21);
-
-        glcm::Features F_22;
-        texture_analysis.GetInverseDifferenceMomentNormalized(F_22);
-        PrintResults("F22: Inverse Difference Moment Normalized", F_22);
+        std::map<glcm::Type, glcm::Features> results = texture_analysis.Calculate(features);
+        texture_analysis.Print(results);
 
         //
         // Display Cropped Image
@@ -208,13 +126,4 @@ int main(int argc, char* argv[]) {
     cv::destroyAllWindows();
 
     return 0;
-}
-
-void PrintResults(string title, glcm::Features f) {
-    cout << title << endl;
-    cout << std::setw(30) << "f1_H (0 deg) = " << f.H << endl;
-    cout << std::setw(30) << "f1_V (90 deg) = " << f.V << endl;
-    cout << std::setw(30) << "f1_LD (135 deg) = " << f.LD << endl;
-    cout << std::setw(30) << "f1_RD (45 deg) = " << f.RD << endl;
-    cout << std::setw(30) << "avg = " << f.Avg() << endl;
 }

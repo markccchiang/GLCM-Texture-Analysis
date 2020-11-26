@@ -91,9 +91,9 @@ public:
 
     std::map<Type, Features> Calculate(const std::set<Type>& types); // Calculate selected features
 
-    std::string TypeToString(const Type& type);
-
     void Print(const std::map<Type, Features>& features);
+
+    std::string TypeToString(const Type& type);
 
 private:
     void Calculate_px();
