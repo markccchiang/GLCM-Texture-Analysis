@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <map>
+#include <set>
 #include <vector>
 
 namespace glcm {
@@ -87,6 +88,8 @@ public:
     void GetInverseDifferenceNormalized(Features& f);                     // F21: Inverse Difference Normalized
     void GetInverseDifferenceMomentNormalized(Features& f);               // F22: Inverse Difference Moment Normalized
     void GetMaximalCorrelationCoefficient(Features& f);                   // Maximal Correlation Coefficient
+
+    std::map<Type, Features> Calculate(std::set<Type> types); // Calculate selected features
 
 private:
     void Calculate_px();
@@ -173,8 +176,6 @@ private:
     double _HXY2_V;
     double _HXY2_LD;
     double _HXY2_RD;
-
-    std::map<Type, Features> _features;
 };
 
 } // namespace glcm

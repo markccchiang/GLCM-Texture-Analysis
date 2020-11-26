@@ -918,3 +918,91 @@ void TextureAnalysis::GetInverseDifferenceMomentNormalized(Features& f) {
 
     f(f_H, f_V, f_LD, f_RD);
 }
+
+std::map<Type, Features> TextureAnalysis::Calculate(std::set<Type> types) {
+    std::map<Type, Features> results;
+    bool information_measures_of_correlation_done = false;
+    for (auto type : types) {
+        switch (type) {
+            case Type::AutoCorrelation:
+                GetAutoCorrelation(results[Type::AutoCorrelation]);
+                break;
+            case Type::Contrast:
+                GetContrast(results[Type::Contrast]);
+                break;
+            case Type::CorrelationI:
+                GetCorrelationI(results[Type::CorrelationI]);
+                break;
+            case Type::CorrelationII:
+                GetCorrelationII(results[Type::CorrelationII]);
+                break;
+            case Type::ClusterProminence:
+                GetClusterProminence(results[Type::ClusterProminence]);
+                break;
+            case Type::ClusterShade:
+                GetClusterShade(results[Type::ClusterShade]);
+                break;
+            case Type::Dissimilarity:
+                GetDissimilarity(results[Type::Dissimilarity]);
+                break;
+            case Type::Energy:
+                GetEnergy(results[Type::Energy]);
+                break;
+            case Type::Entropy:
+                GetEntropy(results[Type::Entropy]);
+                break;
+            case Type::HomogeneityI:
+                GetHomogeneityI(results[Type::HomogeneityI]);
+                break;
+            case Type::HomogeneityII:
+                GetHomogeneityII(results[Type::HomogeneityII]);
+                break;
+            case Type::MaximumProbability:
+                GetMaximumProbability(results[Type::MaximumProbability]);
+                break;
+            case Type::SumOfSquares:
+                GetSumOfSquares(results[Type::SumOfSquares]);
+                break;
+            case Type::SumAverage:
+                GetSumAverage(results[Type::SumAverage]);
+                break;
+            case Type::SumEntropy:
+                GetSumEntropy(results[Type::SumEntropy]);
+                break;
+            case Type::SumVariance:
+                GetSumVariance(results[Type::SumVariance]);
+                break;
+            case Type::DifferenceVariance:
+                GetDifferenceVariance(results[Type::DifferenceVariance]);
+                break;
+            case Type::DifferenceEntropy:
+                GetDifferenceEntropy(results[Type::DifferenceEntropy]);
+                break;
+            case Type::InformationMeasuresOfCorrelationI:
+                if (!information_measures_of_correlation_done) {
+                    GetInformationMeasuresOfCorrelation(
+                        results[Type::InformationMeasuresOfCorrelationI], results[Type::InformationMeasuresOfCorrelationII]);
+                    information_measures_of_correlation_done = true;
+                }
+                break;
+            case Type::InformationMeasuresOfCorrelationII:
+                if (!information_measures_of_correlation_done) {
+                    GetInformationMeasuresOfCorrelation(
+                        results[Type::InformationMeasuresOfCorrelationI], results[Type::InformationMeasuresOfCorrelationII]);
+                    information_measures_of_correlation_done = true;
+                }
+                break;
+            case Type::InverseDifferenceNormalized:
+                GetInverseDifferenceNormalized(results[Type::InverseDifferenceNormalized]);
+                break;
+            case Type::InverseDifferenceMomentNormalized:
+                GetInverseDifferenceMomentNormalized(results[Type::InverseDifferenceMomentNormalized]);
+                break;
+            default:
+                std::cerr << "Unknown feature type!\n";
+                break;
+        }
+    }
+
+    return results;
+}
