@@ -1131,10 +1131,10 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
 
     // open the csv file
     std::ofstream csv_file;
-    csv_file.open(csv_name, std::ios::out | std::ios::app); // write (append) the csv file at the end
+    csv_file.open(csv_name, std::ios::out | std::ios::app); // open as the writing mode and append the csv file at the end
 
     if (!csv_file) {
-        std::cerr << "Can't open file!" << std::endl;
+        std::cerr << "Can't the open file!" << std::endl;
         return;
     }
 
