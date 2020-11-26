@@ -9,6 +9,8 @@ using namespace cv;
 const int Ng = 256;
 int d; // neighborhood distance
 
+std::map<glcm::Type, glcm::Features> results; // GLCM calculation results
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         cout << "Usage: ./glcm-rectangle <file name> <distance>" << endl;
@@ -93,6 +95,7 @@ int main(int argc, char* argv[]) {
         // Normalize the matrices
         texture_analysis.Normalization();
 
+        // Set feature types to calculate
         std::set<glcm::Type> features{glcm::Type::AutoCorrelation, glcm::Type::Contrast, glcm::Type::CorrelationI,
             glcm::Type::CorrelationII, glcm::Type::ClusterProminence, glcm::Type::ClusterShade, glcm::Type::Dissimilarity,
             glcm::Type::Energy, glcm::Type::Entropy, glcm::Type::HomogeneityI, glcm::Type::HomogeneityII, glcm::Type::MaximumProbability,
@@ -101,26 +104,32 @@ int main(int argc, char* argv[]) {
             glcm::Type::InformationMeasuresOfCorrelationII, glcm::Type::InverseDifferenceNormalized,
             glcm::Type::InverseDifferenceMomentNormalized};
 
-        std::map<glcm::Type, glcm::Features> results = texture_analysis.Calculate(features);
+        // Clear the calculation results
+        results.clear();
+
+        // Re-calculate the features
+        results = texture_analysis.Calculate(features);
+
+        // Print results
         texture_analysis.Print(results);
 
-        //
         // Display Cropped Image
-        //
         if (im_crop.cols > 0 && im_crop.rows > 0) {
             imshow("Image", im_crop);
         } else {
             break;
         }
 
-        //
         // Check if ESC key was pressed
-        //
         if (cv::waitKey(20) == 27) {
             execution = false;
             break;
         }
     } // End of the while loop
+
+    // Print results
+    std::cout << "--------------------- final results -----------------------" << std::endl;
+    texture_analysis.Print(results);
 
     // Destroy all windows
     cv::destroyAllWindows();

@@ -24,6 +24,8 @@ int img_width;                   // image width
 int img_height;                  // image height
 int d;                           // neighborhood distance
 
+std::map<glcm::Type, glcm::Features> results; // GLCM calculation results
+
 void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata);
 std::vector<std::pair<int, int>> GetMinMax(const std::vector<cv::Point>& vec);
 
@@ -143,6 +145,7 @@ int main(int argc, char* argv[]) {
         // Normalize the matrices
         texture_analysis.Normalization();
 
+        // Set feature types to calculate
         std::set<glcm::Type> features{glcm::Type::AutoCorrelation, glcm::Type::Contrast, glcm::Type::CorrelationI,
             glcm::Type::CorrelationII, glcm::Type::ClusterProminence, glcm::Type::ClusterShade, glcm::Type::Dissimilarity,
             glcm::Type::Energy, glcm::Type::Entropy, glcm::Type::HomogeneityI, glcm::Type::HomogeneityII, glcm::Type::MaximumProbability,
@@ -151,20 +154,26 @@ int main(int argc, char* argv[]) {
             glcm::Type::InformationMeasuresOfCorrelationII, glcm::Type::InverseDifferenceNormalized,
             glcm::Type::InverseDifferenceMomentNormalized};
 
-        std::map<glcm::Type, glcm::Features> results = texture_analysis.Calculate(features);
+        // Clear the calculation results
+        results.clear();
+
+        // Re-calculate the features
+        results = texture_analysis.Calculate(features);
+
+        // Print results
         texture_analysis.Print(results);
 
-        //
         // Show results
-        //
         cv::namedWindow("ROI", 1);
         cv::imshow("ROI", roi);
         // cv::waitKey(0);
     }
 
-    //
+    // Print results
+    std::cout << "--------------------- final results -----------------------" << std::endl;
+    texture_analysis.Print(results);
+
     // Destroy all windows
-    //
     cv::destroyAllWindows();
 
     return 0;
