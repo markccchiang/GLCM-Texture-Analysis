@@ -11,11 +11,14 @@ const int white_color = 255;
 const int black_color = 0;
 
 // Globals
-bool finish_drawing = false;     // finish drawing the polygon
-bool execution = true;           // stop the program execution
-cv::Mat img;                     // original image
-cv::Mat roi;                     // ROI image
-cv::Mat mask;                    // Mask is black and white where our ROI is
+bool finish_drawing = false; // finish drawing the polygon
+bool execution = true;       // stop the program execution
+
+cv::Mat img;          // drawing image
+cv::Mat original_img; // original image
+cv::Mat roi;          // ROI image
+cv::Mat mask;         // Mask is black and white where our ROI is
+
 std::vector<cv::Point> vertices; // polygon points
 int img_width;                   // image width
 int img_height;                  // image height
@@ -50,6 +53,7 @@ int main(int argc, char* argv[]) {
 
         // Initialize the global variables
         img.release();
+        original_img.release();
         roi.release();
         mask.release();
         vertices.clear();
@@ -64,7 +68,7 @@ int main(int argc, char* argv[]) {
         img_height = img.rows;
 
         // Make a copy of the original image
-        cv::Mat original_img = img.clone();
+        original_img = img.clone();
 
         // Create a window
         cv::namedWindow("Original Image", 1);
