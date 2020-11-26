@@ -193,6 +193,7 @@ void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata) {
 
         // Copy the image to ROI with the mask with the white part (if value = 255)
         img.copyTo(roi, mask);
+        roi(Rect(Point(bounds[0].first, bounds[0].second), Point(bounds[1].first, bounds[1].second))).copyTo(roi);
 
         finish_drawing = true;
         return;
