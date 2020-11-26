@@ -93,6 +93,8 @@ public:
 
     std::string TypeToString(const Type& type);
 
+    void Print(const std::map<Type, Features>& features);
+
 private:
     void Calculate_px();
     void Calculate_py();

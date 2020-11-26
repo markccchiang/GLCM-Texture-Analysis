@@ -4,6 +4,7 @@
 
 #include <Eigen/Eigenvalues>
 #include <algorithm>
+#include <iomanip>
 
 using namespace glcm;
 
@@ -1081,4 +1082,15 @@ std::string TextureAnalysis::TypeToString(const Type& type) {
             break;
     }
     return result;
+}
+
+void TextureAnalysis::Print(const std::map<Type, Features>& features) {
+    for (auto feature : features) {
+        std::cout << TypeToString(feature.first) << std::endl;
+        std::cout << std::setw(30) << "H (0 deg) = " << feature.second.H << std::endl;
+        std::cout << std::setw(30) << "V (90 deg) = " << feature.second.V << std::endl;
+        std::cout << std::setw(30) << "LD (135 deg) = " << feature.second.LD << std::endl;
+        std::cout << std::setw(30) << "RD (45 deg) = " << feature.second.RD << std::endl;
+        std::cout << std::setw(30) << "Average = " << feature.second.Avg() << std::endl;
+    }
 }
