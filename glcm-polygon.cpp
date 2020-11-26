@@ -22,6 +22,7 @@ int img_height;                  // image height
 int d;                           // neighborhood distance
 
 void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata);
+std::vector<std::pair<int, int>> GetMinMax(const std::vector<cv::Point>& vec);
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -180,9 +181,14 @@ void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata) {
         // Mask is black with white where our ROI is
         mask = Mat::zeros(img.rows, img.cols, CV_8UC1);
 
-        std::vector<std::vector<cv::Point>> pts{vertices};
+        // Get boundary points
+        auto bounds = GetMinMax(vertices);
+        // for (int i = 0; i < bounds.size(); ++i) {
+        //    cout << "x = " << bounds[i].first << ", y = " << bounds[i].second << endl;
+        //}
 
         // Scalar(255) is white color (will show image in this part)
+        std::vector<std::vector<cv::Point>> pts{vertices};
         cv::fillPoly(mask, pts, Scalar(white_color));
 
         // Copy the image to ROI with the mask with the white part (if value = 255)
@@ -207,4 +213,28 @@ void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata) {
         }
         return;
     }
+}
+
+std::vector<std::pair<int, int>> GetMinMax(const std::vector<cv::Point>& vec) {
+    int x_min = std::numeric_limits<int>::max();
+    int y_min = std::numeric_limits<int>::max();
+    int x_max = -std::numeric_limits<int>::min();
+    int y_max = -std::numeric_limits<int>::min();
+
+    for (auto point : vec) {
+        if (point.x < x_min) {
+            x_min = point.x;
+        }
+        if (point.y < y_min) {
+            y_min = point.y;
+        }
+        if (point.x > x_max) {
+            x_max = point.x;
+        }
+        if (point.y > y_max) {
+            y_max = point.y;
+        }
+    }
+
+    return {{x_min, y_min}, {x_max, y_max}};
 }
