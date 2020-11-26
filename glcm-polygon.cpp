@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <iostream>
 #include <opencv2/opencv.hpp>
 
@@ -5,6 +6,8 @@
 
 using namespace std;
 using namespace cv;
+
+namespace fs = std::filesystem;
 
 const int Ng = 256; // gray scale total number (0~255)
 const int white_color = 255;
@@ -170,7 +173,10 @@ int main(int argc, char* argv[]) {
     }
 
     // Print results
-    std::cout << "--------------------- final results -----------------------" << std::endl;
+    cout << "--------------------- final results -----------------------" << endl;
+    string file_base_name = fs::path(filename).filename().string();
+    cout << "file name = " << file_base_name << endl;
+    cout << "-----------------------------------------------------------" << endl;
     texture_analysis.Print(results);
 
     // Destroy all windows

@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <opencv2/opencv.hpp>
 #include <opencv2/tracking.hpp> // selectROI is part of tracking API
 
@@ -5,6 +6,8 @@
 
 using namespace std;
 using namespace cv;
+
+namespace fs = std::filesystem;
 
 const int Ng = 256;
 int d; // neighborhood distance
@@ -128,7 +131,10 @@ int main(int argc, char* argv[]) {
     } // End of the while loop
 
     // Print results
-    std::cout << "--------------------- final results -----------------------" << std::endl;
+    cout << "--------------------- final results -----------------------" << endl;
+    string file_base_name = fs::path(filename).filename().string();
+    cout << "file name = " << file_base_name << endl;
+    cout << "-----------------------------------------------------------" << endl;
     texture_analysis.Print(results);
 
     // Destroy all windows

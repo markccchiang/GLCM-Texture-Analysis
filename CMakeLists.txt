@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(GLCM-Texture-Analysis)
+project(GLCM-Texture-Analysis LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
 
 find_package(OpenCV REQUIRED)
 
