@@ -14,7 +14,7 @@ const int black_color = 0;
 bool finish_drawing = false;     // finish drawing the polygon
 bool execution = true;           // stop the program execution
 cv::Mat img;                     // original image
-cv::Mat ROI;                     // ROI image
+cv::Mat roi;                     // ROI image
 cv::Mat mask;                    // Mask is black and white where our ROI is
 std::vector<cv::Point> vertices; // polygon points
 int img_width;                   // image width
@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
 
         // Initialize the global variables
         img.release();
-        ROI.release();
+        roi.release();
         mask.release();
         vertices.clear();
         finish_drawing = false;
@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        if (ROI.rows <= 0 || ROI.cols <= 0) {
+        if (roi.rows <= 0 || roi.cols <= 0) {
             break;
         }
 
@@ -153,7 +153,7 @@ int main(int argc, char* argv[]) {
         // Show results
         //
         cv::namedWindow("ROI", 1);
-        cv::imshow("ROI", ROI);
+        cv::imshow("ROI", roi);
         // cv::waitKey(0);
     }
 
@@ -186,7 +186,7 @@ void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata) {
         cv::fillPoly(mask, pts, Scalar(white_color));
 
         // Copy the image to ROI with the mask with the white part (if value = 255)
-        img.copyTo(ROI, mask);
+        img.copyTo(roi, mask);
 
         finish_drawing = true;
         return;
