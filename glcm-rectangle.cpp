@@ -1,4 +1,3 @@
-#include <filesystem>
 #include <opencv2/opencv.hpp>
 #include <opencv2/tracking.hpp> // selectROI is part of tracking API
 
@@ -130,12 +129,8 @@ int main(int argc, char* argv[]) {
         }
     } // End of the while loop
 
-    // Print results
-    cout << "--------------------- final results -----------------------" << endl;
-    string file_base_name = fs::path(filename).filename().string();
-    cout << "file name = " << file_base_name << endl;
-    cout << "-----------------------------------------------------------" << endl;
-    texture_analysis.Print(results);
+    // Save results as the CSV format
+    texture_analysis.SaveAsCSV(filename, results, "glcm-rectangle.csv");
 
     // Destroy all windows
     cv::destroyAllWindows();

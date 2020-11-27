@@ -1,4 +1,3 @@
-#include <filesystem>
 #include <iostream>
 #include <opencv2/opencv.hpp>
 
@@ -173,11 +172,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Print results
-    cout << "--------------------- final results -----------------------" << endl;
-    string file_base_name = fs::path(filename).filename().string();
-    cout << "file name = " << file_base_name << endl;
-    cout << "-----------------------------------------------------------" << endl;
-    texture_analysis.Print(results);
+    texture_analysis.SaveAsCSV(filename, results, "glcm-polygon.csv");
 
     // Destroy all windows
     cv::destroyAllWindows();
