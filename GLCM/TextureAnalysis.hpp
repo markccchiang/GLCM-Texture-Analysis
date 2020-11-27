@@ -118,6 +118,7 @@ private:
 
     std::string TypeToString(const Type& type);
     std::string DirectionToString(const Direction& direction);
+    std::string GetCurrentTime();
 
     int _Ng; // grey scale number, 256 (0 ~ 255) for example
 

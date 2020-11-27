@@ -4,6 +4,7 @@
 
 #include <Eigen/Eigenvalues>
 #include <algorithm>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -1022,10 +1023,10 @@ std::string TextureAnalysis::TypeToString(const Type& type) {
             result = "F2: Contrast";
             break;
         case Type::CorrelationI:
-            result = "F3: Correlation - I";
+            result = "F3: Correlation I";
             break;
         case Type::CorrelationII:
-            result = "F4: Correlation - II";
+            result = "F4: Correlation II";
             break;
         case Type::ClusterProminence:
             result = "F5: Cluster Prominence";
@@ -1043,10 +1044,10 @@ std::string TextureAnalysis::TypeToString(const Type& type) {
             result = "F9: Entropy";
             break;
         case Type::HomogeneityI:
-            result = "F10: Homogeneity - I";
+            result = "F10: Homogeneity I";
             break;
         case Type::HomogeneityII:
-            result = "F11: Homogeneity - II";
+            result = "F11: Homogeneity II";
             break;
         case Type::MaximumProbability:
             result = "F12: Maximum Probability";
@@ -1070,10 +1071,10 @@ std::string TextureAnalysis::TypeToString(const Type& type) {
             result = "F18: Difference Entropy";
             break;
         case Type::InformationMeasuresOfCorrelationI:
-            result = "F19: Information Measures of Correlation - I";
+            result = "F19: Information Measures of Correlation I";
             break;
         case Type::InformationMeasuresOfCorrelationII:
-            result = "F20: Information Measures of Correlation - II";
+            result = "F20: Information Measures of Correlation II";
             break;
         case Type::InverseDifferenceNormalized:
             result = "F21: Inverse Difference Normalized";
@@ -1132,6 +1133,9 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
     // get image file base name
     std::string image_base_name = fs::path(image_name).filename().string();
 
+    // get current time
+    std::string current_time = GetCurrentTime();
+
     // open the csv file
     std::ofstream csv_file;
     csv_file.open(csv_name, std::ios::out | std::ios::app); // open as the writing mode and append the csv file at the end
@@ -1143,8 +1147,9 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
 
     if (!csv_file_exists) {
         // write a row of titles
-        csv_file << ",";
-        csv_file << ",";
+        csv_file << "Date,";
+        csv_file << "Image,";
+        csv_file << "Direction,";
         for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
             csv_file << TypeToString(it->first) << ",";
         }
@@ -1152,6 +1157,7 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
     }
 
     // write a row of H values
+    csv_file << current_time << ",";
     csv_file << image_base_name << ",";
     csv_file << DirectionToString(Direction::H) << ",";
     for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
@@ -1160,6 +1166,7 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
     csv_file << "\n";
 
     // write a row of V values
+    csv_file << current_time << ",";
     csv_file << image_base_name << ",";
     csv_file << DirectionToString(Direction::V) << ",";
     for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
@@ -1168,6 +1175,7 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
     csv_file << "\n";
 
     // write a row of LD values
+    csv_file << current_time << ",";
     csv_file << image_base_name << ",";
     csv_file << DirectionToString(Direction::LD) << ",";
     for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
@@ -1176,6 +1184,7 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
     csv_file << "\n";
 
     // write a row of RD values
+    csv_file << current_time << ",";
     csv_file << image_base_name << ",";
     csv_file << DirectionToString(Direction::RD) << ",";
     for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
@@ -1184,6 +1193,7 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
     csv_file << "\n";
 
     // write a row of Avg values
+    csv_file << current_time << ",";
     csv_file << image_base_name << ",";
     csv_file << DirectionToString(Direction::Avg) << ",";
     for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
@@ -1193,4 +1203,18 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
 
     // close the csv file
     csv_file.close();
+}
+
+std::string TextureAnalysis::GetCurrentTime() {
+    time_t rawtime;
+    struct tm* timeinfo;
+    char buffer[80];
+
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeinfo);
+    std::string str(buffer);
+
+    return str;
 }
