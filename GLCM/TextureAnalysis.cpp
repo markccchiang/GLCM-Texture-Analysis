@@ -68,6 +68,10 @@ void TextureAnalysis::ResetCache() {
         std::fill(_p_RD[i].begin(), _p_RD[i].end(), 0);
     }
 
+    _pixel_values.clear();
+    _pixel_values_mean = std::numeric_limits<double>::quiet_NaN();
+    _pixel_values_STD = std::numeric_limits<double>::quiet_NaN();
+
     // reset probability vectors as zeros
     std::fill(_px_H.begin(), _px_H.end(), 0);
     std::fill(_px_V.begin(), _px_V.end(), 0);
@@ -147,6 +151,10 @@ void TextureAnalysis::CountElemRD(int i, int j) {
     ++_R_RD;
 }
 
+void TextureAnalysis::PushPixelValue(int pixel_value) {
+    _pixel_values.push_back((double)pixel_value);
+}
+
 void TextureAnalysis::Normalization() {
     for (int i = 0; i < _Ng; ++i) {
         for (int j = 0; j < _Ng; ++j) {
@@ -162,6 +170,9 @@ void TextureAnalysis::Normalization() {
     Calculate_py();
     Calculate_p_xpy();
     Calculate_p_xny();
+
+    // calculate pixels mean and STD in the region
+    CalculatePixelSTD(_pixel_values);
 }
 
 void TextureAnalysis::Calculate_px() {
@@ -1150,6 +1161,8 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
         csv_file << "Date,";
         csv_file << "Image,";
         csv_file << "Direction,";
+        csv_file << "Mean,";
+        csv_file << "STD,";
         for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
             csv_file << TypeToString(it->first) << ",";
         }
@@ -1160,6 +1173,8 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
     csv_file << current_time << ",";
     csv_file << image_base_name << ",";
     csv_file << DirectionToString(Direction::H) << ",";
+    csv_file << _pixel_values_mean << ",";
+    csv_file << _pixel_values_STD << ",";
     for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
         csv_file << it->second.H << ",";
     }
@@ -1169,6 +1184,8 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
     csv_file << current_time << ",";
     csv_file << image_base_name << ",";
     csv_file << DirectionToString(Direction::V) << ",";
+    csv_file << _pixel_values_mean << ",";
+    csv_file << _pixel_values_STD << ",";
     for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
         csv_file << it->second.V << ",";
     }
@@ -1178,6 +1195,8 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
     csv_file << current_time << ",";
     csv_file << image_base_name << ",";
     csv_file << DirectionToString(Direction::LD) << ",";
+    csv_file << _pixel_values_mean << ",";
+    csv_file << _pixel_values_STD << ",";
     for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
         csv_file << it->second.LD << ",";
     }
@@ -1187,6 +1206,8 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
     csv_file << current_time << ",";
     csv_file << image_base_name << ",";
     csv_file << DirectionToString(Direction::RD) << ",";
+    csv_file << _pixel_values_mean << ",";
+    csv_file << _pixel_values_STD << ",";
     for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
         csv_file << it->second.RD << ",";
     }
@@ -1196,6 +1217,8 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
     csv_file << current_time << ",";
     csv_file << image_base_name << ",";
     csv_file << DirectionToString(Direction::Avg) << ",";
+    csv_file << _pixel_values_mean << ",";
+    csv_file << _pixel_values_STD << ",";
     for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
         csv_file << it->second.Avg() << ",";
     }
@@ -1217,4 +1240,22 @@ std::string TextureAnalysis::GetCurrentTime() {
     std::string str(buffer);
 
     return str;
+}
+
+void TextureAnalysis::CalculatePixelMean(const std::vector<double>& vec) {
+    _pixel_values_mean = 0.0;
+    for (int i = 0; i < vec.size(); ++i) {
+        _pixel_values_mean += vec[i];
+    }
+    _pixel_values_mean /= vec.size();
+}
+
+void TextureAnalysis::CalculatePixelSTD(const std::vector<double>& vec) {
+    CalculatePixelMean(vec);
+    _pixel_values_STD = 0.0;
+    for (int i = 0; i < vec.size(); ++i) {
+        _pixel_values_STD += (vec[i] - _pixel_values_mean) * (vec[i] - _pixel_values_mean);
+    }
+    _pixel_values_STD = _pixel_values_STD / (vec.size() - 1.0);
+    _pixel_values_STD = sqrt(_pixel_values_STD);
 }

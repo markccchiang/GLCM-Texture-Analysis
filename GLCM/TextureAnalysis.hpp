@@ -66,6 +66,8 @@ public:
     void CountElemLD(int i, int j);
     void CountElemRD(int i, int j);
 
+    void PushPixelValue(int pixel_value);
+
     void Normalization();
 
     void GetAutoCorrelation(Features& f);                                 // F1: Auto Correlation
@@ -120,6 +122,9 @@ private:
     std::string DirectionToString(const Direction& direction);
     std::string GetCurrentTime();
 
+    void CalculatePixelMean(const std::vector<double>& vec);
+    void CalculatePixelSTD(const std::vector<double>& vec);
+
     int _Ng; // grey scale number, 256 (0 ~ 255) for example
 
     int _R_H;  // normalization factor for 0 degree matrix
@@ -136,6 +141,10 @@ private:
     std::vector<std::vector<double>> _p_V;  // 90 degree matrix
     std::vector<std::vector<double>> _p_LD; // 135 degree matrix
     std::vector<std::vector<double>> _p_RD; // 45 degree matrix
+
+    std::vector<double> _pixel_values; // pixel values in the region
+    double _pixel_values_mean;
+    double _pixel_values_STD;
 
     // "p_x"
     std::vector<double> _px_H;

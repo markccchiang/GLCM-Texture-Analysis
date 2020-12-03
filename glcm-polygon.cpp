@@ -63,9 +63,6 @@ int main(int argc, char* argv[]) {
         vertices.clear();
         finish_drawing = false;
 
-        // Clear the cache
-        texture_analysis.ResetCache();
-
         // Read image from file
         img = imread(filename, IMREAD_GRAYSCALE);
         img_width = img.cols;
@@ -96,9 +93,12 @@ int main(int argc, char* argv[]) {
 
         // Check the pixel values
         // cout << "\nROI = \n" << ROI << endl << endl;                   // this has white lines
-        // cout << "\nimg = \n" << img << endl << endl;                   //  this has white lines
+        // cout << "\nimg = \n" << img << endl << endl;                   // this has white lines
         // cout << "\noriginal_img = \n" << original_img << endl << endl; // this is the original img that we want
         // cout << "\nmask = \n" << mask << endl << endl;                 // this is the original mask that we want
+
+        // Clear the cache
+        texture_analysis.ResetCache();
 
         int masked = 0;
         int non_masked = 0;
@@ -124,6 +124,8 @@ int main(int argc, char* argv[]) {
                                     texture_analysis.CountElemV(i, j);
                                 } else if ((((k - m) == d) && ((l - n) == d)) || (((k - m) == -d) && ((l - n) == -d))) {
                                     texture_analysis.CountElemLD(i, j);
+                                } else if ((m == k) && (n == l)) {
+                                    texture_analysis.PushPixelValue(i);
                                 } else {
                                     // if ((m != k) || (n != l)) {
                                     //    cerr << "unknown element:" << endl;

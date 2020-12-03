@@ -81,6 +81,8 @@ int main(int argc, char* argv[]) {
                                 texture_analysis.CountElemV(i, j);
                             } else if ((((k - m) == d) && ((l - n) == d)) || (((k - m) == -d) && ((l - n) == -d))) {
                                 texture_analysis.CountElemLD(i, j);
+                            } else if ((m == k) && (n == l)) {
+                                texture_analysis.PushPixelValue(i);
                             } else {
                                 // if ((m != k) || (n != l)) {
                                 //    cerr << "unknown element:" << endl;
