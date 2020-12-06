@@ -6,8 +6,6 @@
 using namespace std;
 using namespace cv;
 
-namespace fs = std::filesystem;
-
 const int Ng = 256; // gray scale total number (0~255)
 const int white_color = 255;
 const int black_color = 0;

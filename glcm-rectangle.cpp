@@ -6,8 +6,6 @@
 using namespace std;
 using namespace cv;
 
-namespace fs = std::filesystem;
-
 const int Ng = 256;
 int d; // neighborhood distance
 
