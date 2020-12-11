@@ -148,13 +148,13 @@ int main(int argc, char* argv[]) {
         texture_analysis.Normalization();
 
         // Set feature types to calculate
-        std::set<glcm::Type> features{glcm::Type::AutoCorrelation, glcm::Type::Contrast, glcm::Type::CorrelationI,
-            glcm::Type::CorrelationII, glcm::Type::ClusterProminence, glcm::Type::ClusterShade, glcm::Type::Dissimilarity,
-            glcm::Type::Energy, glcm::Type::Entropy, glcm::Type::HomogeneityI, glcm::Type::HomogeneityII, glcm::Type::MaximumProbability,
-            glcm::Type::SumOfSquares, glcm::Type::SumAverage, glcm::Type::SumEntropy, glcm::Type::SumVariance,
-            glcm::Type::DifferenceVariance, glcm::Type::DifferenceEntropy, glcm::Type::InformationMeasuresOfCorrelationI,
-            glcm::Type::InformationMeasuresOfCorrelationII, glcm::Type::InverseDifferenceNormalized,
-            glcm::Type::InverseDifferenceMomentNormalized};
+        std::set<glcm::Type> features{glcm::Type::AutoCorrelation, glcm::Type::Contrast, glcm::Type::ContrastAnotherWay,
+            glcm::Type::CorrelationI, glcm::Type::CorrelationII, glcm::Type::ClusterProminence, glcm::Type::ClusterShade,
+            glcm::Type::Dissimilarity, glcm::Type::Energy, glcm::Type::Entropy, glcm::Type::HomogeneityI, glcm::Type::HomogeneityII,
+            glcm::Type::MaximumProbability, glcm::Type::SumOfSquares, glcm::Type::SumAverage, glcm::Type::SumEntropy,
+            glcm::Type::SumVariance, glcm::Type::DifferenceVariance, glcm::Type::DifferenceEntropy,
+            glcm::Type::InformationMeasuresOfCorrelationI, glcm::Type::InformationMeasuresOfCorrelationII,
+            glcm::Type::InverseDifferenceNormalized, glcm::Type::InverseDifferenceMomentNormalized};
 
         // Clear the calculation results
         results.clear();

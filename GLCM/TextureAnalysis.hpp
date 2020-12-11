@@ -11,6 +11,7 @@ namespace glcm {
 enum class Type {
     AutoCorrelation,
     Contrast,
+    ContrastAnotherWay,
     CorrelationI,
     CorrelationII,
     ClusterProminence,
@@ -72,6 +73,7 @@ public:
 
     void GetAutoCorrelation(Features& f);                                 // F1: Auto Correlation
     void GetContrast(Features& f);                                        // F2: Contrast
+    void GetContrastAnotherWay(Features& f);                              // F2: Contrast (another way)
     void GetCorrelationI(Features& f);                                    // F3: Correlation - I
     void GetCorrelationII(Features& f);                                   // F4: Correlation - II
     void GetClusterProminence(Features& f);                               // F5: Cluster Prominence

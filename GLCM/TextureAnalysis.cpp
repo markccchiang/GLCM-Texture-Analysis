@@ -426,6 +426,24 @@ void TextureAnalysis::GetContrast(Features& f) {
     f(f_H, f_V, f_LD, f_RD);
 }
 
+void TextureAnalysis::GetContrastAnotherWay(Features& f) {
+    double f_H = 0.0;
+    double f_V = 0.0;
+    double f_LD = 0.0;
+    double f_RD = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            f_H += (i - j) * (i - j) * _p_H[i][j];
+            f_V += (i - j) * (i - j) * _p_V[i][j];
+            f_LD += (i - j) * (i - j) * _p_LD[i][j];
+            f_RD += (i - j) * (i - j) * _p_RD[i][j];
+        }
+    }
+
+    f(f_H, f_V, f_LD, f_RD);
+}
+
 void TextureAnalysis::GetCorrelationII(Features& f) {
     // Calculate means
     double mu_x_H = CalculateMean(_px_H);
@@ -947,6 +965,9 @@ std::map<Type, Features> TextureAnalysis::Calculate(const std::set<Type>& types)
             case Type::Contrast:
                 GetContrast(results[Type::Contrast]);
                 break;
+            case Type::ContrastAnotherWay:
+                GetContrast(results[Type::ContrastAnotherWay]);
+                break;
             case Type::CorrelationI:
                 GetCorrelationI(results[Type::CorrelationI]);
                 break;
@@ -1032,6 +1053,9 @@ std::string TextureAnalysis::TypeToString(const Type& type) {
             break;
         case Type::Contrast:
             result = "F2: Contrast";
+            break;
+        case Type::ContrastAnotherWay:
+            result = "F2: Contrast (Check)";
             break;
         case Type::CorrelationI:
             result = "F3: Correlation I";
