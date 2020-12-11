@@ -13,7 +13,9 @@ enum class Type {
     Contrast,
     ContrastAnotherWay,
     CorrelationI,
+    CorrelationIAnotherWay,
     CorrelationII,
+    CorrelationIIAnotherWay,
     ClusterProminence,
     ClusterShade,
     Dissimilarity,
@@ -76,7 +78,9 @@ public:
     void GetContrast(Features& f);                                        // F2: Contrast
     void GetContrastAnotherWay(Features& f);                              // F2: Contrast (another way)
     void GetCorrelationI(Features& f);                                    // F3: Correlation - I
+    void GetCorrelationIAnotherWay(Features& f);                          // F3: Correlation - I (another way)
     void GetCorrelationII(Features& f);                                   // F4: Correlation - II
+    void GetCorrelationIIAnotherWay(Features& f);                         // F4: Correlation - II (another way)
     void GetClusterProminence(Features& f);                               // F5: Cluster Prominence
     void GetClusterShade(Features& f);                                    // F6: Cluster Shade
     void GetDissimilarity(Features& f);                                   // F7: Dissimilarity
@@ -112,6 +116,8 @@ private:
     double CalculateSTD(const std::vector<double>& vec);
     double CalculateGLCMMean_i(const std::vector<std::vector<double>>& mat);
     double CalculateGLCMMean_j(const std::vector<std::vector<double>>& mat);
+    double CalculateGLCMSTD_i(const std::vector<std::vector<double>>& mat);
+    double CalculateGLCMSTD_j(const std::vector<std::vector<double>>& mat);
     Features CalculateQ(int i, int j);
 
     void CalculateHX();

@@ -258,6 +258,32 @@ double TextureAnalysis::CalculateGLCMMean_j(const std::vector<std::vector<double
     return mean;
 }
 
+double TextureAnalysis::CalculateGLCMSTD_i(const std::vector<std::vector<double>>& mat) {
+    double mu_x = CalculateGLCMMean_i(mat);
+    double sigma_x = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            sigma_x += (i - mu_x) * (i - mu_x) * mat[i][j];
+        }
+    }
+
+    return sqrt(sigma_x);
+}
+
+double TextureAnalysis::CalculateGLCMSTD_j(const std::vector<std::vector<double>>& mat) {
+    double mu_y = CalculateGLCMMean_j(mat);
+    double sigma_y = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            sigma_y += (j - mu_y) * (j - mu_y) * mat[i][j];
+        }
+    }
+
+    return sqrt(sigma_y);
+}
+
 void TextureAnalysis::CalculateHX() {
     for (int i = 0; i < _Ng; ++i) {
         if (_px_H[i] > 0) {
@@ -489,6 +515,51 @@ void TextureAnalysis::GetCorrelationI(Features& f) {
     f(f_H, f_V, f_LD, f_RD);
 }
 
+void TextureAnalysis::GetCorrelationIAnotherWay(Features& f) {
+    // Calculate means
+    double mu_x_H = CalculateGLCMMean_i(_p_H);
+    double mu_x_V = CalculateGLCMMean_i(_p_V);
+    double mu_x_LD = CalculateGLCMMean_i(_p_LD);
+    double mu_x_RD = CalculateGLCMMean_i(_p_RD);
+
+    double mu_y_H = CalculateGLCMMean_j(_p_H);
+    double mu_y_V = CalculateGLCMMean_j(_p_V);
+    double mu_y_LD = CalculateGLCMMean_j(_p_LD);
+    double mu_y_RD = CalculateGLCMMean_j(_p_RD);
+
+    // Calculate STDs
+    double sigma_x_H = CalculateGLCMSTD_i(_p_H);
+    double sigma_x_V = CalculateGLCMSTD_i(_p_V);
+    double sigma_x_LD = CalculateGLCMSTD_i(_p_LD);
+    double sigma_x_RD = CalculateGLCMSTD_i(_p_RD);
+
+    double sigma_y_H = CalculateGLCMSTD_j(_p_H);
+    double sigma_y_V = CalculateGLCMSTD_j(_p_V);
+    double sigma_y_LD = CalculateGLCMSTD_j(_p_LD);
+    double sigma_y_RD = CalculateGLCMSTD_j(_p_RD);
+
+    double f_H = 0.0;
+    double f_V = 0.0;
+    double f_LD = 0.0;
+    double f_RD = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            f_H += (i - mu_x_H) * (j - mu_y_H) * _p_H[i][j];
+            f_V += (i - mu_x_V) * (j - mu_y_V) * _p_V[i][j];
+            f_LD += (i - mu_x_LD) * (j - mu_y_LD) * _p_LD[i][j];
+            f_RD += (i - mu_x_RD) * (j - mu_y_RD) * _p_RD[i][j];
+        }
+    }
+
+    f_H = f_H / (sigma_x_H * sigma_y_H);
+    f_V = f_V / (sigma_x_V * sigma_y_V);
+    f_LD = f_LD / (sigma_x_LD * sigma_y_LD);
+    f_RD = f_RD / (sigma_x_RD * sigma_y_RD);
+
+    f(f_H, f_V, f_LD, f_RD);
+}
+
 void TextureAnalysis::GetCorrelationII(Features& f) {
     // Calculate means
     double mu_x_H = CalculateMean(_px_H);
@@ -511,6 +582,51 @@ void TextureAnalysis::GetCorrelationII(Features& f) {
     double sigma_y_V = CalculateSTD(_py_V);
     double sigma_y_LD = CalculateSTD(_py_LD);
     double sigma_y_RD = CalculateSTD(_py_RD);
+
+    double f_H = 0.0;
+    double f_V = 0.0;
+    double f_LD = 0.0;
+    double f_RD = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            f_H += (i * j) * _p_H[i][j];
+            f_V += (i * j) * _p_V[i][j];
+            f_LD += (i * j) * _p_LD[i][j];
+            f_RD += (i * j) * _p_RD[i][j];
+        }
+    }
+
+    f_H = (f_H - (mu_x_H * mu_y_H)) / (sigma_x_H * sigma_y_H);
+    f_V = (f_V - (mu_x_V * mu_y_V)) / (sigma_x_V * sigma_y_V);
+    f_LD = (f_LD - (mu_x_LD * mu_y_LD)) / (sigma_x_LD * sigma_y_LD);
+    f_RD = (f_RD - (mu_x_RD * mu_y_RD)) / (sigma_x_RD * sigma_y_RD);
+
+    f(f_H, f_V, f_LD, f_RD);
+}
+
+void TextureAnalysis::GetCorrelationIIAnotherWay(Features& f) {
+    // Calculate means
+    double mu_x_H = CalculateGLCMMean_i(_p_H);
+    double mu_x_V = CalculateGLCMMean_i(_p_V);
+    double mu_x_LD = CalculateGLCMMean_i(_p_LD);
+    double mu_x_RD = CalculateGLCMMean_i(_p_RD);
+
+    double mu_y_H = CalculateGLCMMean_j(_p_H);
+    double mu_y_V = CalculateGLCMMean_j(_p_V);
+    double mu_y_LD = CalculateGLCMMean_j(_p_LD);
+    double mu_y_RD = CalculateGLCMMean_j(_p_RD);
+
+    // Calculate STDs
+    double sigma_x_H = CalculateGLCMSTD_i(_p_H);
+    double sigma_x_V = CalculateGLCMSTD_i(_p_V);
+    double sigma_x_LD = CalculateGLCMSTD_i(_p_LD);
+    double sigma_x_RD = CalculateGLCMSTD_i(_p_RD);
+
+    double sigma_y_H = CalculateGLCMSTD_j(_p_H);
+    double sigma_y_V = CalculateGLCMSTD_j(_p_V);
+    double sigma_y_LD = CalculateGLCMSTD_j(_p_LD);
+    double sigma_y_RD = CalculateGLCMSTD_j(_p_RD);
 
     double f_H = 0.0;
     double f_V = 0.0;
@@ -989,13 +1105,19 @@ std::map<Type, Features> TextureAnalysis::Calculate(const std::set<Type>& types)
                 GetContrast(results[Type::Contrast]);
                 break;
             case Type::ContrastAnotherWay:
-                GetContrast(results[Type::ContrastAnotherWay]);
+                GetContrastAnotherWay(results[Type::ContrastAnotherWay]);
                 break;
             case Type::CorrelationI:
                 GetCorrelationI(results[Type::CorrelationI]);
                 break;
+            case Type::CorrelationIAnotherWay:
+                GetCorrelationIAnotherWay(results[Type::CorrelationIAnotherWay]);
+                break;
             case Type::CorrelationII:
                 GetCorrelationII(results[Type::CorrelationII]);
+                break;
+            case Type::CorrelationIIAnotherWay:
+                GetCorrelationIIAnotherWay(results[Type::CorrelationIIAnotherWay]);
                 break;
             case Type::ClusterProminence:
                 GetClusterProminence(results[Type::ClusterProminence]);
@@ -1086,8 +1208,14 @@ std::string TextureAnalysis::TypeToString(const Type& type) {
         case Type::CorrelationI:
             result = "F3: Correlation I";
             break;
+        case Type::CorrelationIAnotherWay:
+            result = "F3: Correlation I (Check)";
+            break;
         case Type::CorrelationII:
             result = "F4: Correlation II";
+            break;
+        case Type::CorrelationIIAnotherWay:
+            result = "F4: Correlation II (Check)";
             break;
         case Type::ClusterProminence:
             result = "F5: Cluster Prominence";
