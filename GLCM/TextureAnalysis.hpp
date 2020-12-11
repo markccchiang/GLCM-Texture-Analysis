@@ -22,7 +22,8 @@ enum class Type {
     HomogeneityI,
     HomogeneityII,
     MaximumProbability,
-    SumOfSquares,
+    SumOfSquaresI,
+    SumOfSquaresJ,
     SumAverage,
     SumEntropy,
     SumVariance,
@@ -84,7 +85,8 @@ public:
     void GetHomogeneityI(Features& f);                                    // F10: Homogeneity - I
     void GetHomogeneityII(Features& f);                                   // F11: Homogeneity - II (Inverse Difference Moment)
     void GetMaximumProbability(Features& f);                              // F12: Maximum Probability
-    void GetSumOfSquares(Features& f);                                    // F13: Sum of Squares (Variance)
+    void GetSumOfSquares_i(Features& f);                                  // F13: Sum of Squares (Variance in i)
+    void GetSumOfSquares_j(Features& f);                                  // F13: Sum of Squares (Variance in j)
     void GetSumAverage(Features& f);                                      // F14: Sum Average
     void GetSumEntropy(Features& f);                                      // F15: Sum Entropy
     void GetSumVariance(Features& f);                                     // F16: Sum Variance

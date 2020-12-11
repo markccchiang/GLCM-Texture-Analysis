@@ -489,7 +489,7 @@ void TextureAnalysis::GetCorrelationII(Features& f) {
     f(f_H, f_V, f_LD, f_RD);
 }
 
-void TextureAnalysis::GetSumOfSquares(Features& f) {
+void TextureAnalysis::GetSumOfSquares_i(Features& f) {
     double mean_H = CalculateGLCMMean_i(_p_H);
     double mean_V = CalculateGLCMMean_i(_p_V);
     double mean_LD = CalculateGLCMMean_i(_p_LD);
@@ -506,6 +506,29 @@ void TextureAnalysis::GetSumOfSquares(Features& f) {
             f_V += (i - mean_V) * (i - mean_V) * _p_V[i][j];
             f_LD += (i - mean_LD) * (i - mean_LD) * _p_LD[i][j];
             f_RD += (i - mean_RD) * (i - mean_RD) * _p_RD[i][j];
+        }
+    }
+
+    f(f_H, f_V, f_LD, f_RD);
+}
+
+void TextureAnalysis::GetSumOfSquares_j(Features& f) {
+    double mean_H = CalculateGLCMMean_j(_p_H);
+    double mean_V = CalculateGLCMMean_j(_p_V);
+    double mean_LD = CalculateGLCMMean_j(_p_LD);
+    double mean_RD = CalculateGLCMMean_j(_p_RD);
+
+    double f_H = 0.0;
+    double f_V = 0.0;
+    double f_LD = 0.0;
+    double f_RD = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            f_H += (j - mean_H) * (j - mean_H) * _p_H[i][j];
+            f_V += (j - mean_V) * (j - mean_V) * _p_V[i][j];
+            f_LD += (j - mean_LD) * (j - mean_LD) * _p_LD[i][j];
+            f_RD += (j - mean_RD) * (j - mean_RD) * _p_RD[i][j];
         }
     }
 
@@ -998,8 +1021,11 @@ std::map<Type, Features> TextureAnalysis::Calculate(const std::set<Type>& types)
             case Type::MaximumProbability:
                 GetMaximumProbability(results[Type::MaximumProbability]);
                 break;
-            case Type::SumOfSquares:
-                GetSumOfSquares(results[Type::SumOfSquares]);
+            case Type::SumOfSquaresI:
+                GetSumOfSquares_i(results[Type::SumOfSquaresI]);
+                break;
+            case Type::SumOfSquaresJ:
+                GetSumOfSquares_j(results[Type::SumOfSquaresJ]);
                 break;
             case Type::SumAverage:
                 GetSumAverage(results[Type::SumAverage]);
@@ -1087,8 +1113,11 @@ std::string TextureAnalysis::TypeToString(const Type& type) {
         case Type::MaximumProbability:
             result = "F12: Maximum Probability";
             break;
-        case Type::SumOfSquares:
-            result = "F13: Sum of Squares";
+        case Type::SumOfSquaresI:
+            result = "F13: Sum of Squares (i)";
+            break;
+        case Type::SumOfSquaresJ:
+            result = "F13: Sum of Squares (j)";
             break;
         case Type::SumAverage:
             result = "F14: Sum Average";
