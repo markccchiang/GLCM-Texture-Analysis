@@ -650,6 +650,34 @@ void TextureAnalysis::GetCorrelationIIAnotherWay(Features& f) {
     f(f_H, f_V, f_LD, f_RD);
 }
 
+void TextureAnalysis::GetSumOfSquares(Features& f) {
+    double mean_H_x = CalculateGLCMMean_i(_p_H);
+    double mean_V_x = CalculateGLCMMean_i(_p_V);
+    double mean_LD_x = CalculateGLCMMean_i(_p_LD);
+    double mean_RD_x = CalculateGLCMMean_i(_p_RD);
+
+    double mean_H_y = CalculateGLCMMean_j(_p_H);
+    double mean_V_y = CalculateGLCMMean_j(_p_V);
+    double mean_LD_y = CalculateGLCMMean_j(_p_LD);
+    double mean_RD_y = CalculateGLCMMean_j(_p_RD);
+
+    double f_H = 0.0;
+    double f_V = 0.0;
+    double f_LD = 0.0;
+    double f_RD = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            f_H += (i - mean_H_x) * (i - mean_H_x) * _p_H[i][j] + (j - mean_H_y) * (j - mean_H_y) * _p_H[i][j];
+            f_V += (i - mean_V_x) * (i - mean_V_x) * _p_V[i][j] + (j - mean_V_y) * (j - mean_V_y) * _p_V[i][j];
+            f_LD += (i - mean_LD_x) * (i - mean_LD_x) * _p_LD[i][j] + (j - mean_LD_y) * (j - mean_LD_y) * _p_LD[i][j];
+            f_RD += (i - mean_RD_x) * (i - mean_RD_x) * _p_RD[i][j] + (j - mean_RD_y) * (j - mean_RD_y) * _p_RD[i][j];
+        }
+    }
+
+    f(f_H, f_V, f_LD, f_RD);
+}
+
 void TextureAnalysis::GetSumOfSquares_i(Features& f) {
     double mean_H = CalculateGLCMMean_i(_p_H);
     double mean_V = CalculateGLCMMean_i(_p_V);
@@ -1143,6 +1171,9 @@ std::map<Type, Features> TextureAnalysis::Calculate(const std::set<Type>& types)
             case Type::MaximumProbability:
                 GetMaximumProbability(results[Type::MaximumProbability]);
                 break;
+            case Type::SumOfSquares:
+                GetSumOfSquares(results[Type::SumOfSquares]);
+                break;
             case Type::SumOfSquaresI:
                 GetSumOfSquares_i(results[Type::SumOfSquaresI]);
                 break;
@@ -1240,6 +1271,9 @@ std::string TextureAnalysis::TypeToString(const Type& type) {
             break;
         case Type::MaximumProbability:
             result = "F12: Maximum Probability";
+            break;
+        case Type::SumOfSquares:
+            result = "F13: Sum of Squares (in x and y)";
             break;
         case Type::SumOfSquaresI:
             result = "F13: Sum of Squares (in x)";
