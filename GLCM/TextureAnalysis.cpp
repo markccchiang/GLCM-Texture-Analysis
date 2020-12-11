@@ -1236,16 +1236,16 @@ std::string TextureAnalysis::TypeToString(const Type& type) {
             result = "F10: Homogeneity I";
             break;
         case Type::HomogeneityII:
-            result = "F11: Homogeneity II";
+            result = "F11: Homogeneity II (Inverse Difference Moment)";
             break;
         case Type::MaximumProbability:
             result = "F12: Maximum Probability";
             break;
         case Type::SumOfSquaresI:
-            result = "F13: Sum of Squares (i)";
+            result = "F13: Sum of Squares (in x)";
             break;
         case Type::SumOfSquaresJ:
-            result = "F13: Sum of Squares (j)";
+            result = "F13: Sum of Squares (in y)";
             break;
         case Type::SumAverage:
             result = "F14: Sum Average";
