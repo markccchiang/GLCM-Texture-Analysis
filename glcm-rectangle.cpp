@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
         texture_analysis.Normalization();
 
         // Set feature types to calculate
-        std::set<glcm::Type> features{glcm::Type::AutoCorrelation, glcm::Type::Contrast, glcm::Type::ContrastAnotherWay,
+        std::set<glcm::Type> features_all{glcm::Type::AutoCorrelation, glcm::Type::Contrast, glcm::Type::ContrastAnotherWay,
             glcm::Type::CorrelationI, glcm::Type::CorrelationIAnotherWay, glcm::Type::CorrelationII, glcm::Type::CorrelationIIAnotherWay,
             glcm::Type::ClusterProminence, glcm::Type::ClusterShade, glcm::Type::Dissimilarity, glcm::Type::Energy, glcm::Type::Entropy,
             glcm::Type::HomogeneityI, glcm::Type::HomogeneityII, glcm::Type::MaximumProbability, glcm::Type::SumOfSquares,
@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
         results.clear();
 
         // Re-calculate the features
-        results = texture_analysis.Calculate(features);
+        results = texture_analysis.Calculate(features_all);
 
         // Print results
         texture_analysis.Print(results);
