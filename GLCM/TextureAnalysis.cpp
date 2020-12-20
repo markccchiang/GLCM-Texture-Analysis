@@ -580,12 +580,17 @@ void TextureAnalysis::GetCorrelationII(Features& f) {
 
     for (int i = 0; i < _Ng; ++i) {
         for (int j = 0; j < _Ng; ++j) {
-            f_H += ((i * j) * _p_H[i][j] - (mu_x_H * mu_y_H)) / (sigma_x_H * sigma_y_H);
-            f_V += ((i * j) * _p_V[i][j] - (mu_x_V * mu_y_V)) / (sigma_x_V * sigma_y_V);
-            f_LD += ((i * j) * _p_LD[i][j] - (mu_x_LD * mu_y_LD) / (sigma_x_LD * sigma_y_LD));
-            f_RD += ((i * j) * _p_RD[i][j] - (mu_x_RD * mu_y_RD)) / (sigma_x_RD * sigma_y_RD);
+            f_H += (i * j) * _p_H[i][j];
+            f_V += (i * j) * _p_V[i][j];
+            f_LD += (i * j) * _p_LD[i][j];
+            f_RD += (i * j) * _p_RD[i][j];
         }
     }
+
+    f_H = (f_H - (mu_x_H * mu_y_H)) / (sigma_x_H * sigma_y_H);
+    f_V = (f_V - (mu_x_V * mu_y_V)) / (sigma_x_V * sigma_y_V);
+    f_LD = (f_LD - (mu_x_LD * mu_y_LD)) / (sigma_x_LD * sigma_y_LD);
+    f_RD = (f_RD - (mu_x_RD * mu_y_RD)) / (sigma_x_RD * sigma_y_RD);
 
     f(f_H, f_V, f_LD, f_RD);
 }
@@ -620,12 +625,17 @@ void TextureAnalysis::GetCorrelationIIAnotherWay(Features& f) {
 
     for (int i = 0; i < _Ng; ++i) {
         for (int j = 0; j < _Ng; ++j) {
-            f_H += ((i * j) * _p_H[i][j] - (mu_x_H * mu_y_H)) / (sigma_x_H * sigma_y_H);
-            f_V += ((i * j) * _p_V[i][j] - (mu_x_V * mu_y_V)) / (sigma_x_V * sigma_y_V);
-            f_LD += ((i * j) * _p_LD[i][j] - (mu_x_LD * mu_y_LD)) / (sigma_x_LD * sigma_y_LD);
-            f_RD += ((i * j) * _p_RD[i][j] - (mu_x_RD * mu_y_RD)) / (sigma_x_RD * sigma_y_RD);
+            f_H += (i * j) * _p_H[i][j];
+            f_V += (i * j) * _p_V[i][j];
+            f_LD += (i * j) * _p_LD[i][j];
+            f_RD += (i * j) * _p_RD[i][j];
         }
     }
+
+    f_H = (f_H - (mu_x_H * mu_y_H)) / (sigma_x_H * sigma_y_H);
+    f_V = (f_V - (mu_x_V * mu_y_V)) / (sigma_x_V * sigma_y_V);
+    f_LD = (f_LD - (mu_x_LD * mu_y_LD)) / (sigma_x_LD * sigma_y_LD);
+    f_RD = (f_RD - (mu_x_RD * mu_y_RD)) / (sigma_x_RD * sigma_y_RD);
 
     f(f_H, f_V, f_LD, f_RD);
 }
