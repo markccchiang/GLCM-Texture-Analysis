@@ -157,11 +157,14 @@ int main(int argc, char* argv[]) {
             glcm::Type::InformationMeasuresOfCorrelationII, glcm::Type::InverseDifferenceNormalized,
             glcm::Type::InverseDifferenceMomentNormalized};
 
+        std::set<glcm::Type> features{glcm::Type::Energy, glcm::Type::HomogeneityII, glcm::Type::Contrast, glcm::Type::SumOfSquares,
+            glcm::Type::CorrelationII, glcm::Type::Entropy, glcm::Type::ClusterShade, glcm::Type::ClusterProminence};
+
         // Clear the calculation results
         results.clear();
 
         // Re-calculate the features
-        results = texture_analysis.Calculate(features_all);
+        results = texture_analysis.Calculate(features);
 
         // Print results
         texture_analysis.Print(results);
