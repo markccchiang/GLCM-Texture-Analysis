@@ -640,6 +640,51 @@ void TextureAnalysis::GetCorrelationIIAnotherWay(Features& f) {
     f(f_H, f_V, f_LD, f_RD);
 }
 
+void TextureAnalysis::GetCorrelationIII(Features& f) {
+    // Calculate means
+    double mu_x_H = CalculateMean(_px_H);
+    double mu_x_V = CalculateMean(_px_V);
+    double mu_x_LD = CalculateMean(_px_LD);
+    double mu_x_RD = CalculateMean(_px_RD);
+
+    double mu_y_H = CalculateMean(_py_H);
+    double mu_y_V = CalculateMean(_py_V);
+    double mu_y_LD = CalculateMean(_py_LD);
+    double mu_y_RD = CalculateMean(_py_RD);
+
+    // Calculate STDs
+    double sigma_x_H = CalculateSTD(_px_H);
+    double sigma_x_V = CalculateSTD(_px_V);
+    double sigma_x_LD = CalculateSTD(_px_LD);
+    double sigma_x_RD = CalculateSTD(_px_RD);
+
+    double sigma_y_H = CalculateSTD(_py_H);
+    double sigma_y_V = CalculateSTD(_py_V);
+    double sigma_y_LD = CalculateSTD(_py_LD);
+    double sigma_y_RD = CalculateSTD(_py_RD);
+
+    double f_H = 0.0;
+    double f_V = 0.0;
+    double f_LD = 0.0;
+    double f_RD = 0.0;
+
+    for (int i = 0; i < _Ng; ++i) {
+        for (int j = 0; j < _Ng; ++j) {
+            f_H += (i * j) * _p_H[i][j];
+            f_V += (i * j) * _p_V[i][j];
+            f_LD += (i * j) * _p_LD[i][j];
+            f_RD += (i * j) * _p_RD[i][j];
+        }
+    }
+
+    f_H = (f_H - (mu_x_H * mu_y_H)) / (sigma_x_H * sigma_y_H * sigma_x_H * sigma_y_H);
+    f_V = (f_V - (mu_x_V * mu_y_V)) / (sigma_x_V * sigma_y_V * sigma_x_V * sigma_y_V);
+    f_LD = (f_LD - (mu_x_LD * mu_y_LD)) / (sigma_x_LD * sigma_y_LD * sigma_x_LD * sigma_y_LD);
+    f_RD = (f_RD - (mu_x_RD * mu_y_RD)) / (sigma_x_RD * sigma_y_RD * sigma_x_RD * sigma_y_RD);
+
+    f(f_H, f_V, f_LD, f_RD);
+}
+
 void TextureAnalysis::GetSumOfSquares(Features& f) {
     double mean_H_x = CalculateGLCMMean_i(_p_H);
     double mean_V_x = CalculateGLCMMean_i(_p_V);
@@ -1137,6 +1182,9 @@ std::map<Type, Features> TextureAnalysis::Calculate(const std::set<Type>& types)
             case Type::CorrelationIIAnotherWay:
                 GetCorrelationIIAnotherWay(results[Type::CorrelationIIAnotherWay]);
                 break;
+            case Type::CorrelationIII:
+                GetCorrelationIII(results[Type::CorrelationIII]);
+                break;
             case Type::ClusterProminence:
                 GetClusterProminence(results[Type::ClusterProminence]);
                 break;
@@ -1237,6 +1285,9 @@ std::string TextureAnalysis::TypeToString(const Type& type) {
             break;
         case Type::CorrelationIIAnotherWay:
             result = "F4: Correlation II (Check)";
+            break;
+        case Type::CorrelationIII:
+            result = "F4: Correlation III";
             break;
         case Type::ClusterProminence:
             result = "F5: Cluster Prominence";

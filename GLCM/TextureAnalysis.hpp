@@ -13,13 +13,14 @@ enum class Type {
     HomogeneityII,
     Contrast,
     SumOfSquares,
-    CorrelationII,
+    CorrelationIII,
     Entropy,
     ClusterShade,
     ClusterProminence,
     AutoCorrelation,
     ContrastAnotherWay,
     CorrelationI,
+    CorrelationII,
     CorrelationIAnotherWay,
     CorrelationIIAnotherWay,
     Dissimilarity,
@@ -82,6 +83,7 @@ public:
     void GetCorrelationIAnotherWay(Features& f);                          // F3: Correlation - I (another way)
     void GetCorrelationII(Features& f);                                   // F4: Correlation - II
     void GetCorrelationIIAnotherWay(Features& f);                         // F4: Correlation - II (another way)
+    void GetCorrelationIII(Features& f);                                  // F4: Correlation - III (Xiaofeng Yang's paper)
     void GetClusterProminence(Features& f);                               // F5: Cluster Prominence
     void GetClusterShade(Features& f);                                    // F6: Cluster Shade
     void GetDissimilarity(Features& f);                                   // F7: Dissimilarity
