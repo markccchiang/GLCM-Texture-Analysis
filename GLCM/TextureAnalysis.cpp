@@ -1266,88 +1266,88 @@ std::string TextureAnalysis::TypeToString(const Type& type) {
     std::string result;
     switch (type) {
         case Type::AutoCorrelation:
-            result = "F1: Auto Correlation";
+            result = "Auto Correlation";
             break;
         case Type::Contrast:
-            result = "F2: Contrast";
+            result = "Contrast";
             break;
         case Type::ContrastAnotherWay:
-            result = "F2: Contrast (Check)";
+            result = "Contrast (Check)";
             break;
         case Type::CorrelationI:
-            result = "F3: Correlation I";
+            result = "Correlation I";
             break;
         case Type::CorrelationIAnotherWay:
-            result = "F3: Correlation I (Check)";
+            result = "Correlation I (Check)";
             break;
         case Type::CorrelationII:
-            result = "F4: Correlation II";
+            result = "Correlation II";
             break;
         case Type::CorrelationIIAnotherWay:
-            result = "F4: Correlation II (Check)";
+            result = "Correlation II (Check)";
             break;
         case Type::CorrelationIII:
-            result = "F4: Correlation III";
+            result = "Correlation III";
             break;
         case Type::ClusterProminence:
-            result = "F5: Cluster Prominence";
+            result = "Cluster Prominence";
             break;
         case Type::ClusterShade:
-            result = "F6: Cluster Shade";
+            result = "Cluster Shade";
             break;
         case Type::Dissimilarity:
-            result = "F7: Dissimilarity";
+            result = "Dissimilarity";
             break;
         case Type::Energy:
-            result = "F8: Energy";
+            result = "Energy";
             break;
         case Type::Entropy:
-            result = "F9: Entropy";
+            result = "Entropy";
             break;
         case Type::HomogeneityI:
-            result = "F10: Homogeneity I";
+            result = "Homogeneity I";
             break;
         case Type::HomogeneityII:
-            result = "F11: Homogeneity II (Inverse Difference Moment)";
+            result = "Homogeneity II (Inverse Difference Moment)";
             break;
         case Type::MaximumProbability:
-            result = "F12: Maximum Probability";
+            result = "Maximum Probability";
             break;
         case Type::SumOfSquares:
-            result = "F13: Sum of Squares (in x and y)";
+            result = "Sum of Squares (in x and y)";
             break;
         case Type::SumOfSquaresI:
-            result = "F13: Sum of Squares (in x)";
+            result = "Sum of Squares (in x)";
             break;
         case Type::SumOfSquaresJ:
-            result = "F13: Sum of Squares (in y)";
+            result = "Sum of Squares (in y)";
             break;
         case Type::SumAverage:
-            result = "F14: Sum Average";
+            result = "Sum Average";
             break;
         case Type::SumEntropy:
-            result = "F15: Sum Entropy";
+            result = "Sum Entropy";
             break;
         case Type::SumVariance:
-            result = "F16: Sum Variance";
+            result = "Sum Variance";
             break;
         case Type::DifferenceVariance:
-            result = "F17: Difference Variance";
+            result = "Difference Variance";
             break;
         case Type::DifferenceEntropy:
-            result = "F18: Difference Entropy";
+            result = "Difference Entropy";
             break;
         case Type::InformationMeasuresOfCorrelationI:
-            result = "F19: Information Measures of Correlation I";
+            result = "Information Measures of Correlation I";
             break;
         case Type::InformationMeasuresOfCorrelationII:
-            result = "F20: Information Measures of Correlation II";
+            result = "Information Measures of Correlation II";
             break;
         case Type::InverseDifferenceNormalized:
-            result = "F21: Inverse Difference Normalized";
+            result = "Inverse Difference Normalized";
             break;
         case Type::InverseDifferenceMomentNormalized:
-            result = "F22: Inverse Difference Moment Normalized";
+            result = "Inverse Difference Moment Normalized";
             break;
         default:
             std::cerr << "Unknown feature type!\n";
