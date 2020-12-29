@@ -223,7 +223,8 @@ void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata) {
         if (x >= 0 && x <= img_width && y >= 0 && y <= img_height) {
             if (vertices.empty()) {
                 // First click - just draw point
-                img.at<Vec3b>(x, y) = cv::Vec3b(white_color, 0, 0);
+                // img.at<Vec3b>(y, x) = cv::Vec3b(white_color, 0, 0);
+                img.at<uchar>(y, x) = white_color;
             } else {
                 // Second, or later click, draw line to previous vertex
                 cv::line(img, cv::Point(x, y), vertices[vertices.size() - 1], Scalar(white_color), 1);
