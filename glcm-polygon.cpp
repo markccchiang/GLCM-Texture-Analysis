@@ -23,6 +23,7 @@ std::vector<cv::Point> vertices; // polygon points
 int img_width;                   // image width
 int img_height;                  // image height
 int d;                           // neighborhood distance
+double age;                      // age of a person
 
 std::map<glcm::Type, glcm::Features> results; // GLCM calculation results
 
@@ -30,8 +31,8 @@ void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata);
 std::vector<std::pair<int, int>> GetMinMax(const std::vector<cv::Point>& vec);
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        cout << "Usage: ./glcm-polygon <file name> <distance>" << endl;
+    if (argc < 2 || argc > 4) {
+        cout << "Usage: ./glcm-polygon <file name> <distance> <age>" << endl;
         return 1;
     }
 
@@ -46,8 +47,16 @@ int main(int argc, char* argv[]) {
         d = 1;
     }
 
-    // Initialize the texure analysis
-    glcm::TextureAnalysis texture_analysis(Ng);
+    // set age
+    if (argc == 4) {
+        string age_str = argv[3];
+        age = stod(age_str);
+    } else {
+        age = 0.0;
+    }
+
+    // Initialize the texture analysis
+    glcm::TextureAnalysis texture_analysis(Ng, age);
 
     while (execution) {
         cout << "=================================================================================\n";
@@ -165,6 +174,9 @@ int main(int argc, char* argv[]) {
 
         // Re-calculate the features
         results = texture_analysis.Calculate(features);
+
+        // Calculate Score
+        texture_analysis.CalculateScore(results);
 
         // Print results
         texture_analysis.Print(results);

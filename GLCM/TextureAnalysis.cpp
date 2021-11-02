@@ -13,7 +13,7 @@ using namespace glcm;
 
 namespace fs = std::filesystem;
 
-TextureAnalysis::TextureAnalysis(int Ng) : _Ng(Ng) {
+TextureAnalysis::TextureAnalysis(int Ng, double age) : _Ng(Ng), _age(age) {
     if (Ng > 0) {
         // initialize probability matrices
         _P_H.resize(_Ng, std::vector<int>(_Ng));
@@ -1262,6 +1262,23 @@ std::map<Type, Features> TextureAnalysis::Calculate(const std::set<Type>& types)
     return results;
 }
 
+void TextureAnalysis::CalculateScore(std::map<Type, Features>& features_map) {
+    if ((_age > 0) && features_map.count(Type::Entropy) && features_map.count(Type::Contrast)) {
+        double f_H = 1.138 * _age - 1.814 * _pixel_values_mean + 1.416 * features_map.at(Type::Entropy).H +
+                     1.714 * features_map.at(Type::Contrast).H;
+        double f_V = 1.138 * _age - 1.814 * _pixel_values_mean + 1.416 * features_map.at(Type::Entropy).V +
+                     1.714 * features_map.at(Type::Contrast).V;
+        double f_LD = 1.138 * _age - 1.814 * _pixel_values_mean + 1.416 * features_map.at(Type::Entropy).LD +
+                      1.714 * features_map.at(Type::Contrast).LD;
+        double f_RD = 1.138 * _age - 1.814 * _pixel_values_mean + 1.416 * features_map.at(Type::Entropy).RD +
+                      1.714 * features_map.at(Type::Contrast).RD;
+
+        features_map[Type::Score](f_H, f_V, f_LD, f_RD);
+    } else {
+        std::cerr << "Can not calculate Score!\n";
+    }
+}
+
 std::string TextureAnalysis::TypeToString(const Type& type) {
     std::string result;
     switch (type) {
@@ -1348,6 +1365,9 @@ std::string TextureAnalysis::TypeToString(const Type& type) {
             break;
         case Type::InverseDifferenceMomentNormalized:
             result = "Inverse Difference Moment Normalized";
+            break;
+        case Type::Score:
+            result = "Score";
             break;
         default:
             std::cerr << "Unknown feature type!\n";

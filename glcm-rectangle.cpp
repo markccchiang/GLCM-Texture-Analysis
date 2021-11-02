@@ -7,13 +7,14 @@ using namespace std;
 using namespace cv;
 
 const int Ng = 256;
-int d; // neighborhood distance
+int d;      // neighborhood distance
+double age; // age of a person
 
 std::map<glcm::Type, glcm::Features> results; // GLCM calculation results
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        cout << "Usage: ./glcm-rectangle <file name> <distance>" << endl;
+    if (argc < 2 || argc > 4) {
+        cout << "Usage: ./glcm-polygon <file name> <distance> <age>" << endl;
         return 1;
     }
 
@@ -28,6 +29,14 @@ int main(int argc, char* argv[]) {
         d = 1;
     }
 
+    // set age
+    if (argc == 4) {
+        string age_str = argv[3];
+        age = stod(age_str);
+    } else {
+        age = 0.0;
+    }
+
     // Read image
     Mat im = imread(filename, IMREAD_GRAYSCALE);
     // cout << "im = " << im << endl;
@@ -36,7 +45,7 @@ int main(int argc, char* argv[]) {
     volatile bool execution(true);
 
     // Initialize the texure analysis
-    glcm::TextureAnalysis texture_analysis(Ng);
+    glcm::TextureAnalysis texture_analysis(Ng, age);
 
     // Select ROI repeatedly
     while (execution) {
@@ -115,6 +124,9 @@ int main(int argc, char* argv[]) {
 
         // Re-calculate the features
         results = texture_analysis.Calculate(features);
+
+        // Calculate Score
+        texture_analysis.CalculateScore(results);
 
         // Print results
         texture_analysis.Print(results);
