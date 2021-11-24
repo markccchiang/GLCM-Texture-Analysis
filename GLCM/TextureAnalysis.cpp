@@ -9,6 +9,9 @@
 #include <fstream>
 #include <iomanip>
 
+const int white_color = 255;
+const int black_color = 0;
+
 using namespace glcm;
 
 namespace fs = std::filesystem;
@@ -84,6 +87,58 @@ void TextureAnalysis::ProcessRectImage(const cv::Mat& image, int distance) {
                             //    cerr << "central element: (m, n) = (" << m << "," << n << ")" << endl;
                             //    cerr << "neighborhood element: (k, l) = (" << k << "," << l << ")" << endl;
                             //}
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Normalize the matrices
+    Normalization();
+}
+
+void TextureAnalysis::ProcessPolygonImage(const cv::Mat& original_image, const cv::Mat& mask_image, int distance) {
+    // Clear the cache
+    ResetCache();
+
+    // Calculate matrices elements: central pixel coord (m ,n), where "m" is the row index, and "n" is the column index
+    int masked = 0;
+    int non_masked = 0;
+    for (int m = 0; m < original_image.rows; ++m) {
+        for (int n = 0; n < original_image.cols; ++n) {
+            // Nearest neighborhood pixel coord (k ,l), where "k" is the row index, and "l" is the column index
+            for (int k = m - distance; k <= m + distance; ++k) {
+                for (int l = n - distance; l <= n + distance; ++l) {
+                    if ((k >= 0) && (l >= 0) && (k < original_image.rows) && (l < original_image.cols)) {
+                        // Check is the nearest neighborhood pixel coord (k ,l) masked
+                        int mask_pixel_value = (int)(mask_image.at<uchar>(k, l));
+                        if (mask_pixel_value == white_color) {             // if nearest neighborhood pixel coord (k ,l) is not masked
+                            int j = (int)(original_image.at<uchar>(m, n)); // I(m,n)
+                            int i = (int)(original_image.at<uchar>(k, l)); // I(k,l)
+                            if (((k - m) == 0) && (abs(l - n) == distance)) {
+                                CountElemH(i, j);
+                            } else if ((((k - m) == distance) && ((l - n) == -distance)) ||
+                                       (((k - m) == -distance) && ((l - n) == distance))) {
+                                CountElemRD(i, j);
+                            } else if ((abs(k - m) == distance) && (l - n == 0)) {
+                                CountElemV(i, j);
+                            } else if ((((k - m) == distance) && ((l - n) == distance)) ||
+                                       (((k - m) == -distance) && ((l - n) == -distance))) {
+                                CountElemLD(i, j);
+                            } else if ((m == k) && (n == l)) {
+                                PushPixelValue(i);
+                            } else {
+                                // if ((m != k) || (n != l)) {
+                                //    cerr << "unknown element:" << endl;
+                                //    cerr << "central element: (m, n) = (" << m << "," << n << ")" << endl;
+                                //    cerr << "neighborhood element: (k, l) = (" << k << "," << l << ")" << endl;
+                                //}
+                            }
+                            ++non_masked;
+                        } else {
+                            // cerr << "masked coord: (k, l) = (" << k << "," << l << "), pixel value = " << mask_pixel_value << endl;
+                            ++masked;
                         }
                     }
                 }

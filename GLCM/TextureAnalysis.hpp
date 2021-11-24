@@ -68,17 +68,7 @@ public:
     ~TextureAnalysis() = default;
 
     void ProcessRectImage(const cv::Mat& image, int distance);
-
-    void ResetCache();
-
-    void CountElemH(int i, int j);
-    void CountElemV(int i, int j);
-    void CountElemLD(int i, int j);
-    void CountElemRD(int i, int j);
-
-    void PushPixelValue(int pixel_value);
-
-    void Normalization();
+    void ProcessPolygonImage(const cv::Mat& original_image, const cv::Mat& mask_image, int distance);
 
     void GetAutoCorrelation(Features& f);                                 // F1: Auto Correlation
     void GetContrast(Features& f);                                        // F2: Contrast
@@ -116,6 +106,16 @@ public:
     void SaveAsCSV(const std::string& image_name, std::map<Type, Features> features, const std::string& csv_name);
 
 private:
+    void ResetCache();
+
+    void CountElemH(int i, int j);
+    void CountElemV(int i, int j);
+    void CountElemLD(int i, int j);
+    void CountElemRD(int i, int j);
+    void PushPixelValue(int pixel_value);
+
+    void Normalization();
+
     void Calculate_px();
     void Calculate_py();
     void Calculate_p_xpy();

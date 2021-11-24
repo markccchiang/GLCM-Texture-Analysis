@@ -14,10 +14,10 @@ const int black_color = 0;
 bool finish_drawing = false; // finish drawing the polygon
 bool execution = true;       // stop the program execution
 
-cv::Mat img;          // drawing image
-cv::Mat original_img; // original image
-cv::Mat roi;          // ROI image
-cv::Mat mask;         // Mask is black and white where our ROI is
+cv::Mat drawing_image;  // drawing image
+cv::Mat original_image; // original image
+cv::Mat roi_image;      // ROI image
+cv::Mat mask_image;     // Mask is black and white where our ROI is
 
 std::vector<cv::Point> vertices; // polygon points
 int img_width;                   // image width
@@ -63,20 +63,20 @@ int main(int argc, char* argv[]) {
         cout << "Start new polygon drawing...\n";
 
         // Initialize the global variables
-        img.release();
-        original_img.release();
-        roi.release();
-        mask.release();
+        drawing_image.release();
+        original_image.release();
+        roi_image.release();
+        mask_image.release();
         vertices.clear();
         finish_drawing = false;
 
         // Read image from file
-        img = imread(filename, IMREAD_GRAYSCALE);
-        img_width = img.cols;
-        img_height = img.rows;
+        drawing_image = imread(filename, IMREAD_GRAYSCALE);
+        img_width = drawing_image.cols;
+        img_height = drawing_image.rows;
 
         // Make a copy of the original image
-        original_img = img.clone();
+        original_image = drawing_image.clone();
 
         // Create a window
         cv::namedWindow("Original Image", 1);
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
 
         // Main loop
         while (!finish_drawing) {
-            cv::imshow("Original Image", img);
+            cv::imshow("Original Image", drawing_image);
             // Check if ESC key was pressed
             if (cv::waitKey(20) == 27) {
                 execution = false;
@@ -94,67 +94,17 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        if (roi.rows <= 0 || roi.cols <= 0) {
+        if (roi_image.rows <= 0 || roi_image.cols <= 0) {
             break;
         }
 
         // Check the pixel values
-        // cout << "\nROI = \n" << ROI << endl << endl;                   // this has white lines
-        // cout << "\nimg = \n" << img << endl << endl;                   // this has white lines
-        // cout << "\noriginal_img = \n" << original_img << endl << endl; // this is the original img that we want
-        // cout << "\nmask = \n" << mask << endl << endl;                 // this is the original mask that we want
+        // cout << "\nROI = \n" << roi_image << endl << endl;                 // this has white lines
+        // cout << "\ndrawing_image = \n" << drawing_image << endl << endl;   // this has white lines
+        // cout << "\noriginal_image = \n" << original_image << endl << endl; // this is the original drawing_image that we want
+        // cout << "\nmask_image = \n" << mask_image << endl << endl;         // this is the original mask_image that we want
 
-        // Clear the cache
-        texture_analysis.ResetCache();
-
-        int masked = 0;
-        int non_masked = 0;
-
-        // Calculate matrices elements:
-        // Central pixel coord (m ,n), where "m" is the row index, and "n" is the column index
-        for (int m = 0; m < original_img.rows; ++m) {
-            for (int n = 0; n < original_img.cols; ++n) {
-                // Nearest neighborhood pixel coord (k ,l), where "k" is the row index, and "l" is the column index
-                for (int k = m - d; k <= m + d; ++k) {
-                    for (int l = n - d; l <= n + d; ++l) {
-                        if ((k >= 0) && (l >= 0) && (k < original_img.rows) && (l < original_img.cols)) {
-                            // Check is the nearest neighborhood pixel coord (k ,l) masked
-                            int mask_pixel_value = (int)(mask.at<uchar>(k, l));
-                            if (mask_pixel_value == white_color) {           // if nearest neighborhood pixel coord (k ,l) is not masked
-                                int j = (int)(original_img.at<uchar>(m, n)); // I(m,n)
-                                int i = (int)(original_img.at<uchar>(k, l)); // I(k,l)
-                                if (((k - m) == 0) && (abs(l - n) == d)) {
-                                    texture_analysis.CountElemH(i, j);
-                                } else if ((((k - m) == d) && ((l - n) == -d)) || (((k - m) == -d) && ((l - n) == d))) {
-                                    texture_analysis.CountElemRD(i, j);
-                                } else if ((abs(k - m) == d) && (l - n == 0)) {
-                                    texture_analysis.CountElemV(i, j);
-                                } else if ((((k - m) == d) && ((l - n) == d)) || (((k - m) == -d) && ((l - n) == -d))) {
-                                    texture_analysis.CountElemLD(i, j);
-                                } else if ((m == k) && (n == l)) {
-                                    texture_analysis.PushPixelValue(i);
-                                } else {
-                                    // if ((m != k) || (n != l)) {
-                                    //    cerr << "unknown element:" << endl;
-                                    //    cerr << "central element: (m, n) = (" << m << "," << n << ")" << endl;
-                                    //    cerr << "neighborhood element: (k, l) = (" << k << "," << l << ")" << endl;
-                                    //}
-                                }
-                                ++non_masked;
-                            } else {
-                                // cerr << "masked coord: (k, l) = (" << k << "," << l << "), pixel value = " << mask_pixel_value << endl;
-                                ++masked;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        cerr << "masked num = " << masked << ", non-masked num = " << non_masked << endl;
-        cout << "---------------------------------------------------------------------------------\n";
-
-        // Normalize the matrices
-        texture_analysis.Normalization();
+        texture_analysis.ProcessPolygonImage(original_image, mask_image, d);
 
         // Set feature types to calculate
         std::set<glcm::Type> features_all{glcm::Type::AutoCorrelation, glcm::Type::Contrast, glcm::Type::ContrastAnotherWay,
@@ -183,7 +133,7 @@ int main(int argc, char* argv[]) {
 
         // Show results
         cv::namedWindow("ROI", 1);
-        cv::imshow("ROI", roi);
+        cv::imshow("ROI", roi_image);
         // cv::waitKey(0);
     }
 
@@ -205,11 +155,11 @@ void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata) {
             return;
         }
 
-        // Close polygon (Scalar(0) is black color, will not show image if the mask in this part is black!)
-        cv::line(img, vertices[vertices.size() - 1], vertices[0], Scalar(white_color), 1);
+        // Close polygon (Scalar(0) is black color, will not show image if the mask_image in this part is black!)
+        cv::line(drawing_image, vertices[vertices.size() - 1], vertices[0], Scalar(white_color), 1);
 
         // Mask is black with white where our ROI is
-        mask = Mat::zeros(img.rows, img.cols, CV_8UC1);
+        mask_image = Mat::zeros(drawing_image.rows, drawing_image.cols, CV_8UC1);
 
         // Get boundary points
         auto bounds = GetMinMax(vertices);
@@ -219,11 +169,11 @@ void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata) {
 
         // Scalar(255) is white color (will show image in this part)
         std::vector<std::vector<cv::Point>> pts{vertices};
-        cv::fillPoly(mask, pts, Scalar(white_color));
+        cv::fillPoly(mask_image, pts, Scalar(white_color));
 
-        // Copy the image to ROI with the mask with the white part (if value = 255)
-        img.copyTo(roi, mask);
-        roi(Rect(Point(bounds[0].first, bounds[0].second), Point(bounds[1].first, bounds[1].second))).copyTo(roi);
+        // Copy the image to ROI with the mask_image with the white part (if value = 255)
+        drawing_image.copyTo(roi_image, mask_image);
+        roi_image(Rect(Point(bounds[0].first, bounds[0].second), Point(bounds[1].first, bounds[1].second))).copyTo(roi_image);
 
         finish_drawing = true;
         return;
@@ -235,11 +185,11 @@ void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata) {
         if (x >= 0 && x <= img_width && y >= 0 && y <= img_height) {
             if (vertices.empty()) {
                 // First click - just draw point
-                // img.at<Vec3b>(y, x) = cv::Vec3b(white_color, 0, 0);
-                img.at<uchar>(y, x) = white_color;
+                // drawing_image.at<Vec3b>(y, x) = cv::Vec3b(white_color, 0, 0);
+                drawing_image.at<uchar>(y, x) = white_color;
             } else {
                 // Second, or later click, draw line to previous vertex
-                cv::line(img, cv::Point(x, y), vertices[vertices.size() - 1], Scalar(white_color), 1);
+                cv::line(drawing_image, cv::Point(x, y), vertices[vertices.size() - 1], Scalar(white_color), 1);
             }
             vertices.push_back(cv::Point(x, y));
         }
