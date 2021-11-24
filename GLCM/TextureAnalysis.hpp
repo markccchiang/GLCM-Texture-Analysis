@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <map>
+#include <opencv2/opencv.hpp>
 #include <set>
 #include <vector>
 
@@ -65,6 +66,8 @@ class TextureAnalysis {
 public:
     TextureAnalysis(int Ng, double age = 0.0);
     ~TextureAnalysis() = default;
+
+    void ProcessRectImage(const cv::Mat& image, int distance);
 
     void ResetCache();
 

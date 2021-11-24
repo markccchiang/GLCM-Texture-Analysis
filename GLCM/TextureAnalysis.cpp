@@ -54,6 +54,47 @@ TextureAnalysis::TextureAnalysis(int Ng, double age) : _Ng(Ng), _age(age) {
     }
 }
 
+void TextureAnalysis::ProcessRectImage(const cv::Mat& image, int distance) {
+    // Clear the cache
+    ResetCache();
+
+    // Calculate matrices elements: central pixel coord (m ,n), where "m" is the row index, and "n" is the column index
+    for (int m = 0; m < image.rows; ++m) {
+        for (int n = 0; n < image.cols; ++n) {
+            // Nearest neighborhood pixel coord (k ,l), where "k" is the row index, and "l" is the column index
+            for (int k = m - distance; k <= m + distance; ++k) {
+                for (int l = n - distance; l <= n + distance; ++l) {
+                    if ((k >= 0) && (l >= 0) && (k < image.rows) && (l < image.cols)) {
+                        //// ToDo: need to check are pixel values in coordinates (m,n) and (k,l) nan or masked!!
+                        int j = (int)(image.at<uchar>(m, n)); // I(m,n)
+                        int i = (int)(image.at<uchar>(k, l)); // I(k,l)
+                        if (((k - m) == 0) && (abs(l - n) == distance)) {
+                            CountElemH(i, j);
+                        } else if ((((k - m) == distance) && ((l - n) == -distance)) || (((k - m) == -distance) && ((l - n) == distance))) {
+                            CountElemRD(i, j);
+                        } else if ((abs(k - m) == distance) && (l - n == 0)) {
+                            CountElemV(i, j);
+                        } else if ((((k - m) == distance) && ((l - n) == distance)) || (((k - m) == -distance) && ((l - n) == -distance))) {
+                            CountElemLD(i, j);
+                        } else if ((m == k) && (n == l)) {
+                            PushPixelValue(i);
+                        } else {
+                            // if ((m != k) || (n != l)) {
+                            //    cerr << "unknown element:" << endl;
+                            //    cerr << "central element: (m, n) = (" << m << "," << n << ")" << endl;
+                            //    cerr << "neighborhood element: (k, l) = (" << k << "," << l << ")" << endl;
+                            //}
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Normalize the matrices
+    Normalization();
+}
+
 void TextureAnalysis::ResetCache() {
     // reset probability matrices as zeros
     for (int i = 0; i < _Ng; ++i) {

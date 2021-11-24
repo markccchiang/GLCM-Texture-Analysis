@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Read image
-    Mat image = imread(filename, IMREAD_GRAYSCALE);
+    cv::Mat image = imread(filename, IMREAD_GRAYSCALE);
 
     // Set the bool execution
     volatile bool execution(true);
@@ -64,48 +64,11 @@ int main(int argc, char* argv[]) {
         cout << "ROI width: " << selected_roi.size().width << ", high: " << selected_roi.size().height << ", area: " << selected_roi.area()
              << endl;
 
-        // Clear the cache
-        texture_analysis.ResetCache();
-
         // Crop image
-        Mat image_crop = image(selected_roi);
+        cv::Mat image_crop = image(selected_roi);
 
         // Calculate matrices elements:
-        // Central pixel coord (m ,n), where "m" is the row index, and "n" is the column index
-        for (int m = 0; m < image_crop.rows; ++m) {
-            for (int n = 0; n < image_crop.cols; ++n) {
-                // Nearest neighborhood pixel coord (k ,l), where "k" is the row index, and "l" is the column index
-                for (int k = m - d; k <= m + d; ++k) {
-                    for (int l = n - d; l <= n + d; ++l) {
-                        if ((k >= 0) && (l >= 0) && (k < image_crop.rows) && (l < image_crop.cols)) {
-                            //// ToDo: need to check are pixel values in coordinates (m,n) and (k,l) nan or masked!!
-                            int j = (int)(image_crop.at<uchar>(m, n)); // I(m,n)
-                            int i = (int)(image_crop.at<uchar>(k, l)); // I(k,l)
-                            if (((k - m) == 0) && (abs(l - n) == d)) {
-                                texture_analysis.CountElemH(i, j);
-                            } else if ((((k - m) == d) && ((l - n) == -d)) || (((k - m) == -d) && ((l - n) == d))) {
-                                texture_analysis.CountElemRD(i, j);
-                            } else if ((abs(k - m) == d) && (l - n == 0)) {
-                                texture_analysis.CountElemV(i, j);
-                            } else if ((((k - m) == d) && ((l - n) == d)) || (((k - m) == -d) && ((l - n) == -d))) {
-                                texture_analysis.CountElemLD(i, j);
-                            } else if ((m == k) && (n == l)) {
-                                texture_analysis.PushPixelValue(i);
-                            } else {
-                                // if ((m != k) || (n != l)) {
-                                //    cerr << "unknown element:" << endl;
-                                //    cerr << "central element: (m, n) = (" << m << "," << n << ")" << endl;
-                                //    cerr << "neighborhood element: (k, l) = (" << k << "," << l << ")" << endl;
-                                //}
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Normalize the matrices
-        texture_analysis.Normalization();
+        texture_analysis.ProcessRectImage(image_crop, d);
 
         // Set feature types to calculate
         std::set<glcm::Type> features_all{glcm::Type::AutoCorrelation, glcm::Type::Contrast, glcm::Type::ContrastAnotherWay,
