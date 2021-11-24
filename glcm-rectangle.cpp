@@ -38,13 +38,12 @@ int main(int argc, char* argv[]) {
     }
 
     // Read image
-    Mat im = imread(filename, IMREAD_GRAYSCALE);
-    // cout << "im = " << im << endl;
+    Mat image = imread(filename, IMREAD_GRAYSCALE);
 
     // Set the bool execution
     volatile bool execution(true);
 
-    // Initialize the texure analysis
+    // Initialize the texture analysis
     glcm::TextureAnalysis texture_analysis(Ng, age);
 
     // Select ROI repeatedly
@@ -53,33 +52,35 @@ int main(int argc, char* argv[]) {
         // Select ROI
         bool from_center = false;
         bool show_crosshair = false;
-        Rect2d r = selectROI(im, from_center, show_crosshair);
+        Rect2d selected_roi = selectROI(image, from_center, show_crosshair);
 
         // Check is the ROI region valid
-        if (r.area() <= 0) {
+        if (selected_roi.area() <= 0) {
             break;
         }
 
-        cout << "\nROI corners: tl(" << r.tl().x << "," << r.tl().y << "), br(" << r.br().x << "," << r.br().y << ")" << endl;
-        cout << "ROI width: " << r.size().width << ", high: " << r.size().height << ", area: " << r.area() << endl;
+        cout << "\nROI corners: tl(" << selected_roi.tl().x << "," << selected_roi.tl().y << "), br(" << selected_roi.br().x << ","
+             << selected_roi.br().y << ")" << endl;
+        cout << "ROI width: " << selected_roi.size().width << ", high: " << selected_roi.size().height << ", area: " << selected_roi.area()
+             << endl;
 
         // Clear the cache
         texture_analysis.ResetCache();
 
         // Crop image
-        Mat im_crop = im(r);
+        Mat image_crop = image(selected_roi);
 
         // Calculate matrices elements:
         // Central pixel coord (m ,n), where "m" is the row index, and "n" is the column index
-        for (int m = 0; m < im_crop.rows; ++m) {
-            for (int n = 0; n < im_crop.cols; ++n) {
+        for (int m = 0; m < image_crop.rows; ++m) {
+            for (int n = 0; n < image_crop.cols; ++n) {
                 // Nearest neighborhood pixel coord (k ,l), where "k" is the row index, and "l" is the column index
                 for (int k = m - d; k <= m + d; ++k) {
                     for (int l = n - d; l <= n + d; ++l) {
-                        if ((k >= 0) && (l >= 0) && (k < im_crop.rows) && (l < im_crop.cols)) {
+                        if ((k >= 0) && (l >= 0) && (k < image_crop.rows) && (l < image_crop.cols)) {
                             //// ToDo: need to check are pixel values in coordinates (m,n) and (k,l) nan or masked!!
-                            int j = (int)(im_crop.at<uchar>(m, n)); // I(m,n)
-                            int i = (int)(im_crop.at<uchar>(k, l)); // I(k,l)
+                            int j = (int)(image_crop.at<uchar>(m, n)); // I(m,n)
+                            int i = (int)(image_crop.at<uchar>(k, l)); // I(k,l)
                             if (((k - m) == 0) && (abs(l - n) == d)) {
                                 texture_analysis.CountElemH(i, j);
                             } else if ((((k - m) == d) && ((l - n) == -d)) || (((k - m) == -d) && ((l - n) == d))) {
@@ -132,8 +133,8 @@ int main(int argc, char* argv[]) {
         texture_analysis.Print(results);
 
         // Display Cropped Image
-        if (im_crop.cols > 0 && im_crop.rows > 0) {
-            imshow("Image", im_crop);
+        if (image_crop.cols > 0 && image_crop.rows > 0) {
+            imshow("Image", image_crop);
         } else {
             break;
         }
