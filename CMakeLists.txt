@@ -24,7 +24,8 @@ set(SOURCES
 set(MAIN_FILES
         ${MAIN_FILES}
         glcm-polygon
-        glcm-rectangle)
+        glcm-rectangle
+        canvas)
 
 foreach (MAIN_FILE IN LISTS MAIN_FILES)
     add_executable(${MAIN_FILE} ${MAIN_FILE}.cpp ${SOURCES})
