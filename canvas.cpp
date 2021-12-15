@@ -14,7 +14,7 @@ Code licensed under the MIT license
 #define WINDOW_NAME "CVUI Canvas"
 
 int main(int argc, const char* argv[]) {
-    cv::Mat lena = cv::imread("../samples/Sample.jpg");
+    cv::Mat lena = cv::imread("../samples/lena.jpg");
     cv::Mat frame = lena.clone();
     int low_threshold = 50;
     int high_threshold = 150;
