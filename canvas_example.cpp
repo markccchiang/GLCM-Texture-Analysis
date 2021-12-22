@@ -9,7 +9,7 @@ Code licensed under the MIT license
 
 #define CVUI_IMPLEMENTATION
 
-#include "cvui.h"
+#include "viewer/cvui.h"
 
 #define WINDOW_NAME "CVUI Canvas"
 
@@ -26,7 +26,7 @@ int main(int argc, const char* argv[]) {
     cvui::init(WINDOW_NAME);
 
     while (true) {
-        cv::Mat canvas = cv::Mat::ones(cv::Size((frame.cols + panel_width + pad * 2), frame.rows), CV_8UC3);
+        cv::Mat canvas = cv::Mat::zeros(cv::Size((frame.cols + panel_width + pad * 2), frame.rows), CV_8UC3);
 
         // Should we apply Canny edge?
         if (use_canny) {

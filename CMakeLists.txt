@@ -19,16 +19,18 @@ set(LIBS
 
 set(SOURCES
         ${SOURCES}
-        GLCM/TextureAnalysis.cpp)
+        GLCM/TextureAnalysis.cpp
+        viewer/ImageViewer.cpp)
 
 set(MAIN_FILES
         ${MAIN_FILES}
         glcm-polygon
-        glcm-rectangle
-        canvas)
+        glcm-rectangle)
 
 foreach (MAIN_FILE IN LISTS MAIN_FILES)
     add_executable(${MAIN_FILE} ${MAIN_FILE}.cpp ${SOURCES})
     target_link_libraries(${MAIN_FILE} ${LIBS})
 endforeach ()
 
+add_executable(canvas_example canvas_example.cpp)
+target_link_libraries(canvas_example ${LIBS})

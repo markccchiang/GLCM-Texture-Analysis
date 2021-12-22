@@ -2,6 +2,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "GLCM/TextureAnalysis.hpp"
+#include "viewer/ImageViewer.hpp"
 
 using namespace std;
 using namespace cv;
@@ -79,7 +80,7 @@ int main(int argc, char* argv[]) {
         original_image = drawing_image.clone();
 
         // Create a window
-        cv::namedWindow("Original Image", 1);
+        cv::namedWindow("Original Image");
 
         // Register a mouse callback
         cv::setMouseCallback("Original Image", MouseCallBackFunc, nullptr);
@@ -132,8 +133,10 @@ int main(int argc, char* argv[]) {
         texture_analysis.Print(results);
 
         // Show results
-        cv::namedWindow("ROI", 1);
-        cv::imshow("ROI", roi_image);
+        // cv::namedWindow("ROI");
+        // cv::imshow("ROI", roi_image); //// Todo: apply canvas here
+        ImageViewer viewer(roi_image);
+        viewer.DisplayPanel();
         // cv::waitKey(0);
     }
 

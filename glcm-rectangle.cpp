@@ -2,6 +2,7 @@
 #include <opencv2/tracking.hpp> // selectROI is part of tracking API
 
 #include "GLCM/TextureAnalysis.hpp"
+#include "viewer/ImageViewer.hpp"
 
 using namespace std;
 using namespace cv;
@@ -50,8 +51,8 @@ int main(int argc, char* argv[]) {
     while (execution) {
         cout << "=================================================================================\n";
         // Select ROI
-        bool from_center = false;
-        bool show_crosshair = false;
+        bool from_center(false);
+        bool show_crosshair(false);
         Rect2d selected_roi = selectROI(image, from_center, show_crosshair);
 
         // Check is the ROI region valid
@@ -97,7 +98,9 @@ int main(int argc, char* argv[]) {
 
         // Display Cropped Image
         if (image_crop.cols > 0 && image_crop.rows > 0) {
-            imshow("Image", image_crop);
+            // imshow("Image", image_crop); //// Todo: apply canvas here
+            ImageViewer viewer(image_crop);
+            viewer.DisplayPanel();
         } else {
             break;
         }
