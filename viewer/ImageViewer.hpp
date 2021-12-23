@@ -14,7 +14,7 @@ public:
 
     void Display();
     void DisplayPanel();
-    void DisplayScorePanel();
+    std::map<glcm::Type, glcm::Features> DisplayScorePanel();
 
 private:
     cv::Mat _image;

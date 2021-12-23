@@ -75,7 +75,7 @@ void ImageViewer::DisplayPanel() {
     }
 }
 
-void ImageViewer::DisplayScorePanel() {
+std::map<Type, Features> ImageViewer::DisplayScorePanel() {
     cv::Mat frame = _image.clone();
     int age = 40;
     int panel_width = 180;
@@ -121,4 +121,6 @@ void ImageViewer::DisplayScorePanel() {
             break;
         }
     }
+
+    return _glcm_features;
 }
