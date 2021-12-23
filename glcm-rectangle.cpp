@@ -61,9 +61,7 @@ int main(int argc, char* argv[]) {
         texture_analysis.ProcessRectImage(image_crop, d);
 
         // Set feature types to calculate
-        std::set<glcm::Type> features{glcm::Type::Mean, glcm::Type::Std, glcm::Type::Energy, glcm::Type::HomogeneityII,
-            glcm::Type::Contrast, glcm::Type::SumOfSquares, glcm::Type::CorrelationIII, glcm::Type::Entropy, glcm::Type::ClusterShade,
-            glcm::Type::ClusterProminence};
+        std::set<glcm::Type> features{glcm::Type::Mean, glcm::Type::Entropy, glcm::Type::Contrast};
 
         // Clear the calculation results
         results.clear();
@@ -76,7 +74,7 @@ int main(int argc, char* argv[]) {
 
         // Display Cropped Image
         if (image_crop.cols > 0 && image_crop.rows > 0) {
-            ImageViewer viewer(image_crop, &texture_analysis);
+            ImageViewer viewer(image_crop, results, &texture_analysis);
             viewer.DisplayPanel();
         } else {
             std::cerr << "Invalid ROI image!\n";

@@ -4,10 +4,11 @@
 
 #include "cvui.h"
 
-#define WINDOW_NAME "CVUI Image Viewer"
+#define WINDOW_NAME "GLCM Image Viewer"
 
-ImageViewer::ImageViewer(const cv::Mat& image, glcm::TextureAnalysis* glcm_texture_analysis)
-    : _image(image), _glcm_texture_analysis(glcm_texture_analysis) {}
+ImageViewer::ImageViewer(
+    const cv::Mat& image, const std::map<glcm::Type, glcm::Features>& glcm_features, glcm::TextureAnalysis* glcm_texture_analysis)
+    : _image(image), _glcm_features(glcm_features), _glcm_texture_analysis(glcm_texture_analysis) {}
 
 void ImageViewer::Display() {
     cv::imshow("Image", _image);

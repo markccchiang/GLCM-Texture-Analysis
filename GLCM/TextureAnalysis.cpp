@@ -1380,8 +1380,8 @@ std::map<Type, Features> TextureAnalysis::Calculate(const std::set<Type>& types)
     return results;
 }
 
-void TextureAnalysis::CalculateScore(double age, std::map<Type, Features>& features_map) {
-    if ((age > 0) && features_map.count(Type::Entropy) && features_map.count(Type::Contrast)) {
+double TextureAnalysis::CalculateScore(double age, std::map<Type, Features>& features_map) {
+    if ((age > 0) && features_map.count(Type::Mean) && features_map.count(Type::Entropy) && features_map.count(Type::Contrast)) {
         std::vector<double> params = {1.138, -1.814, 1.416, 1.714};
 
         std::cout << "Calculate the Score with parameters:\n";
@@ -1390,19 +1390,20 @@ void TextureAnalysis::CalculateScore(double age, std::map<Type, Features>& featu
             std::cout << "params[" << i << "] = " << params[i] << "\n";
         }
 
-        double f_H = params[0] * age + params[1] * _pixel_values_mean + params[2] * features_map.at(Type::Entropy).H +
+        double f_H = params[0] * age + params[1] * features_map.at(Type::Mean).H + params[2] * features_map.at(Type::Entropy).H +
                      params[3] * features_map.at(Type::Contrast).H;
-        double f_V = params[0] * age + params[1] * _pixel_values_mean + params[2] * features_map.at(Type::Entropy).V +
+        double f_V = params[0] * age + params[1] * features_map.at(Type::Mean).V + params[2] * features_map.at(Type::Entropy).V +
                      params[3] * features_map.at(Type::Contrast).V;
-        double f_LD = params[0] * age + params[1] * _pixel_values_mean + params[2] * features_map.at(Type::Entropy).LD +
+        double f_LD = params[0] * age + params[1] * features_map.at(Type::Mean).LD + params[2] * features_map.at(Type::Entropy).LD +
                       params[3] * features_map.at(Type::Contrast).LD;
-        double f_RD = params[0] * age + params[1] * _pixel_values_mean + params[2] * features_map.at(Type::Entropy).RD +
+        double f_RD = params[0] * age + params[1] * features_map.at(Type::Mean).RD + params[2] * features_map.at(Type::Entropy).RD +
                       params[3] * features_map.at(Type::Contrast).RD;
 
         features_map[Type::Score](f_H, f_V, f_LD, f_RD);
-    } else {
-        std::cerr << "Can not calculate the Score!\n";
+        return features_map[Type::Score](f_H, f_V, f_LD, f_RD).Avg();
     }
+    std::cerr << "Can not calculate the Score!\n";
+    return std::numeric_limits<double>::quiet_NaN();
 }
 
 std::string TextureAnalysis::TypeToString(const Type& type) {

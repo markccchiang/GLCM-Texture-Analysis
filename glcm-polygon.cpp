@@ -100,9 +100,7 @@ int main(int argc, char* argv[]) {
         texture_analysis.ProcessPolygonImage(original_image, mask_image, d);
 
         // Set feature types to calculate
-        std::set<glcm::Type> features{glcm::Type::Mean, glcm::Type::Std, glcm::Type::Energy, glcm::Type::HomogeneityII,
-            glcm::Type::Contrast, glcm::Type::SumOfSquares, glcm::Type::CorrelationIII, glcm::Type::Entropy, glcm::Type::ClusterShade,
-            glcm::Type::ClusterProminence};
+        std::set<glcm::Type> features{glcm::Type::Mean, glcm::Type::Entropy, glcm::Type::Contrast};
 
         // Clear the calculation results
         results.clear();
@@ -114,7 +112,7 @@ int main(int argc, char* argv[]) {
         texture_analysis.Print(results);
 
         // Show results
-        ImageViewer viewer(roi_image, &texture_analysis);
+        ImageViewer viewer(roi_image, results, &texture_analysis);
         viewer.DisplayPanel();
         // cv::waitKey(0);
     }

@@ -8,7 +8,8 @@
 
 class ImageViewer {
 public:
-    ImageViewer(const cv::Mat& image, glcm::TextureAnalysis* glcm_texture_analysis);
+    ImageViewer(
+        const cv::Mat& image, const std::map<glcm::Type, glcm::Features>& glcm_features, glcm::TextureAnalysis* glcm_texture_analysis);
     ~ImageViewer() = default;
 
     void Display();
@@ -16,7 +17,8 @@ public:
 
 private:
     cv::Mat _image;
-    glcm::TextureAnalysis* _glcm_texture_analysis;
+    std::map<glcm::Type, glcm::Features> _glcm_features;
+    glcm::TextureAnalysis* _glcm_texture_analysis = nullptr;
 };
 
 #endif // IMAGE_VIEWER_HPP_
