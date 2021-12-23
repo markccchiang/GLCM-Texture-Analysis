@@ -1078,6 +1078,22 @@ void TextureAnalysis::GetMaximalCorrelationCoefficient(Features& f) {
     f(eigens_H[1], eigens_V[1], eigens_LD[1], eigens_RD[1]);
 }
 
+void TextureAnalysis::GetMean(Features& f) {
+    double f_H = _pixel_values_mean;
+    double f_V = _pixel_values_mean;
+    double f_LD = _pixel_values_mean;
+    double f_RD = _pixel_values_mean;
+    f(f_H, f_V, f_LD, f_RD);
+}
+
+void TextureAnalysis::GetStd(Features& f) {
+    double f_H = _pixel_values_STD;
+    double f_V = _pixel_values_STD;
+    double f_LD = _pixel_values_STD;
+    double f_RD = _pixel_values_STD;
+    f(f_H, f_V, f_LD, f_RD);
+}
+
 void TextureAnalysis::GetAutoCorrelation(Features& f) {
     double f_H = 0.0;
     double f_V = 0.0;
@@ -1257,6 +1273,12 @@ std::map<Type, Features> TextureAnalysis::Calculate(const std::set<Type>& types)
     bool information_measures_of_correlation_done = false;
     for (auto type : types) {
         switch (type) {
+            case Type::Mean:
+                GetMean(results[Type::Mean]);
+                break;
+            case Type::Std:
+                GetStd(results[Type::Std]);
+                break;
             case Type::AutoCorrelation:
                 GetAutoCorrelation(results[Type::AutoCorrelation]);
                 break;
@@ -1378,6 +1400,12 @@ void TextureAnalysis::CalculateScore(std::map<Type, Features>& features_map) {
 std::string TextureAnalysis::TypeToString(const Type& type) {
     std::string result;
     switch (type) {
+        case Type::Mean:
+            result = "Mean";
+            break;
+        case Type::Std:
+            result = "STD";
+            break;
         case Type::AutoCorrelation:
             result = "Auto Correlation";
             break;
@@ -1533,8 +1561,6 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
         csv_file << "Date,";
         csv_file << "Image,";
         csv_file << "Direction,";
-        csv_file << "Mean,";
-        csv_file << "STD,";
         for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
             csv_file << TypeToString(it->first) << ",";
         }
@@ -1545,8 +1571,6 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
     csv_file << current_time << ",";
     csv_file << image_base_name << ",";
     csv_file << DirectionToString(Direction::H) << ",";
-    csv_file << _pixel_values_mean << ",";
-    csv_file << _pixel_values_STD << ",";
     for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
         csv_file << it->second.H << ",";
     }
@@ -1556,8 +1580,6 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
     csv_file << current_time << ",";
     csv_file << image_base_name << ",";
     csv_file << DirectionToString(Direction::V) << ",";
-    csv_file << _pixel_values_mean << ",";
-    csv_file << _pixel_values_STD << ",";
     for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
         csv_file << it->second.V << ",";
     }
@@ -1567,8 +1589,6 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
     csv_file << current_time << ",";
     csv_file << image_base_name << ",";
     csv_file << DirectionToString(Direction::LD) << ",";
-    csv_file << _pixel_values_mean << ",";
-    csv_file << _pixel_values_STD << ",";
     for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
         csv_file << it->second.LD << ",";
     }
@@ -1578,8 +1598,6 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
     csv_file << current_time << ",";
     csv_file << image_base_name << ",";
     csv_file << DirectionToString(Direction::RD) << ",";
-    csv_file << _pixel_values_mean << ",";
-    csv_file << _pixel_values_STD << ",";
     for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
         csv_file << it->second.RD << ",";
     }
@@ -1589,8 +1607,6 @@ void TextureAnalysis::SaveAsCSV(const std::string& image_name, std::map<Type, Fe
     csv_file << current_time << ",";
     csv_file << image_base_name << ",";
     csv_file << DirectionToString(Direction::Avg) << ",";
-    csv_file << _pixel_values_mean << ",";
-    csv_file << _pixel_values_STD << ",";
     for (std::map<Type, Features>::iterator it = features.begin(); it != features.end(); ++it) {
         csv_file << it->second.Avg() << ",";
     }

@@ -10,6 +10,8 @@
 namespace glcm {
 
 enum class Type {
+    Mean,
+    Std,
     Energy,
     HomogeneityII,
     Contrast,
@@ -70,6 +72,8 @@ public:
     void ProcessRectImage(const cv::Mat& image, int distance);
     void ProcessPolygonImage(const cv::Mat& original_image, const cv::Mat& mask_image, int distance);
 
+    void GetMean(Features& f);                                            // Mean of selected region pixels
+    void GetStd(Features& f);                                             // STD of selected region pixels
     void GetAutoCorrelation(Features& f);                                 // F1: Auto Correlation
     void GetContrast(Features& f);                                        // F2: Contrast
     void GetContrastAnotherWay(Features& f);                              // F2: Contrast (another way)
