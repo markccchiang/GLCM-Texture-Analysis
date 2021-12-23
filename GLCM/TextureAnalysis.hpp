@@ -66,7 +66,7 @@ struct Features {
 
 class TextureAnalysis {
 public:
-    TextureAnalysis(int Ng, double age = 0.0);
+    TextureAnalysis(int Ng);
     ~TextureAnalysis() = default;
 
     void ProcessRectImage(const cv::Mat& image, int distance);
@@ -104,7 +104,7 @@ public:
     void GetMaximalCorrelationCoefficient(Features& f);                   // Maximal Correlation Coefficient
 
     std::map<Type, Features> Calculate(const std::set<Type>& types); // Calculate selected features
-    void CalculateScore(std::map<Type, Features>& Features_map);
+    void CalculateScore(double age, std::map<Type, Features>& features_map);
 
     void Print(const std::map<Type, Features>& features);
     void SaveAsCSV(const std::string& image_name, std::map<Type, Features> features, const std::string& csv_name);
@@ -217,8 +217,6 @@ private:
     double _HXY2_V;
     double _HXY2_LD;
     double _HXY2_RD;
-
-    double _age;
 };
 
 } // namespace glcm

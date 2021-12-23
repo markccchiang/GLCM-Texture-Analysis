@@ -16,7 +16,7 @@ using namespace glcm;
 
 namespace fs = std::filesystem;
 
-TextureAnalysis::TextureAnalysis(int Ng, double age) : _Ng(Ng), _age(age) {
+TextureAnalysis::TextureAnalysis(int Ng) : _Ng(Ng) {
     if (Ng > 0) {
         // initialize probability matrices
         _P_H.resize(_Ng, std::vector<int>(_Ng));
@@ -1380,20 +1380,28 @@ std::map<Type, Features> TextureAnalysis::Calculate(const std::set<Type>& types)
     return results;
 }
 
-void TextureAnalysis::CalculateScore(std::map<Type, Features>& features_map) {
-    if ((_age > 0) && features_map.count(Type::Entropy) && features_map.count(Type::Contrast)) {
-        double f_H = 1.138 * _age - 1.814 * _pixel_values_mean + 1.416 * features_map.at(Type::Entropy).H +
-                     1.714 * features_map.at(Type::Contrast).H;
-        double f_V = 1.138 * _age - 1.814 * _pixel_values_mean + 1.416 * features_map.at(Type::Entropy).V +
-                     1.714 * features_map.at(Type::Contrast).V;
-        double f_LD = 1.138 * _age - 1.814 * _pixel_values_mean + 1.416 * features_map.at(Type::Entropy).LD +
-                      1.714 * features_map.at(Type::Contrast).LD;
-        double f_RD = 1.138 * _age - 1.814 * _pixel_values_mean + 1.416 * features_map.at(Type::Entropy).RD +
-                      1.714 * features_map.at(Type::Contrast).RD;
+void TextureAnalysis::CalculateScore(double age, std::map<Type, Features>& features_map) {
+    if ((age > 0) && features_map.count(Type::Entropy) && features_map.count(Type::Contrast)) {
+        std::vector<double> params = {1.138, -1.814, 1.416, 1.714};
+
+        std::cout << "Calculate the Score with parameters:\n";
+        std::cout << "age = " << age << "\n";
+        for (int i = 0; i < params.size(); ++i) {
+            std::cout << "params[" << i << "] = " << params[i] << "\n";
+        }
+
+        double f_H = params[0] * age + params[1] * _pixel_values_mean + params[2] * features_map.at(Type::Entropy).H +
+                     params[3] * features_map.at(Type::Contrast).H;
+        double f_V = params[0] * age + params[1] * _pixel_values_mean + params[2] * features_map.at(Type::Entropy).V +
+                     params[3] * features_map.at(Type::Contrast).V;
+        double f_LD = params[0] * age + params[1] * _pixel_values_mean + params[2] * features_map.at(Type::Entropy).LD +
+                      params[3] * features_map.at(Type::Contrast).LD;
+        double f_RD = params[0] * age + params[1] * _pixel_values_mean + params[2] * features_map.at(Type::Entropy).RD +
+                      params[3] * features_map.at(Type::Contrast).RD;
 
         features_map[Type::Score](f_H, f_V, f_LD, f_RD);
     } else {
-        std::cerr << "Can not calculate Score!\n";
+        std::cerr << "Can not calculate the Score!\n";
     }
 }
 

@@ -14,7 +14,7 @@ double age; // age of a person
 std::map<glcm::Type, glcm::Features> results; // GLCM calculation results
 
 int main(int argc, char* argv[]) {
-    if (argc < 2 || argc > 4) {
+    if (argc < 2 || argc > 3) {
         cout << "Usage: ./glcm-polygon <file name> <distance> <age>" << endl;
         return 1;
     }
@@ -30,19 +30,11 @@ int main(int argc, char* argv[]) {
         d = 1;
     }
 
-    // set age
-    if (argc == 4) {
-        string age_str = argv[3];
-        age = stod(age_str);
-    } else {
-        age = 0.0;
-    }
-
     // Read image
     cv::Mat image = imread(filename, IMREAD_GRAYSCALE);
 
     // Initialize the texture analysis
-    glcm::TextureAnalysis texture_analysis(Ng, age);
+    glcm::TextureAnalysis texture_analysis(Ng);
 
     // Select ROI repeatedly
     while (true) {
@@ -78,9 +70,6 @@ int main(int argc, char* argv[]) {
 
         // Re-calculate the features
         results = texture_analysis.Calculate(features);
-
-        // Calculate Score
-        texture_analysis.CalculateScore(results);
 
         // Print results
         texture_analysis.Print(results);
