@@ -41,14 +41,11 @@ int main(int argc, char* argv[]) {
     // Read image
     cv::Mat image = imread(filename, IMREAD_GRAYSCALE);
 
-    // Set the bool execution
-    volatile bool execution(true);
-
     // Initialize the texture analysis
     glcm::TextureAnalysis texture_analysis(Ng, age);
 
     // Select ROI repeatedly
-    while (execution) {
+    while (true) {
         cout << "=================================================================================\n";
         // Select ROI
         bool from_center(false);
@@ -72,17 +69,9 @@ int main(int argc, char* argv[]) {
         texture_analysis.ProcessRectImage(image_crop, d);
 
         // Set feature types to calculate
-        std::set<glcm::Type> features_all{glcm::Type::AutoCorrelation, glcm::Type::Contrast, glcm::Type::ContrastAnotherWay,
-            glcm::Type::CorrelationI, glcm::Type::CorrelationIAnotherWay, glcm::Type::CorrelationII, glcm::Type::CorrelationIIAnotherWay,
-            glcm::Type::ClusterProminence, glcm::Type::ClusterShade, glcm::Type::Dissimilarity, glcm::Type::Energy, glcm::Type::Entropy,
-            glcm::Type::HomogeneityI, glcm::Type::HomogeneityII, glcm::Type::MaximumProbability, glcm::Type::SumOfSquares,
-            glcm::Type::SumOfSquaresI, glcm::Type::SumOfSquaresJ, glcm::Type::SumAverage, glcm::Type::SumEntropy, glcm::Type::SumVariance,
-            glcm::Type::DifferenceVariance, glcm::Type::DifferenceEntropy, glcm::Type::InformationMeasuresOfCorrelationI,
-            glcm::Type::InformationMeasuresOfCorrelationII, glcm::Type::InverseDifferenceNormalized,
-            glcm::Type::InverseDifferenceMomentNormalized};
-
-        std::set<glcm::Type> features{glcm::Type::Energy, glcm::Type::HomogeneityII, glcm::Type::Contrast, glcm::Type::SumOfSquares,
-            glcm::Type::CorrelationIII, glcm::Type::Entropy, glcm::Type::ClusterShade, glcm::Type::ClusterProminence};
+        std::set<glcm::Type> features{glcm::Type::Mean, glcm::Type::Std, glcm::Type::Energy, glcm::Type::HomogeneityII,
+            glcm::Type::Contrast, glcm::Type::SumOfSquares, glcm::Type::CorrelationIII, glcm::Type::Entropy, glcm::Type::ClusterShade,
+            glcm::Type::ClusterProminence};
 
         // Clear the calculation results
         results.clear();
@@ -98,16 +87,14 @@ int main(int argc, char* argv[]) {
 
         // Display Cropped Image
         if (image_crop.cols > 0 && image_crop.rows > 0) {
-            // imshow("Image", image_crop); //// Todo: apply canvas here
             ImageViewer viewer(image_crop);
             viewer.DisplayPanel();
         } else {
-            break;
+            std::cerr << "Invalid ROI image!\n";
         }
 
         // Check if ESC key was pressed
         if (cv::waitKey(20) == 27) {
-            execution = false;
             break;
         }
     } // End of the while loop

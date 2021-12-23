@@ -108,17 +108,9 @@ int main(int argc, char* argv[]) {
         texture_analysis.ProcessPolygonImage(original_image, mask_image, d);
 
         // Set feature types to calculate
-        std::set<glcm::Type> features_all{glcm::Type::AutoCorrelation, glcm::Type::Contrast, glcm::Type::ContrastAnotherWay,
-            glcm::Type::CorrelationI, glcm::Type::CorrelationIAnotherWay, glcm::Type::CorrelationII, glcm::Type::CorrelationIIAnotherWay,
-            glcm::Type::ClusterProminence, glcm::Type::ClusterShade, glcm::Type::Dissimilarity, glcm::Type::Energy, glcm::Type::Entropy,
-            glcm::Type::HomogeneityI, glcm::Type::HomogeneityII, glcm::Type::MaximumProbability, glcm::Type::SumOfSquares,
-            glcm::Type::SumOfSquaresI, glcm::Type::SumOfSquaresJ, glcm::Type::SumAverage, glcm::Type::SumEntropy, glcm::Type::SumVariance,
-            glcm::Type::DifferenceVariance, glcm::Type::DifferenceEntropy, glcm::Type::InformationMeasuresOfCorrelationI,
-            glcm::Type::InformationMeasuresOfCorrelationII, glcm::Type::InverseDifferenceNormalized,
-            glcm::Type::InverseDifferenceMomentNormalized};
-
-        std::set<glcm::Type> features{glcm::Type::Energy, glcm::Type::HomogeneityII, glcm::Type::Contrast, glcm::Type::SumOfSquares,
-            glcm::Type::CorrelationIII, glcm::Type::Entropy, glcm::Type::ClusterShade, glcm::Type::ClusterProminence};
+        std::set<glcm::Type> features{glcm::Type::Mean, glcm::Type::Std, glcm::Type::Energy, glcm::Type::HomogeneityII,
+            glcm::Type::Contrast, glcm::Type::SumOfSquares, glcm::Type::CorrelationIII, glcm::Type::Entropy, glcm::Type::ClusterShade,
+            glcm::Type::ClusterProminence};
 
         // Clear the calculation results
         results.clear();
@@ -133,8 +125,6 @@ int main(int argc, char* argv[]) {
         texture_analysis.Print(results);
 
         // Show results
-        // cv::namedWindow("ROI");
-        // cv::imshow("ROI", roi_image); //// Todo: apply canvas here
         ImageViewer viewer(roi_image);
         viewer.DisplayPanel();
         // cv::waitKey(0);
