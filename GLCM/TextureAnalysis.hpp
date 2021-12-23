@@ -104,7 +104,7 @@ public:
     void GetMaximalCorrelationCoefficient(Features& f);                   // Maximal Correlation Coefficient
 
     std::map<Type, Features> Calculate(const std::set<Type>& types); // Calculate selected features
-    double CalculateScore(double age, std::map<Type, Features>& features_map);
+    void CalculateScore(double age, std::map<Type, Features>& features_map);
 
     void Print(const std::map<Type, Features>& features);
     void SaveAsCSV(const std::string& image_name, std::map<Type, Features> features, const std::string& csv_name);

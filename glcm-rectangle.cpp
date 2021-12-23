@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
         // Display Cropped Image
         if (image_crop.cols > 0 && image_crop.rows > 0) {
             ImageViewer viewer(image_crop, results, &texture_analysis);
-            viewer.DisplayPanel();
+            viewer.DisplayScorePanel();
         } else {
             std::cerr << "Invalid ROI image!\n";
         }

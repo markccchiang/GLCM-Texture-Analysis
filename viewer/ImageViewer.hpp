@@ -14,6 +14,7 @@ public:
 
     void Display();
     void DisplayPanel();
+    void DisplayScorePanel();
 
 private:
     cv::Mat _image;

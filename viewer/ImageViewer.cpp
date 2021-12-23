@@ -6,6 +6,8 @@
 
 #define WINDOW_NAME "GLCM Image Viewer"
 
+using namespace glcm;
+
 ImageViewer::ImageViewer(
     const cv::Mat& image, const std::map<glcm::Type, glcm::Features>& glcm_features, glcm::TextureAnalysis* glcm_texture_analysis)
     : _image(image), _glcm_features(glcm_features), _glcm_texture_analysis(glcm_texture_analysis) {}
@@ -22,6 +24,8 @@ void ImageViewer::DisplayPanel() {
     int panel_height = 280;
     int pad = 15;
     bool use_canny = false;
+    double font_scale = 1.3 * cvui::DEFAULT_FONT_SCALE;
+    unsigned int font_color = 0xffffff;
 
     cvui::init(WINDOW_NAME);
     int canvas_width = frame.cols + panel_width + pad * 3;
@@ -53,10 +57,58 @@ void ImageViewer::DisplayPanel() {
         cvui::trackbar(canvas, items_x, pad * 5, trackbar_width, &low_threshold, 5, 150);
         cvui::trackbar(canvas, items_x, pad * 9, trackbar_width, &high_threshold, 80, 300);
 
-        cvui::printf(canvas, items_x + 5, pad * 14, 1.3 * cvui::DEFAULT_FONT_SCALE, 0xffffff, "Low threshold: %d", low_threshold);
-        cvui::printf(canvas, items_x + 5, pad * 16.5, 1.3 * cvui::DEFAULT_FONT_SCALE, 0xffffff, "High threshold: %d", high_threshold);
+        cvui::printf(canvas, items_x + 5, pad * 14, font_scale, font_color, "Low threshold: %d", low_threshold);
+        cvui::printf(canvas, items_x + 5, pad * 16.5, font_scale, font_color, "High threshold: %d", high_threshold);
 
         // This function must be called *AFTER* all UI components. It does all the behind the scenes magic to handle mouse clicks, etc.
+        cvui::update();
+
+        // Show everything on the screen
+        frame.copyTo(canvas(cv::Rect(frame_x, frame_y, frame.cols, frame.rows)));
+
+        cv::imshow(WINDOW_NAME, canvas);
+
+        // Check if ESC was pressed
+        if (cv::waitKey(30) == 27) {
+            break;
+        }
+    }
+}
+
+void ImageViewer::DisplayScorePanel() {
+    cv::Mat frame = _image.clone();
+    int age = 40;
+    int panel_width = 180;
+    int panel_height = 250;
+    int pad = 15;
+    double font_scale = 1.3 * cvui::DEFAULT_FONT_SCALE;
+    unsigned int font_color = 0xffffff; // white color
+
+    cvui::init(WINDOW_NAME);
+    int canvas_width = frame.cols + panel_width + pad * 3;
+    int canvas_height = std::max(frame.rows, panel_height) + pad * 2;
+    int trackbar_width = 165;
+    int items_x = frame.cols + pad * 2;
+    int frame_x = pad;
+    int frame_y = canvas_height / 2 - frame.rows / 2;
+
+    while (true) {
+        cv::Mat canvas = cv::Mat::zeros(cv::Size(canvas_width, canvas_height), CV_8UC1);
+
+        // Render the settings window to house the checkbox and the trackbars below.
+        cvui::window(canvas, items_x, pad, panel_width, panel_height, "Texture Analysis", font_scale);
+
+        // A trackbars to control the age setting
+        cvui::printf(canvas, items_x + 5, pad * 3.5, font_scale, font_color, "Age:");
+        cvui::trackbar(canvas, items_x, pad * 5.5, trackbar_width, &age, 0, 100);
+
+        _glcm_texture_analysis->CalculateScore(age, _glcm_features);
+
+        cvui::printf(canvas, items_x + 5, pad * 10.0, font_scale, font_color, "Intensity: %.4f", _glcm_features.at(Type::Mean).Avg());
+        cvui::printf(canvas, items_x + 5, pad * 12.0, font_scale, font_color, "Entropy: %.4f", _glcm_features.at(Type::Entropy).Avg());
+        cvui::printf(canvas, items_x + 5, pad * 14.0, font_scale, font_color, "Contrast: %.4f", _glcm_features.at(Type::Contrast).Avg());
+        cvui::printf(canvas, items_x + 5, pad * 16.0, font_scale, font_color, "Score: %.1f", _glcm_features.at(Type::Score).Avg());
+
         cvui::update();
 
         // Show everything on the screen

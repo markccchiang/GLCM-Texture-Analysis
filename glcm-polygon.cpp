@@ -113,7 +113,7 @@ int main(int argc, char* argv[]) {
 
         // Show results
         ImageViewer viewer(roi_image, results, &texture_analysis);
-        viewer.DisplayPanel();
+        viewer.DisplayScorePanel();
         // cv::waitKey(0);
     }
 
