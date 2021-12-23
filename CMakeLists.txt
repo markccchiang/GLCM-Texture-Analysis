@@ -13,6 +13,8 @@ if (Eigen3_FOUND)
     message(STATUS "Eigen3 found: ${EIGEN3_INCLUDE_DIR}")
 endif ()
 
+include_directories(${CMAKE_SOURCE_DIR})
+
 set(LIBS
         ${LIBS}
         ${OpenCV_LIBS})

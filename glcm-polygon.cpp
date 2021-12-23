@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
         texture_analysis.Print(results);
 
         // Show results
-        ImageViewer viewer(roi_image);
+        ImageViewer viewer(roi_image, &texture_analysis);
         viewer.DisplayPanel();
         // cv::waitKey(0);
     }

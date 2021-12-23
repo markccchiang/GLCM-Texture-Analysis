@@ -6,7 +6,8 @@
 
 #define WINDOW_NAME "CVUI Image Viewer"
 
-ImageViewer::ImageViewer(cv::Mat image) : _image(image) {}
+ImageViewer::ImageViewer(const cv::Mat& image, glcm::TextureAnalysis* glcm_texture_analysis)
+    : _image(image), _glcm_texture_analysis(glcm_texture_analysis) {}
 
 void ImageViewer::Display() {
     cv::imshow("Image", _image);
