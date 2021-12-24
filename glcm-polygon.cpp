@@ -141,25 +141,26 @@ void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata) {
         // Mask is black with white where our ROI is
         mask_image = Mat::zeros(drawing_image.rows, drawing_image.cols, CV_8UC1);
 
+        // Scalar(255) is white color (will show image in this part)
+        std::vector<std::vector<cv::Point>> points{vertices};
+        cv::fillPoly(mask_image, points, Scalar(white_color));
+
+        // Copy the image to ROI with the mask_image with the white part (if value = 255)
+        original_image.copyTo(roi_image, mask_image);
+
         // Get boundary points
         auto bounds = GetMinMax(vertices);
         // for (int i = 0; i < bounds.size(); ++i) {
         //    cout << "x = " << bounds[i].first << ", y = " << bounds[i].second << endl;
         //}
 
-        // Scalar(255) is white color (will show image in this part)
-        std::vector<std::vector<cv::Point>> pts{vertices};
-        cv::fillPoly(mask_image, pts, Scalar(white_color));
-
-        // Copy the image to ROI with the mask_image with the white part (if value = 255)
-        drawing_image.copyTo(roi_image, mask_image);
         roi_image(Rect(Point(bounds[0].first, bounds[0].second), Point(bounds[1].first, bounds[1].second))).copyTo(roi_image);
 
         finish_drawing = true;
         return;
     }
 
-    // Left click the button to draw a polygon
+    // Left-click the button to draw a polygon
     if (event == EVENT_LBUTTONDOWN) {
         // cout << "Left mouse button clicked at (" << x << ", " << y << ")" << endl;
         if (x >= 0 && x <= img_width && y >= 0 && y <= img_height) {
