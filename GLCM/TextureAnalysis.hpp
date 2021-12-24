@@ -40,7 +40,8 @@ enum class Type {
     InformationMeasuresOfCorrelationII,
     InverseDifferenceNormalized,
     InverseDifferenceMomentNormalized,
-    Score
+    Score,
+    Age
 };
 
 enum class Direction { H, V, LD, RD, Avg };

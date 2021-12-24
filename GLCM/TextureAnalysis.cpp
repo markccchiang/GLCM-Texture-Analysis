@@ -1400,6 +1400,7 @@ void TextureAnalysis::CalculateScore(double age, std::map<Type, Features>& featu
                       params[3] * features_map.at(Type::Contrast).RD;
 
         features_map[Type::Score](f_H, f_V, f_LD, f_RD);
+        features_map[Type::Age](age, age, age, age);
     } else {
         std::cerr << "Can not calculate the Score!\n";
     }
@@ -1500,6 +1501,9 @@ std::string TextureAnalysis::TypeToString(const Type& type) {
             break;
         case Type::Score:
             result = "Score";
+            break;
+        case Type::Age:
+            result = "Age";
             break;
         default:
             std::cerr << "Unknown feature type!\n";
