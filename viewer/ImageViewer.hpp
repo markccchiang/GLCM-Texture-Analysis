@@ -6,20 +6,19 @@
 
 #include "GLCM/TextureAnalysis.hpp"
 
+using namespace glcm;
+
 class ImageViewer {
 public:
-    ImageViewer(
-        const cv::Mat& image, const std::map<glcm::Type, glcm::Features>& glcm_features, glcm::TextureAnalysis* glcm_texture_analysis);
+    ImageViewer(const cv::Mat& image);
     ~ImageViewer() = default;
 
     void Display();
     void DisplayPanel();
-    std::map<glcm::Type, glcm::Features> DisplayScorePanel();
+    void DisplayScorePanel(glcm::TextureAnalysis* glcm_texture_analysis, std::map<Type, Features>& glcm_features);
 
 private:
     cv::Mat _image;
-    std::map<glcm::Type, glcm::Features> _glcm_features;
-    glcm::TextureAnalysis* _glcm_texture_analysis = nullptr;
 };
 
 #endif // IMAGE_VIEWER_HPP_

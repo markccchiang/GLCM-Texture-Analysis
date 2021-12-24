@@ -6,11 +6,7 @@
 
 #define WINDOW_NAME "GLCM Image Viewer"
 
-using namespace glcm;
-
-ImageViewer::ImageViewer(
-    const cv::Mat& image, const std::map<glcm::Type, glcm::Features>& glcm_features, glcm::TextureAnalysis* glcm_texture_analysis)
-    : _image(image), _glcm_features(glcm_features), _glcm_texture_analysis(glcm_texture_analysis) {}
+ImageViewer::ImageViewer(const cv::Mat& image) : _image(image) {}
 
 void ImageViewer::Display() {
     cv::imshow("Image", _image);
@@ -75,7 +71,7 @@ void ImageViewer::DisplayPanel() {
     }
 }
 
-std::map<Type, Features> ImageViewer::DisplayScorePanel() {
+void ImageViewer::DisplayScorePanel(glcm::TextureAnalysis* glcm_texture_analysis, std::map<Type, Features>& glcm_features) {
     cv::Mat frame = _image.clone();
     int age = 40;
     int panel_width = 180;
@@ -102,12 +98,14 @@ std::map<Type, Features> ImageViewer::DisplayScorePanel() {
         cvui::printf(canvas, items_x + 5, pad * 3.5, font_scale, font_color, "Age:");
         cvui::trackbar(canvas, items_x, pad * 5.5, trackbar_width, &age, 0, 100);
 
-        _glcm_texture_analysis->CalculateScore(age, _glcm_features);
+        if (glcm_texture_analysis) {
+            glcm_texture_analysis->CalculateScore(age, glcm_features);
+        }
 
-        cvui::printf(canvas, items_x + 5, pad * 10.0, font_scale, font_color, "Intensity: %.4f", _glcm_features.at(Type::Mean).Avg());
-        cvui::printf(canvas, items_x + 5, pad * 12.0, font_scale, font_color, "Entropy: %.4f", _glcm_features.at(Type::Entropy).Avg());
-        cvui::printf(canvas, items_x + 5, pad * 14.0, font_scale, font_color, "Contrast: %.4f", _glcm_features.at(Type::Contrast).Avg());
-        cvui::printf(canvas, items_x + 5, pad * 16.0, font_scale, font_color, "Score: %.1f", _glcm_features.at(Type::Score).Avg());
+        cvui::printf(canvas, items_x + 5, pad * 10.0, font_scale, font_color, "Intensity: %.4f", glcm_features.at(Type::Mean).Avg());
+        cvui::printf(canvas, items_x + 5, pad * 12.0, font_scale, font_color, "Entropy: %.4f", glcm_features.at(Type::Entropy).Avg());
+        cvui::printf(canvas, items_x + 5, pad * 14.0, font_scale, font_color, "Contrast: %.4f", glcm_features.at(Type::Contrast).Avg());
+        cvui::printf(canvas, items_x + 5, pad * 16.0, font_scale, font_color, "Score: %.1f", glcm_features.at(Type::Score).Avg());
 
         cvui::update();
 
@@ -121,6 +119,4 @@ std::map<Type, Features> ImageViewer::DisplayScorePanel() {
             break;
         }
     }
-
-    return _glcm_features;
 }
