@@ -8,14 +8,13 @@ using namespace std;
 using namespace cv;
 
 const int Ng = 256;
-int d;      // neighborhood distance
-double age; // age of a person
+int d; // neighborhood distance
 
 std::map<glcm::Type, glcm::Features> results; // GLCM calculation results
 
 int main(int argc, char* argv[]) {
     if (argc < 2 || argc > 3) {
-        cout << "Usage: ./glcm-polygon <file name> <distance> <age>" << endl;
+        cout << "Usage: ./glcm-polygon <file name> <distance>" << endl;
         return 1;
     }
 

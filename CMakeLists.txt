@@ -21,11 +21,13 @@ set(LIBS
 
 set(SOURCES
         ${SOURCES}
+        controller/RectController.cpp
         GLCM/TextureAnalysis.cpp
         viewer/ImageViewer.cpp)
 
 set(MAIN_FILES
         ${MAIN_FILES}
+        glcm-analysis
         glcm-polygon
         glcm-rectangle)
 
