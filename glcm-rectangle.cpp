@@ -1,7 +1,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/tracking.hpp> // selectROI is part of tracking API
 
-#include "GLCM/TextureAnalysis.hpp"
+#include "analysis/TextureAnalysis.hpp"
 #include "viewer/ImageViewer.hpp"
 
 using namespace std;

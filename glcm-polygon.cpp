@@ -1,7 +1,7 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 
-#include "GLCM/TextureAnalysis.hpp"
+#include "analysis/TextureAnalysis.hpp"
 #include "viewer/ImageViewer.hpp"
 
 using namespace std;

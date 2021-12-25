@@ -1,4 +1,4 @@
-#include "GLCM/TextureAnalysis.hpp"
+#include "analysis/TextureAnalysis.hpp"
 #include "controller/RectController.hpp"
 
 using namespace std;

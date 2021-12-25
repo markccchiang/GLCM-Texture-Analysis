@@ -21,8 +21,8 @@ set(LIBS
 
 set(SOURCES
         ${SOURCES}
+        analysis/TextureAnalysis.cpp
         controller/RectController.cpp
-        GLCM/TextureAnalysis.cpp
         viewer/ImageViewer.cpp)
 
 set(MAIN_FILES
