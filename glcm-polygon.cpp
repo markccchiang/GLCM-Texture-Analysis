@@ -24,7 +24,6 @@ std::vector<cv::Point> vertices; // polygon points
 int img_width;                   // image width
 int img_height;                  // image height
 int d;                           // neighborhood distance
-double age;                      // age of a person
 
 std::map<glcm::Type, glcm::Features> results; // GLCM calculation results
 

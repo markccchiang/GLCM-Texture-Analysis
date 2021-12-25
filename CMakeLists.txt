@@ -36,5 +36,5 @@ foreach (MAIN_FILE IN LISTS MAIN_FILES)
     target_link_libraries(${MAIN_FILE} ${LIBS})
 endforeach ()
 
-add_executable(canvas_example canvas_example.cpp)
-target_link_libraries(canvas_example ${LIBS})
+add_executable(canvas-example canvas-example.cpp)
+target_link_libraries(canvas-example ${LIBS})
