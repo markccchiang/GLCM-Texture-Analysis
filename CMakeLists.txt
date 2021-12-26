@@ -22,6 +22,7 @@ set(LIBS
 set(SOURCES
         ${SOURCES}
         analysis/TextureAnalysis.cpp
+        controller/PolygonController.cpp
         controller/RectController.cpp
         viewer/ImageViewer.cpp)
 
