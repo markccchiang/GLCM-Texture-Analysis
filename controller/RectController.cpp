@@ -3,7 +3,9 @@
 using namespace std;
 using namespace cv;
 
-void RectController::Run(const std::string& filename, int d, int Ng) {
+namespace Rect {
+
+void Controller::Run(const std::string& filename, int d, int Ng) {
     cv::Mat image = imread(filename, IMREAD_GRAYSCALE);
     glcm::TextureAnalysis texture_analysis(Ng);
     std::map<glcm::Type, glcm::Features> results;
@@ -42,3 +44,5 @@ void RectController::Run(const std::string& filename, int d, int Ng) {
 
     cv::destroyAllWindows();
 }
+
+} // namespace Rect

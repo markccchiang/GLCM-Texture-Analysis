@@ -20,7 +20,7 @@ std::vector<cv::Point> vertices; // polygon points
 int image_width;                 // image width
 int image_height;                // image height
 
-void PolygonController::Run(const std::string& filename, int d, int Ng) {
+void Controller::Run(const std::string& filename, int d, int Ng) {
     glcm::TextureAnalysis texture_analysis(Ng);
     std::map<glcm::Type, glcm::Features> results;
 
@@ -69,7 +69,7 @@ void PolygonController::Run(const std::string& filename, int d, int Ng) {
     cv::destroyAllWindows();
 }
 
-void PolygonController::MouseCallBackFunc(int event, int x, int y, int flags, void* userdata) {
+void Controller::MouseCallBackFunc(int event, int x, int y, int flags, void* userdata) {
     // Right-click the button to show the ROI
     if (event == EVENT_RBUTTONDOWN) {
         if (vertices.size() < 2) {
@@ -107,7 +107,7 @@ void PolygonController::MouseCallBackFunc(int event, int x, int y, int flags, vo
     }
 }
 
-std::vector<std::pair<int, int>> PolygonController::GetMinMax(const std::vector<cv::Point>& vec) {
+std::vector<std::pair<int, int>> Controller::GetMinMax(const std::vector<cv::Point>& vec) {
     int x_min = std::numeric_limits<int>::max();
     int y_min = std::numeric_limits<int>::max();
     int x_max = std::numeric_limits<int>::min();

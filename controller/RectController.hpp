@@ -8,12 +8,16 @@
 #include "analysis/TextureAnalysis.hpp"
 #include "viewer/ImageViewer.hpp"
 
-class RectController {
+namespace Rect {
+
+class Controller {
 public:
-    RectController(){};
-    ~RectController() = default;
+    Controller(){};
+    ~Controller() = default;
 
     void Run(const std::string& filename, int d = 1, int Ng = 256);
 };
+
+} // namespace Rect
 
 #endif // RECT_CONTROLLER_HPP_

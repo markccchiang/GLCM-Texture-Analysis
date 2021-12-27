@@ -9,10 +9,10 @@
 
 namespace polygon {
 
-class PolygonController {
+class Controller {
 public:
-    PolygonController(){};
-    ~PolygonController() = default;
+    Controller(){};
+    ~Controller() = default;
 
     void Run(const std::string& filename, int d = 1, int Ng = 256);
 
