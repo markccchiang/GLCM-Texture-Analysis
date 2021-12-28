@@ -2,7 +2,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "analysis/TextureAnalysis.hpp"
-#include "viewer/ImageViewer.hpp"
+#include "viewer/Viewer.hpp"
 
 using namespace std;
 using namespace cv;
@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
         texture_analysis.Print(results);
 
         // Show results
-        ImageViewer viewer(roi_image);
+        glcm::Viewer viewer(roi_image);
         viewer.DisplayScorePanel(&texture_analysis, results);
         // cv::waitKey(0);
     }

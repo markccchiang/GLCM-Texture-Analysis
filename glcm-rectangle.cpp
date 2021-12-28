@@ -2,7 +2,7 @@
 #include <opencv2/tracking.hpp> // selectROI is part of tracking API
 
 #include "analysis/TextureAnalysis.hpp"
-#include "viewer/ImageViewer.hpp"
+#include "viewer/Viewer.hpp"
 
 using namespace std;
 using namespace cv;
@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
 
         // Display Cropped Image
         if (image_crop.cols > 0 && image_crop.rows > 0) {
-            ImageViewer viewer(image_crop);
+            glcm::Viewer viewer(image_crop);
             viewer.DisplayScorePanel(&texture_analysis, results);
         } else {
             std::cerr << "Invalid ROI image!\n";

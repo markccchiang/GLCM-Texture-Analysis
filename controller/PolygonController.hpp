@@ -5,7 +5,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "analysis/TextureAnalysis.hpp"
-#include "viewer/ImageViewer.hpp"
+#include "viewer/Viewer.hpp"
 
 namespace polygon {
 

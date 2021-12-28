@@ -1,4 +1,4 @@
-#include "ImageViewer.hpp"
+#include "Viewer.hpp"
 
 #define CVUI_IMPLEMENTATION
 
@@ -6,13 +6,15 @@
 
 #define WINDOW_NAME "GLCM Image Viewer"
 
-ImageViewer::ImageViewer(const cv::Mat& image) : _image(image) {}
+namespace glcm {
 
-void ImageViewer::Display() {
+Viewer::Viewer(const cv::Mat& image) : _image(image) {}
+
+void Viewer::Display() {
     cv::imshow("Image", _image);
 }
 
-void ImageViewer::DisplayPanel() {
+void Viewer::DisplayPanel() {
     cv::Mat frame = _image.clone();
     int low_threshold = 50;
     int high_threshold = 150;
@@ -71,7 +73,7 @@ void ImageViewer::DisplayPanel() {
     }
 }
 
-void ImageViewer::DisplayScorePanel(glcm::TextureAnalysis* glcm_texture_analysis, std::map<Type, Features>& glcm_features) {
+void Viewer::DisplayScorePanel(glcm::TextureAnalysis* glcm_texture_analysis, std::map<Type, Features>& glcm_features) {
     cv::Mat frame = _image.clone();
     int age = 40;
     int panel_width = 180;
@@ -120,3 +122,5 @@ void ImageViewer::DisplayScorePanel(glcm::TextureAnalysis* glcm_texture_analysis
         }
     }
 }
+
+} // namespace glcm

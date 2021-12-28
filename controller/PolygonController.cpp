@@ -61,7 +61,7 @@ void Controller::Run(const std::string& filename, int d, int Ng) {
         results = texture_analysis.Calculate(features);
         texture_analysis.Print(results);
 
-        ImageViewer viewer(roi_image);
+        glcm::Viewer viewer(roi_image);
         viewer.DisplayScorePanel(&texture_analysis, results);
     }
 

@@ -24,7 +24,7 @@ set(SOURCES
         analysis/TextureAnalysis.cpp
         controller/PolygonController.cpp
         controller/RectController.cpp
-        viewer/ImageViewer.cpp)
+        viewer/Viewer.cpp)
 
 set(MAIN_FILES
         ${MAIN_FILES}

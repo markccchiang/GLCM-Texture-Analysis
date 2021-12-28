@@ -29,7 +29,7 @@ void Controller::Run(const std::string& filename, int d, int Ng) {
         texture_analysis.Print(results);
 
         if (image_crop.cols > 0 && image_crop.rows > 0) {
-            ImageViewer viewer(image_crop);
+            glcm::Viewer viewer(image_crop);
             viewer.DisplayScorePanel(&texture_analysis, results);
         } else {
             std::cerr << "Invalid ROI image!\n";

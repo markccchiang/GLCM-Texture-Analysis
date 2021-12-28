@@ -6,7 +6,7 @@
 #include <opencv2/tracking.hpp> // selectROI is part of tracking API
 
 #include "analysis/TextureAnalysis.hpp"
-#include "viewer/ImageViewer.hpp"
+#include "viewer/Viewer.hpp"
 
 namespace Rect {
 
