@@ -3,7 +3,7 @@
 using namespace std;
 using namespace cv;
 
-namespace Rect {
+namespace rect {
 
 void Controller::Run(const std::string& filename, int d, int Ng) {
     cv::Mat image = imread(filename, IMREAD_GRAYSCALE);

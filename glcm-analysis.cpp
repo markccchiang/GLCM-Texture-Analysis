@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
         polygon::Controller controller;
         controller.Run(filename);
     } else {
-        Rect::Controller controller;
+        rect::Controller controller;
         controller.Run(filename);
     }
 

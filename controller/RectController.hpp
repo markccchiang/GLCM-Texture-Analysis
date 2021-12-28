@@ -8,7 +8,7 @@
 #include "analysis/TextureAnalysis.hpp"
 #include "viewer/Viewer.hpp"
 
-namespace Rect {
+namespace rect {
 
 class Controller {
 public:
