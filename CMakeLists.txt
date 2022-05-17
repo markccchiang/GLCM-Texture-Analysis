@@ -1,8 +1,10 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.22)
 
 project(GLCM-Texture-Analysis LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
+
+set(CMAKE_OSX_ARCHITECTURES "arm64")
 
 find_package(OpenCV REQUIRED)
 
