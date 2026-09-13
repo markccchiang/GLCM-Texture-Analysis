@@ -1,4 +1,4 @@
-# GLCM-Texture-analysis
+# GLCM Texture Analysis
 
 Interactive tool that computes Haralick texture features from the Gray Level Co-occurrence Matrix (GLCM) of a region you select in a grayscale image.
 
@@ -142,7 +142,6 @@ To rebuild later, activate the environment again with `source .venv/bin/activate
 | `viewer/` | Score panel, built on the vendored `cvui.h` |
 | `tests/` | GoogleTest unit tests |
 | `doc/` | Sphinx documentation: GLCM equations and references |
-| `ImageJ-plugin-codes/` | GLCM texture ImageJ plugin, kept for reference |
 | `samples/` | Sample image |
 
 ## References

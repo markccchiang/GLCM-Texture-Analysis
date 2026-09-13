@@ -333,4 +333,4 @@ Choosing features and gray levels
 - Standardized feature definitions and reference values are given by the Image Biomarker Standardization
   Initiative [Zwanenburg2020]_ and implemented in PyRadiomics [vanGriethuysen2017]_.
 - [HallBeyer2017a]_ and [HallBeyer2017b]_ give practical guidance on interpreting and selecting GLCM features.
-- The ImageJ plugin kept in ``ImageJ-plugin-codes/`` computes its correlation according to [Walker1995]_.
+- [Walker1995]_ analyses where co-occurrence features get their discriminatory power and how to improve it.
