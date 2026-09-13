@@ -110,6 +110,29 @@ ctest --test-dir build
 
 The tests check the features against Haralick's worked example and against a simple, independent GLCM implementation.
 
+## Documentation
+
+The `doc/` folder contains a [Sphinx](https://www.sphinx-doc.org/) site (theme: [sphinx_rtd_theme](https://sphinx-rtd-theme.readthedocs.io/)) with every GLCM equation as implemented in `analysis/TextureAnalysis.cpp` and a list of references.
+
+Build it in a Python virtual environment (requires Python 3):
+
+```bash
+cd doc
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+make html
+```
+
+Open the generated pages in a browser:
+
+```bash
+open _build/html/index.html        # macOS
+xdg-open _build/html/index.html    # Linux
+```
+
+To rebuild later, activate the environment again with `source .venv/bin/activate` and run `make html`. Use `make clean` to remove the generated pages. The equations are rendered with MathJax, which is loaded from a CDN, so viewing them needs an internet connection.
+
 ## Project structure
 
 | Path | Contents |
@@ -118,9 +141,12 @@ The tests check the features against Haralick's worked example and against a sim
 | `controller/` | Rectangle and polygon selection loops |
 | `viewer/` | Score panel, built on the vendored `cvui.h` |
 | `tests/` | GoogleTest unit tests |
+| `doc/` | Sphinx documentation: GLCM equations and references |
 | `ImageJ-plugin-codes/` | GLCM texture ImageJ plugin, kept for reference |
 | `samples/` | Sample image |
 
 ## References
 
 - R. M. Haralick, K. Shanmugam and I. Dinstein, "Textural Features for Image Classification," *IEEE Transactions on Systems, Man, and Cybernetics*, SMC-3(6), 1973.
+
+See [`doc/references.rst`](doc/references.rst) (or the References page of the built documentation) for the full list.
