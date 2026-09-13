@@ -9,11 +9,16 @@ Code licensed under the MIT license
 
 #define CVUI_IMPLEMENTATION
 
+// cvui.h is vendored; silence its warnings instead of editing it
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #include "viewer/cvui.h"
+#pragma GCC diagnostic pop
 
 #define WINDOW_NAME "CVUI Canvas"
 
-int main(int argc, const char* argv[]) {
+int main() {
     cv::Mat lena = cv::imread("../samples/lena.jpg");
     cv::Mat frame = lena.clone();
     int low_threshold = 50;

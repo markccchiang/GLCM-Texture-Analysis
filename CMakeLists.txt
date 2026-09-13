@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 
 set(CMAKE_OSX_ARCHITECTURES "arm64")
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    add_compile_options(-Wall -Wextra)
+endif ()
+
 find_package(OpenCV REQUIRED)
 
 # No version pin: Eigen 3.3+ and 5.x both work, but Eigen's config only accepts the same major version

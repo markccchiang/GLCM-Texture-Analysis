@@ -2,7 +2,12 @@
 
 #define CVUI_IMPLEMENTATION
 
+// cvui.h is vendored; silence its warnings instead of editing it
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #include "cvui.h"
+#pragma GCC diagnostic pop
 
 #define WINDOW_NAME "GLCM Image Viewer"
 
