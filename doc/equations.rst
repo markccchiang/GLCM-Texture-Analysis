@@ -182,6 +182,10 @@ Features F1–F14 of [Haralick1973]_ (see also [Haralick1979]_).
 ``CorrelationII`` — Haralick's correlation
    .. math:: f = \frac{\sum_{i,j} i \, j \, p(i, j) - \mu_x \mu_y}{\sigma_x \sigma_y}
 
+   If :math:`\sigma_x \sigma_y = 0` (for example a constant region), the correlation is undefined and 1 is returned,
+   as in PyRadiomics. The same applies to ``CorrelationI``, ``CorrelationIII`` and the "another way" variants (with
+   :math:`\sigma_i \sigma_j`).
+
 ``CorrelationIIAnotherWay`` — cross-check of ``CorrelationII``
    .. math:: f = \frac{\sum_{i,j} i \, j \, p(i, j) - \mu_i \mu_j}{\sigma_i \sigma_j}
 
@@ -215,13 +219,10 @@ Features F1–F14 of [Haralick1973]_ (see also [Haralick1979]_).
    .. math:: f = -\sum_{i,j} p(i, j) \log p(i, j)
 
 ``DifferenceVariance``
-   .. math:: f = \sum_{k=0}^{N_g-1} k^2 \, p_{x-y}(k)
+   .. math::
 
-   .. note::
-
-      This is the second moment of :math:`p_{x-y}` and equals ``Contrast``. Haralick defines Difference Variance
-      as the *variance* of :math:`p_{x-y}`, i.e. :math:`\sum_k (k - \mu_{x-y})^2 p_{x-y}(k)` with
-      :math:`\mu_{x-y} = \sum_k k \, p_{x-y}(k)`.
+      \mu_{x-y} = \sum_{k=0}^{N_g-1} k \, p_{x-y}(k), \qquad
+      f = \sum_{k=0}^{N_g-1} \left(k - \mu_{x-y}\right)^2 p_{x-y}(k)
 
 ``DifferenceEntropy``
    .. math:: f = -\sum_{k=0}^{N_g-1} p_{x-y}(k) \log p_{x-y}(k)
@@ -244,6 +245,9 @@ Features F1–F14 of [Haralick1973]_ (see also [Haralick1979]_).
       f_{IMC1} = \frac{HXY - HXY1}{\max(HX, HY)}, \qquad
       f_{IMC2} = \sqrt{1 - \exp\big(-2 \, (HXY2 - HXY)\big)}
 
+   If :math:`\max(HX, HY) = 0` (a single gray level), :math:`f_{IMC1} = 0`. If rounding makes
+   :math:`1 - \exp(-2 \, (HXY2 - HXY))` negative, :math:`f_{IMC2} = 0`. These are the values PyRadiomics uses.
+
    Requesting either type calculates both.
 
 Maximal Correlation Coefficient
@@ -251,13 +255,12 @@ Maximal Correlation Coefficient
 
    .. math:: Q(i, j) = \sum_{k=0}^{N_g-1} \frac{p(i, k) \, p(j, k)}{p_x(i) \, p_y(k)}
 
-   where terms with :math:`p_x(i) \, p_y(k) = 0` are skipped. The result is the second largest real part of the
-   eigenvalues of :math:`Q`, computed with Eigen.
+   where terms with :math:`p_x(i) \, p_y(k) = 0` are skipped. With :math:`\lambda_2` the second largest real part of
+   the eigenvalues of :math:`Q` (computed with Eigen),
 
-   .. note::
+   .. math:: f = \sqrt{\max(\lambda_2, 0)}
 
-      Haralick defines the Maximal Correlation Coefficient as the **square root** of the second largest
-      eigenvalue. The implementation returns the eigenvalue itself.
+   A negative :math:`\lambda_2` can only come from rounding and is treated as 0.
 
 Other co-occurrence features
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

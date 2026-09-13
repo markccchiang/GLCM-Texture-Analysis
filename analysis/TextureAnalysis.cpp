@@ -47,6 +47,12 @@ double EntropyOf(const std::vector<double>& values) {
     return entropy;
 }
 
+// Correlation-type ratio. It is undefined when a standard deviation is zero (e.g. a constant region); 1 is returned
+// then, as in PyRadiomics
+double CorrelationRatio(double numerator, double denominator) {
+    return (denominator == 0.0) ? 1.0 : numerator / denominator;
+}
+
 } // namespace
 
 TextureAnalysis::TextureAnalysis(int Ng) : _Ng(Ng) {
@@ -260,10 +266,10 @@ void TextureAnalysis::GetCorrelationI(Features& f) const {
         double sum = 0.0;
         for (int i = 0; i < _Ng; ++i) {
             for (int j = 0; j < _Ng; ++j) {
-                sum += (i - d.mu_x) * (j - d.mu_y) * P(d, i, j) / (d.sigma_x * d.sigma_y);
+                sum += (i - d.mu_x) * (j - d.mu_y) * P(d, i, j);
             }
         }
-        return sum;
+        return CorrelationRatio(sum, d.sigma_x * d.sigma_y);
     });
 }
 
@@ -272,10 +278,10 @@ void TextureAnalysis::GetCorrelationIAnotherWay(Features& f) const {
         double sum = 0.0;
         for (int i = 0; i < _Ng; ++i) {
             for (int j = 0; j < _Ng; ++j) {
-                sum += (i - d.glcm_mu_i) * (j - d.glcm_mu_j) * P(d, i, j) / (d.glcm_sigma_i * d.glcm_sigma_j);
+                sum += (i - d.glcm_mu_i) * (j - d.glcm_mu_j) * P(d, i, j);
             }
         }
-        return sum;
+        return CorrelationRatio(sum, d.glcm_sigma_i * d.glcm_sigma_j);
     });
 }
 
@@ -287,7 +293,7 @@ void TextureAnalysis::GetCorrelationII(Features& f) const {
                 sum += (i * j) * P(d, i, j);
             }
         }
-        return (sum - (d.mu_x * d.mu_y)) / (d.sigma_x * d.sigma_y);
+        return CorrelationRatio(sum - (d.mu_x * d.mu_y), d.sigma_x * d.sigma_y);
     });
 }
 
@@ -299,7 +305,7 @@ void TextureAnalysis::GetCorrelationIIAnotherWay(Features& f) const {
                 sum += (i * j) * P(d, i, j);
             }
         }
-        return (sum - (d.glcm_mu_i * d.glcm_mu_j)) / (d.glcm_sigma_i * d.glcm_sigma_j);
+        return CorrelationRatio(sum - (d.glcm_mu_i * d.glcm_mu_j), d.glcm_sigma_i * d.glcm_sigma_j);
     });
 }
 
@@ -311,7 +317,7 @@ void TextureAnalysis::GetCorrelationIII(Features& f) const {
                 sum += (i * j) * P(d, i, j);
             }
         }
-        return (sum - (d.mu_x * d.mu_y)) / (d.sigma_x * d.sigma_y * d.sigma_x * d.sigma_y);
+        return CorrelationRatio(sum - (d.mu_x * d.mu_y), d.sigma_x * d.sigma_y * d.sigma_x * d.sigma_y);
     });
 }
 
@@ -397,12 +403,17 @@ void TextureAnalysis::GetEntropy(Features& f) const {
 }
 
 void TextureAnalysis::GetDifferenceVariance(Features& f) const {
+    // Variance of p_{x-y}: sum_k (k - mu_{x-y})^2 p_{x-y}(k)
     f = ForEachDirection([this](const DirectionData& d) {
-        double sum = 0.0;
+        double mean = 0.0;
         for (int k = 0; k < _Ng; ++k) {
-            sum += k * k * d.p_xny[k];
+            mean += k * d.p_xny[k];
         }
-        return sum;
+        double variance = 0.0;
+        for (int k = 0; k < _Ng; ++k) {
+            variance += (k - mean) * (k - mean) * d.p_xny[k];
+        }
+        return variance;
     });
 }
 
@@ -439,8 +450,16 @@ void TextureAnalysis::GetInformationMeasuresOfCorrelation(Features& f1, Features
         }
     }
 
-    auto first = [](const Entropies& e) { return (e.HXY - e.HXY1) / std::max(e.HX, e.HY); };
-    auto second = [](const Entropies& e) { return sqrt(1.0 - exp(-2.0 * (e.HXY2 - e.HXY))); };
+    // Undefined cases return 0, as in PyRadiomics: a single gray level (HX = HY = 0) for IMC1, and a negative value under
+    // the square root, which only comes from rounding, for IMC2
+    auto first = [](const Entropies& e) {
+        double max_entropy = std::max(e.HX, e.HY);
+        return (max_entropy == 0.0) ? 0.0 : (e.HXY - e.HXY1) / max_entropy;
+    };
+    auto second = [](const Entropies& e) {
+        double value = 1.0 - exp(-2.0 * (e.HXY2 - e.HXY));
+        return (value < 0.0) ? 0.0 : sqrt(value);
+    };
 
     f1 = {first(entropies[0]), first(entropies[1]), first(entropies[2]), first(entropies[3])};
     f2 = {second(entropies[0]), second(entropies[1]), second(entropies[2]), second(entropies[3])};
@@ -472,9 +491,9 @@ void TextureAnalysis::GetMaximalCorrelationCoefficient(Features& f) const {
             eigens.push_back(eigen_solver.eigenvalues()[i].real());
         }
 
-        // second largest eigenvalue
+        // square root of the second largest eigenvalue; a negative eigenvalue can only come from rounding
         std::nth_element(eigens.begin(), eigens.begin() + 1, eigens.end(), std::greater<double>());
-        return eigens[1];
+        return sqrt(std::max(eigens[1], 0.0));
     });
 }
 

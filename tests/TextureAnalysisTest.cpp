@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <Eigen/SVD>
 #include <cmath>
 #include <map>
 #include <opencv2/opencv.hpp>
@@ -305,4 +306,116 @@ TEST(TextureAnalysisTest, SumVarianceIsCenteredOnSumAverage) {
         EXPECT_NEAR(Component(results.at(Type::SumAverage), direction), average, TOLERANCE);
         EXPECT_NEAR(Component(results.at(Type::SumVariance), direction), variance, TOLERANCE);
     }
+}
+
+// Regression: Difference Variance used to be sum_k k^2 p_{x-y}(k), which equals Contrast
+TEST(TextureAnalysisTest, DifferenceVarianceIsVarianceOfDifference) {
+    const int Ng = 8;
+    cv::Mat image = PatternImage(7, 9, Ng);
+    TextureAnalysis texture_analysis(Ng);
+    for (int d : {1, 2}) {
+        SCOPED_TRACE("distance " + std::to_string(d));
+        texture_analysis.ProcessRectImage(image, d);
+        auto results = texture_analysis.Calculate({Type::DifferenceVariance});
+
+        for (int direction = 0; direction < 4; ++direction) {
+            SCOPED_TRACE("direction " + std::to_string(direction));
+            Matrix p = ReferenceGlcm(image, FullMask(image), Ng, direction, d);
+
+            std::vector<double> p_xny(Ng, 0.0);
+            for (int i = 0; i < Ng; ++i) {
+                for (int j = 0; j < Ng; ++j) {
+                    p_xny[std::abs(i - j)] += p[i][j];
+                }
+            }
+            double mean = 0.0;
+            for (int k = 0; k < Ng; ++k) {
+                mean += k * p_xny[k];
+            }
+            double variance = 0.0;
+            for (int k = 0; k < Ng; ++k) {
+                variance += (k - mean) * (k - mean) * p_xny[k];
+            }
+
+            EXPECT_NEAR(Component(results.at(Type::DifferenceVariance), direction), variance, TOLERANCE);
+        }
+    }
+}
+
+// Regression: the Maximal Correlation Coefficient used to be the eigenvalue instead of its square root.
+// sqrt(second eigenvalue of Q) equals the second singular value of Dx^-1/2 p Dy^-1/2, which is computed here with an SVD.
+TEST(TextureAnalysisTest, MaximalCorrelationCoefficientMatchesSingularValue) {
+    const int Ng = 8;
+    cv::Mat image = PatternImage(9, 9, Ng);
+    TextureAnalysis texture_analysis(Ng);
+    texture_analysis.ProcessRectImage(image, 1);
+    Features mcc;
+    texture_analysis.GetMaximalCorrelationCoefficient(mcc);
+
+    for (int direction = 0; direction < 4; ++direction) {
+        SCOPED_TRACE("direction " + std::to_string(direction));
+        Matrix p = ReferenceGlcm(image, FullMask(image), Ng, direction, 1);
+
+        // Gray levels that occur (the GLCM is symmetric, so p_x = p_y)
+        std::vector<int> levels;
+        std::vector<double> px(Ng, 0.0);
+        for (int i = 0; i < Ng; ++i) {
+            for (int j = 0; j < Ng; ++j) {
+                px[i] += p[i][j];
+            }
+            if (px[i] > 0) {
+                levels.push_back(i);
+            }
+        }
+
+        const int n = static_cast<int>(levels.size());
+        Eigen::MatrixXd B(n, n);
+        for (int a = 0; a < n; ++a) {
+            for (int b = 0; b < n; ++b) {
+                B(a, b) = p[levels[a]][levels[b]] / std::sqrt(px[levels[a]] * px[levels[b]]);
+            }
+        }
+        Eigen::JacobiSVD<Eigen::MatrixXd> svd(B);
+        ASSERT_GE(n, 2);
+
+        EXPECT_NEAR(Component(mcc, direction), svd.singularValues()(1), 1e-7);
+    }
+}
+
+TEST(TextureAnalysisTest, MaximalCorrelationCoefficientIsOneForDeterministicPairs) {
+    // Horizontal stripes: every horizontal pair has two equal gray levels
+    cv::Mat image(8, 8, CV_8UC1);
+    for (int m = 0; m < image.rows; ++m) {
+        image.row(m).setTo(cv::Scalar(m % 2));
+    }
+    TextureAnalysis texture_analysis(2);
+    texture_analysis.ProcessRectImage(image, 1);
+    Features mcc;
+    texture_analysis.GetMaximalCorrelationCoefficient(mcc);
+
+    EXPECT_NEAR(mcc.H, 1.0, 1e-9);
+}
+
+// Regression: correlations and IMC1 used to divide 0 by 0 for a constant region
+TEST(TextureAnalysisTest, ConstantRegionHasNoNaN) {
+    cv::Mat image(8, 8, CV_8UC1, cv::Scalar(3));
+    TextureAnalysis texture_analysis(8);
+    texture_analysis.ProcessRectImage(image, 1);
+
+    std::set<Type> all;
+    for (int t = static_cast<int>(Type::Mean); t < static_cast<int>(Type::Score); ++t) {
+        all.insert(static_cast<Type>(t));
+    }
+    auto results = texture_analysis.Calculate(all);
+    Features mcc;
+    texture_analysis.GetMaximalCorrelationCoefficient(mcc);
+
+    EXPECT_TRUE(AllFinite(results));
+    EXPECT_TRUE(AllFinite({{Type::Score, mcc}}));
+    for (Type type :
+        {Type::CorrelationI, Type::CorrelationII, Type::CorrelationIII, Type::CorrelationIAnotherWay, Type::CorrelationIIAnotherWay}) {
+        EXPECT_EQ(results.at(type).Avg(), 1.0) << "type " << static_cast<int>(type);
+    }
+    EXPECT_EQ(results.at(Type::InformationMeasuresOfCorrelationI).Avg(), 0.0);
+    EXPECT_EQ(results.at(Type::InformationMeasuresOfCorrelationII).Avg(), 0.0);
 }
