@@ -24,6 +24,7 @@ void Controller::Run(const std::string& filename, int d, int Ng) {
     glcm::TextureAnalysis texture_analysis(Ng);
     std::map<glcm::Type, glcm::Features> results;
 
+    execution = true;
     while (execution) {
         // Initialize the global variables
         drawing_image.release();
@@ -34,6 +35,10 @@ void Controller::Run(const std::string& filename, int d, int Ng) {
         finish_drawing = false;
 
         drawing_image = imread(filename, IMREAD_GRAYSCALE);
+        if (drawing_image.empty()) {
+            std::cerr << "Can not read the image: " << filename << "\n";
+            break;
+        }
         original_image = drawing_image.clone();
         image_width = drawing_image.cols;
         image_height = drawing_image.rows;
@@ -63,16 +68,18 @@ void Controller::Run(const std::string& filename, int d, int Ng) {
 
         glcm::Viewer viewer(roi_image);
         viewer.DisplayScorePanel(&texture_analysis, results);
+
+        // Save every ROI after its panel is closed, so the Score and Age from the panel are included
+        texture_analysis.SaveAsCSV(filename, results, "glcm-analysis.csv");
     }
 
-    texture_analysis.SaveAsCSV(filename, results, "glcm-analysis.csv");
     cv::destroyAllWindows();
 }
 
 void Controller::MouseCallBackFunc(int event, int x, int y, int flags, void* userdata) {
     // Right-click the button to show the ROI
     if (event == EVENT_RBUTTONDOWN) {
-        if (vertices.size() < 2) {
+        if (vertices.size() < 3) {
             cerr << "You need a minimum of three points!" << endl;
             return;
         }
@@ -86,8 +93,16 @@ void Controller::MouseCallBackFunc(int event, int x, int y, int flags, void* use
         // Copy the image to ROI with the mask_image with the white part (if value = 255)
         original_image.copyTo(roi_image, mask_image);
 
-        auto bounds = GetMinMax(vertices);
-        roi_image(Rect(Point(bounds[0].first, bounds[0].second), Point(bounds[1].first, bounds[1].second))).copyTo(roi_image);
+        // Crop to the polygon's bounding box, including the right-most and bottom-most vertices
+        cv::Point top_left = vertices[0];
+        cv::Point bottom_right = vertices[0];
+        for (const auto& vertex : vertices) {
+            top_left.x = std::min(top_left.x, vertex.x);
+            top_left.y = std::min(top_left.y, vertex.y);
+            bottom_right.x = std::max(bottom_right.x, vertex.x);
+            bottom_right.y = std::max(bottom_right.y, vertex.y);
+        }
+        roi_image = roi_image(cv::Rect(top_left, bottom_right + cv::Point(1, 1))).clone();
 
         finish_drawing = true;
         return;
@@ -95,7 +110,7 @@ void Controller::MouseCallBackFunc(int event, int x, int y, int flags, void* use
 
     // Left-click the button to draw a polygon
     if (event == EVENT_LBUTTONDOWN) {
-        if (x >= 0 && x <= image_width && y >= 0 && y <= image_height) {
+        if (x >= 0 && x < image_width && y >= 0 && y < image_height) {
             if (vertices.empty()) {                          // First click - just draw point
                 drawing_image.at<uchar>(y, x) = white_color; // drawing_image.at<Vec3b>(y, x) = cv::Vec3b(white_color, 0, 0);
             } else {                                         // Second, or later click, draw line to previous vertex
@@ -105,29 +120,6 @@ void Controller::MouseCallBackFunc(int event, int x, int y, int flags, void* use
         }
         return;
     }
-}
-
-std::vector<std::pair<int, int>> Controller::GetMinMax(const std::vector<cv::Point>& vec) {
-    int x_min = std::numeric_limits<int>::max();
-    int y_min = std::numeric_limits<int>::max();
-    int x_max = std::numeric_limits<int>::min();
-    int y_max = std::numeric_limits<int>::min();
-
-    for (auto point : vec) {
-        if (point.x < x_min) {
-            x_min = point.x;
-        }
-        if (point.y < y_min) {
-            y_min = point.y;
-        }
-        if (point.x > x_max) {
-            x_max = point.x;
-        }
-        if (point.y > y_max) {
-            y_max = point.y;
-        }
-    }
-    return {{x_min, y_min}, {x_max, y_max}};
 }
 
 } // namespace polygon

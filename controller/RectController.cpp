@@ -7,6 +7,11 @@ namespace rect {
 
 void Controller::Run(const std::string& filename, int d, int Ng) {
     cv::Mat image = imread(filename, IMREAD_GRAYSCALE);
+    if (image.empty()) {
+        std::cerr << "Can not read the image: " << filename << "\n";
+        return;
+    }
+
     glcm::TextureAnalysis texture_analysis(Ng);
     std::map<glcm::Type, glcm::Features> results;
 
@@ -31,6 +36,9 @@ void Controller::Run(const std::string& filename, int d, int Ng) {
         if (image_crop.cols > 0 && image_crop.rows > 0) {
             glcm::Viewer viewer(image_crop);
             viewer.DisplayScorePanel(&texture_analysis, results);
+
+            // Save every ROI after its panel is closed, so the Score and Age from the panel are included
+            texture_analysis.SaveAsCSV(filename, results, "glcm-analysis.csv");
         } else {
             std::cerr << "Invalid ROI image!\n";
         }
@@ -40,9 +48,7 @@ void Controller::Run(const std::string& filename, int d, int Ng) {
         }
     }
 
-    texture_analysis.SaveAsCSV(filename, results, "glcm-analysis.csv");
-
     cv::destroyAllWindows();
 }
 
-} // namespace Rect
+} // namespace rect

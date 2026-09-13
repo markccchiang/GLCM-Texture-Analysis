@@ -18,7 +18,6 @@ public:
 
 private:
     static void MouseCallBackFunc(int event, int x, int y, int flags, void* userdata);
-    static std::vector<std::pair<int, int>> GetMinMax(const std::vector<cv::Point>& vec);
 };
 
 } // namespace polygon

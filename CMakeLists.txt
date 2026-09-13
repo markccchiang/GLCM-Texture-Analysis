@@ -8,18 +8,16 @@ set(CMAKE_OSX_ARCHITECTURES "arm64")
 
 find_package(OpenCV REQUIRED)
 
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
-
-if (Eigen3_FOUND)
-    INCLUDE_DIRECTORIES("${EIGEN3_INCLUDE_DIR}")
-    message(STATUS "Eigen3 found: ${EIGEN3_INCLUDE_DIR}")
-endif ()
+# No version pin: Eigen 3.3+ and 5.x both work, but Eigen's config only accepts the same major version
+find_package(Eigen3 REQUIRED NO_MODULE)
+message(STATUS "Eigen3 found: ${Eigen3_VERSION}")
 
 include_directories(${CMAKE_SOURCE_DIR})
 
 set(LIBS
         ${LIBS}
-        ${OpenCV_LIBS})
+        ${OpenCV_LIBS}
+        Eigen3::Eigen)
 
 set(SOURCES
         ${SOURCES}
@@ -30,9 +28,7 @@ set(SOURCES
 
 set(MAIN_FILES
         ${MAIN_FILES}
-        glcm-analysis
-        glcm-polygon
-        glcm-rectangle)
+        glcm-analysis)
 
 foreach (MAIN_FILE IN LISTS MAIN_FILES)
     add_executable(${MAIN_FILE} ${MAIN_FILE}.cpp ${SOURCES})
@@ -41,3 +37,14 @@ endforeach ()
 
 add_executable(canvas-example canvas-example.cpp)
 target_link_libraries(canvas-example ${LIBS})
+
+# Unit tests for the GLCM math (built only when GoogleTest is installed)
+find_package(GTest)
+
+if (GTest_FOUND)
+    enable_testing()
+    add_executable(glcm-tests tests/TextureAnalysisTest.cpp analysis/TextureAnalysis.cpp)
+    target_link_libraries(glcm-tests ${LIBS} GTest::gtest_main)
+    include(GoogleTest)
+    gtest_discover_tests(glcm-tests DISCOVERY_MODE PRE_TEST)
+endif ()

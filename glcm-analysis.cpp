@@ -5,24 +5,36 @@
 using namespace std;
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        cout << "Usage: ./glcm-analysis <file name> <mode: polygon/rect>" << endl;
+    const string usage = "Usage: ./glcm-analysis <file name> [mode: rect/polygon] [distance >= 1]";
+
+    if (argc < 2 || argc > 4) {
+        cout << usage << endl;
         return 1;
     }
 
     string filename = argv[1];
-    string mode("rect");
+    string mode = (argc >= 3) ? argv[2] : "rect";
 
-    if (argc == 3) {
-        mode = argv[2];
+    int distance = 1;
+    if (argc == 4) {
+        try {
+            distance = stoi(argv[3]);
+        } catch (const std::exception&) {
+            distance = 0;
+        }
+    }
+
+    if ((mode != "rect" && mode != "polygon") || distance < 1) {
+        cout << usage << endl;
+        return 1;
     }
 
     if (mode == "polygon") {
         polygon::Controller controller;
-        controller.Run(filename);
+        controller.Run(filename, distance);
     } else {
         rect::Controller controller;
-        controller.Run(filename);
+        controller.Run(filename, distance);
     }
 
     return 0;
