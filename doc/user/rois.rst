@@ -7,11 +7,11 @@ A region of interest (ROI) is the part of the image that is measured. ROIs are d
 Manager, and measured together or one by one.
 
 .. figure:: images/canvas-rois.png
-   :alt: The sample image with a rectangle ROI (Hat), a selected ellipse ROI (Face) with resize handles, a polygon ROI
-         (Hair) and a freehand ROI (Background), each labeled with its name.
+   :alt: The sample image with a rectangle ROI (Sky), a selected ellipse ROI (Coat) with resize handles, a polygon ROI
+         (Grass) and a freehand ROI (Hair), each labeled with its name.
    :width: 100%
 
-   Four ROIs with labels. The selected ROI ("Face") shows handles for resizing and rotating.
+   Four ROIs with labels. The selected ROI ("Coat") shows handles for resizing and rotating.
 
 Drawing ROIs
 ------------
@@ -85,7 +85,7 @@ The ROI Manager
 ---------------
 
 .. figure:: images/roi-manager.png
-   :alt: The ROI Manager listing Hat, Face, Hair and Background with their shapes and pixel counts; Face is selected.
+   :alt: The ROI Manager listing Sky, Coat, Grass and Hair with their shapes and pixel counts; Coat is selected.
    :align: center
 
    The ROI Manager.

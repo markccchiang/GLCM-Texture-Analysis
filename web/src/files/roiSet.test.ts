@@ -6,7 +6,7 @@ import { FileFormatError } from './validate';
 
 const info: ImageInfo = {
   imageId: `img_${'0'.repeat(32)}`,
-  name: 'lena 16.tif',
+  name: 'mri 16.tif',
   sizeBytes: 100,
   width: 100,
   height: 50,
@@ -33,15 +33,15 @@ describe('ROI set files', () => {
     const parsed = parseRoiSet(JSON.stringify(document, null, 2));
     expect(parsed).toEqual(document);
     expect(parsed.rois.map((roi) => roi.shape)).toEqual(rois.map((roi) => roi.shape));
-    expect(parsed.image).toEqual({ name: 'lena 16.tif', width: 100, height: 50, bitDepth: 16, sha256: info.sha256 });
-    expect(roiSetFileName(info.name)).toBe('lena_16.roi.json');
+    expect(parsed.image).toEqual({ name: 'mri 16.tif', width: 100, height: 50, bitDepth: 16, sha256: info.sha256 });
+    expect(roiSetFileName(info.name)).toBe('mri_16.roi.json');
   });
 
   it('reads the example of the design plan', () => {
     const example = {
       format: 'glcm-roi-set',
       version: 1,
-      image: { name: 'lena16.tif', width: 512, height: 512, bitDepth: 16, sha256: '…' },
+      image: { name: 'mri16.tif', width: 512, height: 512, bitDepth: 16, sha256: '…' },
       rois: [
         { id: '7f3c…', name: 'ROI 1', color: '#FFD400', shape: { type: 'rectangle', x: 100, y: 100, width: 64, height: 64 } },
         { id: 'a91e…', name: 'ROI 2', color: '#00C2FF', shape: { type: 'ellipse', cx: 260.5, cy: 300, rx: 40, ry: 25, angle: 30 } },

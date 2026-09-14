@@ -21,10 +21,10 @@ import {
   waitForImage,
 } from './helpers.js';
 
-let lena: native.DecodedImage;
+let camera: native.DecodedImage;
 
 test.beforeAll(async () => {
-  lena = await native.decodeImageFile(path.join(ROOT, 'samples', 'lena.jpg'));
+  camera = await native.decodeImageFile(path.join(ROOT, 'samples', 'textures', 'camera.png'));
 });
 
 test.beforeEach(async ({ page }) => {
@@ -49,7 +49,7 @@ async function measureRectangle(page: Page) {
   await expect(page.getByTestId('results-table').locator('tbody tr')).toHaveCount(5);
   const [roi] = await storedRois(page);
   const expected = JSON.parse(
-    await native.runAnalysis(lena.pixels, lena.width, lena.height, lena.bitDepth, JSON.stringify([{ id: roi.id, name: roi.name, shape: roi.shape }]), JSON.stringify(SETTINGS)),
+    await native.runAnalysis(camera.pixels, camera.width, camera.height, camera.bitDepth, JSON.stringify([{ id: roi.id, name: roi.name, shape: roi.shape }]), JSON.stringify(SETTINGS)),
   ).results[0];
   return { roi, expected };
 }
@@ -58,7 +58,7 @@ test('exports results as CSV and JSON with the values of the core', async ({ pag
   const { roi, expected } = await measureRectangle(page);
 
   const csv = await download(page, () => chooseMenuItem(page, 'File', 'Export Results as CSV'));
-  expect(csv.file.suggestedFilename()).toBe('lena-results.csv');
+  expect(csv.file.suggestedFilename()).toBe('camera-results.csv');
   const { comments, header, rows } = parseCsv(await fs.readFile(csv.path, 'utf8'));
   expect(comments).toContain('# format=glcm-results-csv');
   expect(comments).toContain('# grayLevels=32');
@@ -75,9 +75,9 @@ test('exports results as CSV and JSON with the values of the core', async ({ pag
   }
 
   const json = await download(page, () => chooseMenuItem(page, 'File', 'Export Results as JSON'));
-  expect(json.file.suggestedFilename()).toBe('lena-results.json');
+  expect(json.file.suggestedFilename()).toBe('camera-results.json');
   const document = JSON.parse(await fs.readFile(json.path, 'utf8'));
-  expect(document).toMatchObject({ format: 'glcm-results', version: 1, image: { name: 'lena.jpg' }, settings: SETTINGS });
+  expect(document).toMatchObject({ format: 'glcm-results', version: 1, image: { name: 'camera.png' }, settings: SETTINGS });
   expect(document.results[0].values).toEqual(expected.values);
 });
 
@@ -86,9 +86,9 @@ test('exports and imports an ROI set without loss', async ({ page }) => {
   const original = await storedRois(page);
 
   const exported = await download(page, () => chooseMenuItem(page, 'ROI', 'Export ROI Set…'));
-  expect(exported.file.suggestedFilename()).toBe('lena.roi.json');
+  expect(exported.file.suggestedFilename()).toBe('camera.roi.json');
   const document = JSON.parse(await fs.readFile(exported.path, 'utf8'));
-  expect(document).toMatchObject({ format: 'glcm-roi-set', version: 1, image: { name: 'lena.jpg', width: 650, height: 366, bitDepth: 8 } });
+  expect(document).toMatchObject({ format: 'glcm-roi-set', version: 1, image: { name: 'camera.png', width: 512, height: 512, bitDepth: 8 } });
 
   await chooseMenuItem(page, 'Edit', /^Select All ROIs/);
   await chooseMenuItem(page, 'Edit', /^Delete ROI/);
@@ -113,7 +113,7 @@ test('saves and opens projects, re-uploading an embedded image', async ({ page }
   await chooseMenuItem(page, 'File', /^Save Project…/);
   await page.getByLabel('Embed the image').check();
   const embedded = await download(page, () => page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click());
-  expect(embedded.file.suggestedFilename()).toBe('lena.glcmproj');
+  expect(embedded.file.suggestedFilename()).toBe('camera.glcmproj');
   expect(JSON.parse(await fs.readFile(embedded.path, 'utf8')).image.data).toEqual(expect.any(String));
   expect((await page.request.delete(`/api/v1/images/${imageBefore.imageId}`)).status()).toBe(204);
 
@@ -147,13 +147,13 @@ test('exports ROI images as a ZIP', async ({ page }) => {
   await chooseMenuItem(page, 'ROI', 'Export ROI Images…');
   await page.getByLabel('Include quantized gray levels').check();
   const zip = await download(page, () => page.getByRole('dialog').getByRole('button', { name: 'Export', exact: true }).click());
-  expect(zip.file.suggestedFilename()).toBe('lena-rois.zip');
+  expect(zip.file.suggestedFilename()).toBe('camera-rois.zip');
 
   const files = unzipSync(await fs.readFile(zip.path));
   expect(Object.keys(files).sort()).toEqual(
     ['ROI_1.png', 'ROI_1_mask.png', 'ROI_1_q32.png', 'ROI_2.png', 'ROI_2_mask.png', 'ROI_2_q32.png', 'ROI_3.png', 'ROI_3_mask.png', 'ROI_3_q32.png', 'manifest.json'].sort(),
   );
   const manifest = JSON.parse(new TextDecoder().decode(files['manifest.json']));
-  const counts = await native.roiStats(lena.pixels, lena.width, lena.height, lena.bitDepth, JSON.stringify(rois));
+  const counts = await native.roiStats(camera.pixels, camera.width, camera.height, camera.bitDepth, JSON.stringify(rois));
   expect(manifest.entries.map((entry: { pixelCount: number }) => entry.pixelCount)).toEqual(counts.map((c) => c.pixelCount));
 });

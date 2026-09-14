@@ -7,7 +7,7 @@ import { base64ToBytes, buildProject, bytesToBase64, parseProject, projectFileNa
 
 const info: ImageInfo = {
   imageId: `img_${'0'.repeat(32)}`,
-  name: 'lena.jpg',
+  name: 'camera.png',
   sizeBytes: 3,
   width: 650,
   height: 366,
@@ -54,7 +54,7 @@ const rois: ManagedRoi[] = [
 
 const run = (status: AnalysisRun['status'], results: Array<MeasurementResult | undefined>): AnalysisRun => ({
   analysisId: `ana_${status}`,
-  imageName: 'lena.jpg',
+  imageName: 'camera.png',
   imageSha256: 'c'.repeat(64),
   settings,
   status,
@@ -84,7 +84,7 @@ describe('project files', () => {
 
     const [restored] = runsFromProject(parsed);
     expect(restored).toEqual({ ...run('completed', [result]), completed: 1, total: 1 });
-    expect(projectFileName(info.name)).toBe('lena.glcmproj');
+    expect(projectFileName(info.name)).toBe('camera.glcmproj');
   });
 
   it('embeds the image as base64', () => {
@@ -104,7 +104,7 @@ describe('project files', () => {
 
 describe('download names', () => {
   it('reads Content-Disposition and makes safe stems', () => {
-    expect(fileNameFromDisposition(`attachment; filename="lena_.csv"; filename*=UTF-8''lena%20%E2%9C%93.csv`, 'x')).toBe('lena ✓.csv');
+    expect(fileNameFromDisposition(`attachment; filename="camera_.csv"; filename*=UTF-8''camera%20%E2%9C%93.csv`, 'x')).toBe('camera ✓.csv');
     expect(fileNameFromDisposition('attachment; filename="rois.zip"', 'x')).toBe('rois.zip');
     expect(fileNameFromDisposition(null, 'fallback.csv')).toBe('fallback.csv');
     expect(fileStem('/tmp/My Image.v2.tif')).toBe('My_Image.v2');

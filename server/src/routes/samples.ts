@@ -19,7 +19,7 @@ const CONTENT_TYPES: Record<string, string> = {
   '.tiff': 'image/tiff',
 };
 
-export const DEFAULT_SAMPLE = 'lena.jpg';
+export const DEFAULT_SAMPLE = 'textures/camera.png';
 
 const samplePathRegex = new RegExp(SAMPLE_PATH_PATTERN);
 

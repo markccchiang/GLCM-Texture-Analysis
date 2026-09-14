@@ -30,7 +30,7 @@ sharp squares, so individual pixels can be inspected.
      - :kbd:`Z` or *Image ▸ Zoom to Selection*
 
 .. figure:: images/zoom-navigator.png
-   :alt: The canvas zoomed in on the Face ROI, with the navigator in the lower right corner and an ROI tooltip.
+   :alt: The canvas zoomed in on the Coat ROI, with the navigator in the lower right corner and an ROI tooltip.
    :width: 100%
 
    Zoomed in on an ROI. The navigator (lower right) shows where the view is; hovering an ROI shows its name, shape and

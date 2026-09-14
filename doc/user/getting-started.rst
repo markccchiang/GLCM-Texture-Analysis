@@ -45,7 +45,7 @@ There are three ways to open an image:
 
 - **Open Image…** on the start screen or in the *File* menu (:kbd:`⌘O` / :kbd:`Ctrl+O`) shows the file dialog.
 - **Drag** an image file from your desktop or file manager onto the window.
-- **Open sample image** opens ``lena.jpg``; **More sample images…** (or *File ▸ Open Sample Image…*) lists synthetic
+- **Open sample image** opens ``textures/camera.png``, the cameraman photograph; **More sample images…** (or *File ▸ Open Sample Image…*) lists synthetic
   test patterns and natural textures.
 
 Supported files are PNG, JPEG, BMP and TIFF with 8 or 16 bits per pixel. The image is uploaded to the server, which

@@ -153,18 +153,18 @@ async function main(): Promise<void> {
     await page.getByRole('button', { name: 'Open sample image' }).click();
     await waitForImage(page);
     await page.keyboard.press('r');
-    await drag(page, [228, 48], [300, 96]);
+    await drag(page, [40, 30], [140, 95]);
     await page.keyboard.press('t');
     await page.keyboard.press('e');
-    await drag(page, [322, 150], [376, 215]);
+    await drag(page, [45, 280], [125, 400]);
     await page.keyboard.press('t');
     await page.keyboard.press('p');
     for (const [x, y] of [
-      [200, 150],
-      [248, 138],
-      [262, 212],
-      [232, 262],
-      [196, 232],
+      [385, 270],
+      [480, 262],
+      [498, 370],
+      [455, 430],
+      [398, 375],
     ]) {
       await clickAt(page, x, y);
     }
@@ -172,13 +172,14 @@ async function main(): Promise<void> {
     await page.keyboard.press('t');
     await page.keyboard.press('f');
     const outline = [
-      [500, 40],
-      [575, 32],
-      [610, 80],
-      [590, 125],
-      [530, 130],
-      [498, 92],
-      [500, 45],
+      [168, 112],
+      [178, 82],
+      [210, 64],
+      [250, 70],
+      [268, 96],
+      [238, 104],
+      [200, 116],
+      [172, 116],
     ];
     const start = await toPage(page, outline[0][0], outline[0][1]);
     await page.mouse.move(start.x, start.y);
@@ -191,16 +192,16 @@ async function main(): Promise<void> {
     await page.keyboard.press('t');
     await page.evaluate(() => {
       const rois = (window as unknown as { __glcm: { rois: { getState(): { rois: Array<{ id: string }>; renameRoi(id: string, name: string): void; select(ids: string[]): void } } } }).__glcm.rois.getState();
-      ['Hat', 'Face', 'Hair', 'Background'].forEach((name, i) => rois.renameRoi(rois.rois[i].id, name));
+      ['Sky', 'Coat', 'Grass', 'Hair'].forEach((name, i) => rois.renameRoi(rois.rois[i].id, name));
       rois.select([]);
     });
     await page.keyboard.press('Shift+M');
     await expect(page.getByTestId('results-table').locator('tbody tr')).toHaveCount(20, { timeout: 30_000 });
     await chooseMenuItem(page, 'View', 'Show ROI Labels');
     await page.getByRole('button', { name: /^Pointer/ }).click();
-    await page.getByTestId('roi-row').filter({ hasText: 'Face' }).click();
-    const facePoint = await toPage(page, 300, 180);
-    await page.mouse.move(facePoint.x, facePoint.y);
+    await page.getByTestId('roi-row').filter({ hasText: 'Coat' }).click();
+    const coatPoint = await toPage(page, 300, 180);
+    await page.mouse.move(coatPoint.x, coatPoint.y);
     await page.waitForTimeout(400);
 
     // Without markers, for the README
@@ -264,7 +265,7 @@ async function main(): Promise<void> {
     // Zoomed in on the selected ROI, with the navigator and an ROI tooltip
     await page.mouse.move(5, VIEWPORT.height - 5);
     await page.keyboard.press('z');
-    const hover = await toPage(page, 322, 182);
+    const hover = await toPage(page, 100, 330);
     await page.mouse.move(hover.x, hover.y);
     await page.waitForTimeout(700);
     await shot(page, 'zoom-navigator', page.getByTestId('image-canvas'));

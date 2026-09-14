@@ -7,7 +7,6 @@ const SAMPLES = path.resolve(import.meta.dirname, '../../../samples');
 
 // Every image in samples/ (see samples/README.md): path, width, height, bit depth, channels before grayscale conversion
 const EXPECTED: ReadonlyArray<readonly [file: string, width: number, height: number, bitDepth: 8 | 16, channels: number]> = [
-  ['lena.jpg', 650, 366, 8, 3],
   ['synthetic/checkerboard-8px-8bit.png', 256, 256, 8, 1],
   ['synthetic/constant-8bit.png', 128, 128, 8, 1],
   ['synthetic/disc-12bit-in-16bit.tif', 256, 256, 16, 1],

@@ -37,10 +37,10 @@ type Hooks = {
   results: { getState(): { rows: Array<{ roiId: string; direction: string | null; status: string; values: Record<string, number | null> }> } };
 };
 
-let lena: native.DecodedImage;
+let camera: native.DecodedImage;
 
 test.beforeAll(async () => {
-  lena = await native.decodeImageFile(path.join(ROOT, 'samples', 'lena.jpg'));
+  camera = await native.decodeImageFile(path.join(ROOT, 'samples', 'textures', 'camera.png'));
 });
 
 test.beforeEach(async ({ page }) => {
@@ -50,7 +50,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/?testHooks');
   await page.getByRole('button', { name: 'Open sample image' }).click();
   const status = page.getByTestId('status-bar');
-  await expect(status).toContainText('lena.jpg 650×366 8-bit');
+  await expect(status).toContainText('camera.png 512×512 8-bit');
   await expect(status).toContainText(/WebGL2|Lookup table|Server rendering/);
 });
 
@@ -80,7 +80,7 @@ async function clickAt(page: Page, x: number, y: number): Promise<void> {
 }
 
 async function expectedPixelCounts(rois: StoredRoi[]): Promise<number[]> {
-  const stats = await native.roiStats(lena.pixels, lena.width, lena.height, lena.bitDepth, JSON.stringify(rois));
+  const stats = await native.roiStats(camera.pixels, camera.width, camera.height, camera.bitDepth, JSON.stringify(rois));
   return stats.map((s) => s.pixelCount);
 }
 
@@ -103,7 +103,7 @@ test('measures a rectangle ROI with the values of the core', async ({ page }) =>
   await expect(table.locator('tbody tr')).toHaveCount(5);
 
   const expected = JSON.parse(
-    await native.runAnalysis(lena.pixels, lena.width, lena.height, lena.bitDepth, JSON.stringify([{ id: roi.id, name: roi.name, shape: roi.shape }]), JSON.stringify(SETTINGS)),
+    await native.runAnalysis(camera.pixels, camera.width, camera.height, camera.bitDepth, JSON.stringify([{ id: roi.id, name: roi.name, shape: roi.shape }]), JSON.stringify(SETTINGS)),
   ).results[0];
   const rows = await resultRows(page);
   expect(rows.map((r) => r.direction)).toEqual(['0', '45', '90', '135', 'mean']);
@@ -135,11 +135,11 @@ test('draws ellipse, polygon and freehand ROIs and measures all', async ({ page 
 
   await page.keyboard.press('f');
   const path = [
-    [500, 250],
-    [560, 240],
-    [600, 290],
-    [560, 340],
-    [500, 320],
+    [380, 380],
+    [440, 370],
+    [480, 420],
+    [440, 470],
+    [380, 450],
   ];
   const first = await toPage(page, path[0][0], path[0][1]);
   await page.mouse.move(first.x, first.y);
@@ -182,12 +182,12 @@ test('navigates the image and edits ROIs', async ({ page }) => {
     const centre = await toPage(page, column + 0.5, row + 0.5);
     // Whole CSS pixels: WebKit rounds mouse positions, which stays inside the pixel at 400 % and more
     await page.mouse.move(Math.round(centre.x), Math.round(centre.y));
-    await expect(readout).toHaveText(new RegExp(`x ${column}\\s+y ${row}\\s+value ${lena.pixels[row * lena.width + column]}$`));
+    await expect(readout).toHaveText(new RegExp(`x ${column}\\s+y ${row}\\s+value ${camera.pixels[row * camera.width + column]}$`));
   }
 
   // Hover readout when zoomed in with keys, after wheel zoom and after panning
   const before = await viewport(page);
-  for (let i = 0; i < 3; i += 1) {
+  for (let i = 0; i < 4; i += 1) {
     await page.keyboard.press('=');
   }
   expect((await viewport(page)).scale).toBeGreaterThanOrEqual(4);

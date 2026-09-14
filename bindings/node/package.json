@@ -17,6 +17,9 @@
     "rebuild": "cmake-js rebuild --out build"
   },
   "binary": {
-    "napi_versions": [8]
-  }
+    "napi_versions": [
+      8
+    ]
+  },
+  "license": "MIT"
 }

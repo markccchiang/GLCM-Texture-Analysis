@@ -343,7 +343,7 @@ paths are relative to ``core/``. The main entry points:
    #include "io/ResultsCsv.hpp"
    #include "pipeline/AnalysisRunner.hpp"
 
-   glcm::LoadedImage image = glcm::LoadImageFile("samples/lena.jpg");
+   glcm::LoadedImage image = glcm::LoadImageFile("samples/textures/camera.png");
 
    glcm::AnalysisSettings settings = glcm::DefaultSettings(image.info.bit_depth); // Haralick F1–F14, Ng = 32
    settings.distances = {1, 2};
@@ -354,7 +354,7 @@ paths are relative to ``core/``. The main entry points:
 
    glcm::AnalysisOutput output = glcm::RunAnalysis(image.gray, {roi}, settings);
    double contrast_0_deg = output.results[0].values.at(glcm::Type::Contrast).H;
-   std::string csv = glcm::ResultsToCsv(output.results, settings, {"lena.jpg", "", "2026-09-14T12:00:00Z"});
+   std::string csv = glcm::ResultsToCsv(output.results, settings, {"camera.png", "", "2026-09-14T12:00:00Z"});
 
 Functions throw ``std::invalid_argument`` for invalid input (for example invalid settings); ``RunAnalysis`` reports
 problems with a single ROI as a ``Skipped`` or ``Failed`` result instead.
@@ -399,7 +399,7 @@ Example ROI set:
    {
      "format": "glcm-roi-set",
      "version": 1,
-     "image": {"name": "lena16.tif", "width": 512, "height": 512, "bitDepth": 16, "sha256": "…"},
+     "image": {"name": "mri16.tif", "width": 512, "height": 512, "bitDepth": 16, "sha256": "…"},
      "rois": [
        {"id": "7f3c", "name": "ROI 1", "color": "#FFD400",
         "shape": {"type": "rectangle", "x": 100, "y": 100, "width": 64, "height": 64}}

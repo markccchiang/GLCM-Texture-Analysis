@@ -259,7 +259,7 @@ struct MeasurementResult {
 │ ROI    │ d │ Dir     │ Mean   │ Contrast │ Entropy │ Correlation III ⚠ │ Score │              │
 │ ROI 1  │ 1 │ Mean    │ 82.67  │ 2.081    │ 4.95    │ 0.0013            │ 71.3  │              │
 ├──────────────────────────────────────────────────────────────────────────────────────────────┤
-│ x 214  y 118  value 1 553 │ zoom 150% │ lena16.tif 512×512 16-bit │ ROI 1 4 096 px │ ⟳ 2 jobs │
+│ x 214  y 118  value 1 553 │ zoom 150% │ mri16.tif 512×512 16-bit │ ROI 1 4 096 px │ ⟳ 2 jobs │
 └──────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -392,7 +392,7 @@ sequenceDiagram
     - Drag the rectangle to pan; click anywhere on the thumbnail to centre the view there.
     - It appears automatically when the image does not fit in the window at the current zoom, and can be toggled with **N** or *View ▸ Navigator*.
     - With the tile pyramid for large images (§8.1), it uses the lowest pyramid level.
-- **Entry points:** File ▸ Open, drag-and-drop, and "Open sample image" on the empty start screen (uses `samples/lena.jpg`).
+- **Entry points:** File ▸ Open, drag-and-drop, and "Open sample image" on the empty start screen (uses `samples/textures/camera.png`).
 
 ### 6.2 R2 — ROI selection and ROI Manager
 
@@ -557,7 +557,7 @@ Every file has a `format` and an integer `version`; readers reject versions they
 {
   "format": "glcm-roi-set",
   "version": 1,
-  "image": { "name": "lena16.tif", "width": 512, "height": 512, "bitDepth": 16, "sha256": "…" },
+  "image": { "name": "mri16.tif", "width": 512, "height": 512, "bitDepth": 16, "sha256": "…" },
   "rois": [
     { "id": "7f3c…", "name": "ROI 1", "color": "#FFD400",
       "shape": { "type": "rectangle", "x": 100, "y": 100, "width": 64, "height": 64 } },

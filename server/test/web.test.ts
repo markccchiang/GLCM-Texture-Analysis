@@ -20,8 +20,8 @@ describe('web app and samples', () => {
     await fs.writeFile(path.join(webDir, 'assets', 'index-abc123.js'), 'console.log(1);');
 
     await fs.mkdir(path.join(samplesDir, 'textures'), { recursive: true });
-    await fs.writeFile(path.join(samplesDir, 'lena.jpg'), Buffer.from([0xff, 0xd8, 0xff]));
     await fs.writeFile(path.join(samplesDir, 'textures', 'brick.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d]));
+    await fs.writeFile(path.join(samplesDir, 'textures', 'camera.png'), Buffer.from([0x89, 0x50, 0x4e]));
     await fs.writeFile(path.join(samplesDir, 'README.md'), '# not an image');
     await fs.writeFile(path.join(samplesDir, '.hidden.png'), 'hidden');
     await fs.writeFile(path.join(fixtures, 'secret.png'), 'outside');
@@ -40,10 +40,10 @@ describe('web app and samples', () => {
     expect(response.statusCode).toBe(200);
     expect(response.json<SamplesResponse>()).toEqual({
       samples: [
-        { path: 'lena.jpg', name: 'lena.jpg', group: '', sizeBytes: 3 },
         { path: 'textures/brick.png', name: 'brick.png', group: 'textures', sizeBytes: 5 },
+        { path: 'textures/camera.png', name: 'camera.png', group: 'textures', sizeBytes: 3 },
       ],
-      defaultSample: 'lena.jpg',
+      defaultSample: 'textures/camera.png',
     });
   });
 

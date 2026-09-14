@@ -35,7 +35,7 @@ const features: FeatureInfo[] = [
   { id: 'Entropy', name: 'Entropy', group: 'haralick', nonStandard: false, nonStandardReason: '', docAnchor: '', cost: 'normal' },
 ];
 
-const context = { analysisId: 'ana_1', index: 0, imageName: 'lena.jpg', settings };
+const context = { analysisId: 'ana_1', index: 0, imageName: 'camera.png', settings };
 
 describe('rows', () => {
   it('follows the aggregation', () => {

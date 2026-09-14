@@ -5,7 +5,7 @@ Computes Haralick texture features from the Gray Level Co-occurrence Matrix (GLC
 Open an 8- or 16-bit image in the browser, draw rectangle, ellipse, polygon or freehand ROIs, choose the features and GLCM settings (gray levels, quantization, distances, directions), and measure. Results appear in a table, per direction and aggregated, optionally with an age-based score.
 
 <p align="center">
-  <img src="doc/user/images/app-window.png" alt="The GLCM Texture Analysis web app: the sample image with four ROIs (Hat, Face, Hair, Background) on the canvas, the ROI Manager with their pixel counts, the Analysis Settings panel, and the Results table with texture features per direction." width="900">
+  <img src="doc/user/images/app-window.png" alt="The GLCM Texture Analysis web app: the sample image with four ROIs (Sky, Coat, Grass, Hair) on the canvas, the ROI Manager with their pixel counts, the Analysis Settings panel, and the Results table with texture features per direction." width="900">
 </p>
 
 The User guide of the documentation (`doc/user/`) explains every part of the window.
@@ -72,7 +72,7 @@ Using the library directly (include paths are relative to `core/`):
 #include "io/ResultsCsv.hpp"
 #include "pipeline/AnalysisRunner.hpp"
 
-glcm::LoadedImage image = glcm::LoadImageFile("samples/lena.jpg");
+glcm::LoadedImage image = glcm::LoadImageFile("samples/textures/camera.png");
 
 glcm::AnalysisSettings settings = glcm::DefaultSettings(image.info.bit_depth); // Haralick F1–F14, Ng = 32
 settings.distances = {1, 2};
@@ -83,7 +83,7 @@ roi.shape = glcm::EllipseRoi{256.0, 256.0, 40.0, 25.0, 30.0}; // cx, cy, rx, ry,
 
 glcm::AnalysisOutput output = glcm::RunAnalysis(image.gray, {roi}, settings);
 double contrast_0_deg = output.results[0].values.at(glcm::Type::Contrast).H;
-std::string csv = glcm::ResultsToCsv(output.results, settings, {"lena.jpg", "", "2026-09-14T12:00:00Z"});
+std::string csv = glcm::ResultsToCsv(output.results, settings, {"camera.png", "", "2026-09-14T12:00:00Z"});
 ```
 
 Link against `glcm_core` (for example `target_link_libraries(my_app PRIVATE glcm_core)` after `add_subdirectory(core)`).
@@ -238,8 +238,16 @@ To rebuild later, activate the environment again with `source .venv/bin/activate
 | `Dockerfile`, `compose.yaml` | Server image and deployment example (`doc/deployment.md`) |
 | `.github/workflows/` | CI: core, unit and end-to-end tests on macOS and Ubuntu; Docker image smoke test |
 | `doc/` | Sphinx documentation (user guide with screenshots, GLCM equations and references, developer guide), the design plan and the deployment guide |
-| `samples/` | Sample images: synthetic test patterns, CC0 textures and `lena.jpg` (see `samples/README.md`) |
+| `samples/` | Sample images: synthetic test patterns, CC0 textures, including the default sample `textures/camera.png` (see `samples/README.md`) |
 | `scripts/` | Helper scripts, e.g. `generate-samples.ts` (`npm run samples`) |
+
+## License
+
+GLCM Texture Analysis is free and open-source software, released under the [MIT License](LICENSE). You may use, copy, modify and distribute it, including in commercial and closed-source software, as long as the copyright notice and the license text are kept.
+
+Exceptions:
+- **Sample images from other sources:** the images in `samples/textures/` come from scikit-image and keep their own licenses (CC0 or no known copyright restrictions). See [`samples/README.md`](samples/README.md).
+- **Dependencies:** OpenCV, Eigen, nlohmann/json, Node.js packages and the other dependencies are distributed under their own licenses.
 
 ## References
 

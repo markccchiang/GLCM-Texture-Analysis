@@ -211,12 +211,12 @@ TEST(IdentifiersTest, RoundTrip) {
 
 TEST(RoiSetJsonTest, RoundTripsEveryShape) {
     RoiSetDocument document;
-    document.image = {"lena16.tif", 512, 512, 16, "abc123"};
+    document.image = {"mri16.tif", 512, 512, 16, "abc123"};
     document.rois = SampleRois();
 
     const std::string text = RoiSetToJson(document);
     const RoiSetDocument parsed = RoiSetFromJson(text);
-    EXPECT_EQ(parsed.image.name, "lena16.tif");
+    EXPECT_EQ(parsed.image.name, "mri16.tif");
     EXPECT_EQ(parsed.image.width, 512);
     EXPECT_EQ(parsed.image.height, 512);
     EXPECT_EQ(parsed.image.bit_depth, 16);
@@ -238,7 +238,7 @@ TEST(RoiSetJsonTest, RoundTripsEveryShape) {
 TEST(RoiSetJsonTest, ParsesThePlanExample) {
     const std::string text = R"({
       "format": "glcm-roi-set", "version": 1,
-      "image": {"name": "lena16.tif", "width": 512, "height": 512, "bitDepth": 16, "sha256": "x"},
+      "image": {"name": "mri16.tif", "width": 512, "height": 512, "bitDepth": 16, "sha256": "x"},
       "rois": [
         {"id": "7f3c", "name": "ROI 1", "color": "#FFD400", "shape": {"type": "rectangle", "x": 100, "y": 100, "width": 64, "height": 64}},
         {"id": "a91e", "name": "ROI 2", "color": "#00C2FF", "shape": {"type": "ellipse", "cx": 260.5, "cy": 300, "rx": 40, "ry": 25, "angle": 30}},

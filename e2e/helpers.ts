@@ -48,7 +48,7 @@ interface Hooks {
   settings: { getState(): { settings: AnalysisSettings | null } };
 }
 
-/** Opens the app with the test settings and the lena sample */
+/** Opens the app with the test settings and the camera sample */
 export async function openSample(page: Page): Promise<void> {
   await page.addInitScript((settings) => {
     window.localStorage.setItem('glcm.analysisSettings', JSON.stringify({ state: { settings }, version: 1 }));
@@ -60,7 +60,7 @@ export async function openSample(page: Page): Promise<void> {
 
 export async function waitForImage(page: Page): Promise<void> {
   const status = page.getByTestId('status-bar');
-  await expect(status).toContainText('lena.jpg 650×366 8-bit');
+  await expect(status).toContainText('camera.png 512×512 8-bit');
   await expect(status).toContainText(/WebGL2|Lookup table|Server rendering/);
 }
 
