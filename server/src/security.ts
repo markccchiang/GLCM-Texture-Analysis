@@ -20,9 +20,25 @@ export function bearerToken(header: string | undefined): string | null {
   return match ? match[1] : null;
 }
 
+function isApiPath(path: string): boolean {
+  return path === API_PREFIX || path.startsWith(`${API_PREFIX}/`);
+}
+
+/**
+ * The router decodes the path before matching, so the raw URL can spell an API route differently (/%61pi/v1/catalog).
+ * The decision therefore uses the matched route, and for requests without one the decoded path; a path that cannot be
+ * decoded counts as an API request.
+ */
 function isApiRequest(request: FastifyRequest): boolean {
-  const url = request.url.split('?')[0];
-  return url === API_PREFIX || url.startsWith(`${API_PREFIX}/`);
+  if (isApiPath(request.routeOptions.url ?? '')) {
+    return true;
+  }
+  const path = request.url.split('?')[0];
+  try {
+    return isApiPath(decodeURIComponent(path));
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -33,7 +49,7 @@ function isApiRequest(request: FastifyRequest): boolean {
 export function registerAuthentication(app: FastifyInstance, token: string): void {
   const expected = digest(token);
   app.addHook('onRequest', async (request, reply) => {
-    if (!isApiRequest(request) || request.method === 'OPTIONS' || request.url.split('?')[0] === HEALTH_PATH) {
+    if (!isApiRequest(request) || request.method === 'OPTIONS' || request.routeOptions.url === HEALTH_PATH) {
       return;
     }
     const presented = bearerToken(request.headers.authorization);

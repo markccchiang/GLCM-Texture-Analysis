@@ -121,6 +121,22 @@ describe('authentication', () => {
     expect((await t.app.inject({ method: 'GET', url: `/api/v1/analyses/${info.analysisId}/events` })).statusCode).toBe(401);
   });
 
+  it('requires the token however the path is spelled', async () => {
+    // The router decodes the path, so these reach the API routes
+    for (const url of ['/%61pi/v1/catalog', '/api/%761/catalog', '/api/v1/%63atalog', '/%61pi/v1/images?sha256=abc', '/%61pi/v1/nothing-here']) {
+      const response = await t.app.inject({ method: 'GET', url });
+      expect(response.statusCode, url).toBe(401);
+      expect(response.headers['www-authenticate'], url).toBe('Bearer');
+    }
+    // Spellings that match no route, or cannot be decoded (400 from the router), must not reach the API either
+    for (const url of ['//api/v1/catalog', '/api//v1/catalog', '/API/v1/catalog', '/api/v1/catalog/', '/api/v1/%E0']) {
+      const response = await t.app.inject({ method: 'GET', url });
+      expect([400, 401, 404], url).toContain(response.statusCode);
+    }
+    expect((await t.app.inject({ method: 'GET', url: '/%61pi/v1/catalog', headers: auth() })).statusCode).toBe(200);
+    expect((await t.app.inject({ method: 'GET', url: '/api/v1/%68ealth' })).statusCode).toBe(200);
+  });
+
   it('does not protect paths outside the API', async () => {
     const response = await t.app.inject({ method: 'GET', url: '/not-api' });
     expect(response.statusCode).toBe(404);
@@ -173,6 +189,18 @@ describe('limits', () => {
       expect(limited.statusCode).toBe(429);
       expect(limited.json()).toMatchObject({ error: 'TooManyRequests' });
       expect(limited.headers['retry-after']).toBeDefined();
+    } finally {
+      await t.close();
+    }
+  });
+
+  it('counts requests however the path is spelled', async () => {
+    const t = await createTestApp({ rateLimitPerMinute: 2 });
+    try {
+      for (const url of ['/api/v1/catalog', '/%61pi/v1/catalog']) {
+        expect((await t.app.inject({ method: 'GET', url })).statusCode, url).toBe(200);
+      }
+      expect((await t.app.inject({ method: 'GET', url: '/api/%761/catalog' })).statusCode).toBe(429);
     } finally {
       await t.close();
     }
