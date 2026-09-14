@@ -325,9 +325,13 @@ public:
             for (const glcm::Roi& roi : rois) {
                 RoiStatisticsResult result;
                 try {
-                    const cv::Mat mask = glcm::RasterizeMask(roi.shape, gray.size());
-                    result.statistics = glcm::ComputeRegionStatistics(gray, mask);
-                    result.bounding_box = glcm::MaskBoundingBox(mask);
+                    // Only the box around the ROI is rasterized and visited
+                    const glcm::CroppedMask cropped = glcm::RasterizeCroppedMask(roi.shape, gray.size());
+                    if (!cropped.mask.empty()) {
+                        result.statistics = glcm::ComputeRegionStatistics(gray(cropped.box), cropped.mask);
+                        const cv::Rect box = glcm::MaskBoundingBox(cropped.mask);
+                        result.bounding_box = box.area() > 0 ? box + cropped.box.tl() : cv::Rect();
+                    }
                 } catch (const std::invalid_argument& error) {
                     result.error = error.what();
                 }

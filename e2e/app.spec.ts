@@ -333,3 +333,33 @@ test('switches to the lookup-table renderer when the WebGL context is lost', asy
   expect(drawn!.mean).toBeGreaterThan(10);
 });
 
+
+
+test('renders a long results table in windows and keeps every row reachable', async ({ page }) => {
+  // 60 ROIs × 5 rows = 300 rows, above the threshold for rendering only the visible rows
+  await page.evaluate(() => {
+    const store = (window as unknown as { __glcm: { rois: { getState(): { importRois(rois: unknown[]): string[] } } } }).__glcm.rois.getState();
+    store.importRois(
+      Array.from({ length: 60 }, (_, i) => ({
+        id: `bulk-${i}`,
+        name: `Bulk ${i + 1}`,
+        color: '#40c057',
+        shape: { type: 'rectangle', x: 10 + (i % 10) * 45, y: 10 + Math.floor(i / 10) * 45, width: 30, height: 30 },
+      })),
+    );
+  });
+  await page.keyboard.press('Shift+M');
+
+  const section = page.locator('section[aria-label^="Results"]');
+  await expect(section).toHaveAttribute('aria-label', 'Results (300 rows)', { timeout: 30_000 });
+  const renderedRows = page.getByTestId('results-table').locator('tbody tr:not([aria-hidden])');
+  await expect.poll(() => renderedRows.count()).toBeGreaterThan(0);
+  expect(await renderedRows.count()).toBeLessThan(300);
+
+  // Scrolling to the end renders the rows of the last ROI
+  await section.locator('.results-body').evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect(renderedRows.filter({ hasText: 'Bulk 60' }).first()).toBeVisible();
+  expect(await renderedRows.count()).toBeLessThan(300);
+});

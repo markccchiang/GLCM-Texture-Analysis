@@ -88,7 +88,7 @@ Namespace ``glcm``; include paths are relative to ``core/``.
    * - ``analysis/Score``
      - The age-based score from mean, entropy and contrast with configurable ``ScoreCoefficients``.
    * - ``roi/Roi``
-     - Rectangle, ellipse and polygon shapes in image pixel coordinates. ``RasterizeMask`` uses the pixel-centre rule:
+     - Rectangle, ellipse and polygon shapes in image pixel coordinates. ``RasterizeMask`` (and ``RasterizeCroppedMask``, which rasterizes only a box around the shape so small ROIs on large images are fast) uses the pixel-centre rule:
        a pixel belongs to the ROI when its centre ``(c + 0.5, r + 0.5)`` lies inside the shape.
    * - ``imaging/ImageLoader``
      - Decodes PNG, JPEG, BMP and 8/16-bit TIFF with OpenCV and converts color to grayscale (with a warning).
@@ -255,7 +255,7 @@ Data flows
 
 .. code-block:: text
 
-   POST /images/{id}/roi-stats (debounced) ─▶ roiStats ──────────────────────────▶ RasterizeMask per ROI
+   POST /images/{id}/roi-stats (debounced) ─▶ roiStats ──────────────────────────▶ RasterizeCroppedMask per ROI
    pixel counts in the ROI Manager ◀─────────
    POST /analyses {imageId, rois, settings} ▶ validateAnalysis ──────────────────▶ parse and validate
    AnalysisInfo ◀─────────────────────────── 202; queue ROI × distance jobs

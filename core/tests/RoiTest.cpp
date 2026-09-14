@@ -4,6 +4,7 @@
 #include <cmath>
 #include <limits>
 #include <opencv2/core.hpp>
+#include <random>
 #include <stdexcept>
 #include <vector>
 
@@ -201,4 +202,63 @@ TEST(RoiTest, ExtremeCoordinatesGiveCorrectMasks) {
     // Rectangles whose far corner is computed from extreme values: ending at the origin, and covering the image
     EXPECT_EQ(CountMaskPixels(RasterizeMask(RectangleRoi{-max, -max, max, max}, size)), 0);
     EXPECT_EQ(CountMaskPixels(RasterizeMask(RectangleRoi{-1e308, -1e308, max, max}, size)), 100);
+}
+
+// RasterizeCroppedMask must give exactly the full mask, placed at its box
+TEST(RoiTest, CroppedMasksEqualFullMasks) {
+    const cv::Size size(64, 48);
+    const double max = std::numeric_limits<double>::max();
+    std::vector<glcm::RoiShape> shapes = {RectangleRoi{10.2, 5.5, 20.0, 9.7}, RectangleRoi{30.0, 40.0, -12.5, -30.0},
+        RectangleRoi{-5.0, -5.0, 12.0, 12.0}, RectangleRoi{60.0, 44.0, 10.0, 10.0}, RectangleRoi{100.0, 100.0, 5.0, 5.0},
+        RectangleRoi{3.2, 3.2, 0.1, 0.1}, RectangleRoi{-1e308, -1e308, max, max}, EllipseRoi{20.0, 20.0, 9.5, 4.25, 33.0},
+        EllipseRoi{62.0, 2.0, 15.0, 6.0, -70.0}, EllipseRoi{5.0, 5.0, 1e200, 3.0, 0.0}, EllipseRoi{30.0, 30.0, 0.0, 5.0, 0.0},
+        EllipseRoi{-50.0, -50.0, 10.0, 10.0, 0.0}, EllipseRoi{32.5, 24.5, 0.4, 0.4, 0.0}, Polygon({{5.0, 5.0}, {40.0, 8.0}, {20.0, 30.0}}),
+        Polygon({{10.0, 10.0}, {50.0, 40.0}, {50.0, 10.0}, {10.0, 40.0}}), Polygon({{-20.0, 10.0}, {90.0, 12.5}, {30.0, 70.0}}),
+        Polygon({{-1e308, 0.5}, {1e308, 9.5}, {1e308, 20.0}, {-1e308, 20.0}}), Polygon({{1.0, 1.0}, {2.0, 2.0}}),
+        Polygon({{63.9, 47.9}, {70.0, 47.95}, {64.0, 60.0}})};
+
+    std::mt19937 random(12345);
+    std::uniform_real_distribution<double> coordinate(-10.0, 74.0);
+    for (int i = 0; i < 200; ++i) {
+        Points points;
+        for (int k = 0; k < 3 + i % 6; ++k) {
+            points.push_back({coordinate(random), coordinate(random)});
+        }
+        shapes.push_back(Polygon(points));
+        shapes.push_back(EllipseRoi{coordinate(random), coordinate(random), std::abs(coordinate(random)) / 3.0,
+            std::abs(coordinate(random)) / 4.0, coordinate(random) * 5.0});
+        shapes.push_back(RectangleRoi{coordinate(random), coordinate(random), coordinate(random) / 2.0, coordinate(random) / 2.0});
+    }
+
+    for (size_t i = 0; i < shapes.size(); ++i) {
+        SCOPED_TRACE("shape " + std::to_string(i));
+        const cv::Mat full = RasterizeMask(shapes[i], size);
+        const glcm::CroppedMask cropped = glcm::RasterizeCroppedMask(shapes[i], size);
+        ASSERT_EQ(cropped.box.size(), cropped.mask.size());
+        ASSERT_EQ(cropped.box & cv::Rect(cv::Point(0, 0), size), cropped.box);
+        cv::Mat placed = cv::Mat::zeros(size, CV_8UC1);
+        if (!cropped.mask.empty()) {
+            cropped.mask.copyTo(placed(cropped.box));
+        }
+        EXPECT_TRUE(MasksEqual(placed, full));
+        EXPECT_EQ(CountMaskPixels(cropped.mask), CountMaskPixels(full));
+    }
+}
+
+TEST(RoiTest, CroppedMasksStaySmallAndValidateInput) {
+    // Small shapes on a huge image get small boxes, and no full-size mask is allocated
+    const cv::Size huge(20000, 20000);
+    EXPECT_EQ(glcm::RasterizeCroppedMask(RectangleRoi{100.0, 200.0, 10.0, 5.0}, huge).box, cv::Rect(100, 200, 10, 5));
+    EXPECT_LE(glcm::RasterizeCroppedMask(EllipseRoi{5000.0, 5000.0, 6.0, 4.0, 30.0}, huge).box.area(), 16 * 16);
+    EXPECT_LE(glcm::RasterizeCroppedMask(Polygon({{10.0, 10.0}, {22.0, 12.0}, {15.0, 21.0}}), huge).box.area(), 16 * 14);
+
+    const glcm::CroppedMask outside = glcm::RasterizeCroppedMask(RectangleRoi{-50.0, -50.0, 10.0, 10.0}, cv::Size(10, 10));
+    EXPECT_TRUE(outside.box.empty());
+    EXPECT_TRUE(outside.mask.empty());
+    EXPECT_EQ(CountMaskPixels(outside.mask), 0);
+
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    EXPECT_THROW(glcm::RasterizeCroppedMask(Polygon({{1.0, 1.0}, {nan, 2.0}, {3.0, 1.0}}), cv::Size(10, 10)), std::invalid_argument);
+    EXPECT_THROW(glcm::RasterizeCroppedMask(EllipseRoi{nan, 1.0, 1.0, 1.0, 0.0}, cv::Size(10, 10)), std::invalid_argument);
+    EXPECT_THROW(glcm::RasterizeCroppedMask(RectangleRoi{0.0, 0.0, 1.0, 1.0}, cv::Size(0, 5)), std::invalid_argument);
 }

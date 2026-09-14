@@ -473,3 +473,58 @@ TEST(AnalysisRunnerTest, RejectsInvalidImagesAndSettings) {
 
     EXPECT_TRUE(RunAnalysis(Pattern8(10, 10), {}, DefaultSettings(8)).results.empty());
 }
+
+// Only the box around each ROI is analysed; the results must not depend on the rest of the image or on the position
+TEST(AnalysisRunnerTest, ResultsDoNotDependOnWhereTheRoiLiesInTheImage) {
+    const cv::Mat small = Pattern8(40, 50);
+    cv::Mat large(700, 900, CV_8UC1);
+    cv::randu(large, 0, 256);
+    const cv::Point offset(613, 402);
+    small.copyTo(large(cv::Rect(offset, small.size())));
+
+    const auto regions = [](double dx, double dy) {
+        std::vector<Roi> rois = {RectangleRegion("rectangle", 3.0 + dx, 4.0 + dy, 30.0, 20.0), RectangleRegion("ellipse", 0, 0, 0, 0),
+            RectangleRegion("polygon", 0, 0, 0, 0)};
+        rois[1].shape = EllipseRoi{25.0 + dx, 20.0 + dy, 14.0, 9.0, 25.0};
+        PolygonRoi polygon;
+        polygon.points = {{2.0 + dx, 2.0 + dy}, {45.0 + dx, 6.0 + dy}, {30.0 + dx, 37.0 + dy}, {8.0 + dx, 30.0 + dy}};
+        rois[2].shape = polygon;
+        return rois;
+    };
+    const auto same = [](double a, double b) { return a == b || (std::isnan(a) && std::isnan(b)); };
+    const auto same_features = [&](const Features& a, const Features& b) {
+        return same(a.H, b.H) && same(a.V, b.V) && same(a.LD, b.LD) && same(a.RD, b.RD);
+    };
+
+    AnalysisSettings settings = DefaultSettings(8);
+    settings.features = AllFeatures();
+    settings.distances = {1, 3};
+    settings.score.enabled = true;
+    for (const QuantizationMethod method : {QuantizationMethod::FixedRange, QuantizationMethod::RoiMinMax}) {
+        settings.quantization.method = method;
+        const AnalysisOutput alone = RunAnalysis(small, regions(0.0, 0.0), settings);
+        const AnalysisOutput embedded = RunAnalysis(large, regions(offset.x, offset.y), settings);
+        ASSERT_EQ(alone.results.size(), 6u);
+        ASSERT_EQ(embedded.results.size(), 6u);
+        for (size_t i = 0; i < alone.results.size(); ++i) {
+            SCOPED_TRACE(alone.results[i].roi_id + " d=" + std::to_string(alone.results[i].distance));
+            const MeasurementResult& a = alone.results[i];
+            const MeasurementResult& b = embedded.results[i];
+            EXPECT_EQ(a.status, MeasurementStatus::Ok);
+            EXPECT_EQ(a.status, b.status);
+            EXPECT_EQ(a.pixel_count, b.pixel_count);
+            EXPECT_EQ(a.pair_counts, b.pair_counts);
+            EXPECT_EQ(a.quantization_lower, b.quantization_lower);
+            EXPECT_EQ(a.quantization_upper, b.quantization_upper);
+            EXPECT_EQ(a.warnings, b.warnings);
+            ASSERT_EQ(a.values.size(), b.values.size());
+            for (const auto& [type, features] : a.values) {
+                EXPECT_TRUE(same_features(features, b.values.at(type))) << TextureAnalysis::TypeToString(type);
+            }
+            ASSERT_EQ(a.score.has_value(), b.score.has_value());
+            if (a.score) {
+                EXPECT_TRUE(same_features(*a.score, *b.score));
+            }
+        }
+    }
+}

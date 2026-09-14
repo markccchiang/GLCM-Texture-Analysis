@@ -95,9 +95,20 @@ bool MatchesScoreCalibration(const AnalysisSettings& settings, int distance, int
            settings.quantization.range_max == 255 && settings.log_base == LogBase::Natural && settings.directions == ALL_DIRECTIONS;
 }
 
-void Measure(const cv::Mat& gray, const cv::Mat& mask, int distance, const AnalysisSettings& settings, MeasurementResult& result) {
-    const RegionStatistics statistics = ComputeRegionStatistics(gray, mask);
-    const QuantizationResult quantized = Quantize(gray, mask, settings.gray_levels, settings.quantization);
+// Everything about an ROI that does not depend on the distance, computed once per ROI
+struct PreparedRegion {
+    RegionStatistics statistics;
+    QuantizationResult quantized;
+};
+
+PreparedRegion Prepare(const cv::Mat& gray, const cv::Mat& mask, const AnalysisSettings& settings) {
+    return {ComputeRegionStatistics(gray, mask), Quantize(gray, mask, settings.gray_levels, settings.quantization)};
+}
+
+void Measure(const cv::Mat& gray, const cv::Mat& mask, const PreparedRegion& prepared, int distance, const AnalysisSettings& settings,
+    MeasurementResult& result) {
+    const RegionStatistics& statistics = prepared.statistics;
+    const QuantizationResult& quantized = prepared.quantized;
     result.quantization_lower = quantized.lower;
     result.quantization_upper = quantized.upper;
 
@@ -218,14 +229,19 @@ AnalysisOutput RunAnalysis(
     int completed = 0;
 
     for (const Roi& roi : rois) {
-        cv::Mat mask;
+        // Only the box around the ROI is rasterized and analysed: pixels outside it are outside the ROI, so gray(box) with
+        // the cropped mask gives the same results as the whole image with a full-size mask
+        CroppedMask cropped;
         std::string roi_error;
         try {
-            mask = RasterizeMask(roi.shape, gray.size());
+            cropped = RasterizeCroppedMask(roi.shape, gray.size());
         } catch (const std::exception& error) {
             roi_error = error.what();
         }
-        const int pixel_count = mask.empty() ? 0 : CountMaskPixels(mask);
+        const int pixel_count = CountMaskPixels(cropped.mask);
+        const cv::Mat region = cropped.mask.empty() ? cv::Mat() : gray(cropped.box);
+        const cv::Mat& mask = cropped.mask;
+        std::optional<PreparedRegion> prepared;        // statistics and quantization, shared by every distance
         std::optional<ScoreOutcome> calibration_score; // computed once per ROI, shared by every distance
 
         for (int distance : settings.distances) {
@@ -243,10 +259,13 @@ AnalysisOutput RunAnalysis(
                 result.error = "The ROI contains fewer than 2 pixels";
             } else {
                 try {
-                    Measure(gray, mask, distance, settings, result);
+                    if (!prepared) {
+                        prepared = Prepare(region, mask, settings);
+                    }
+                    Measure(region, mask, *prepared, distance, settings, result);
                     if (settings.score.enabled && settings.score.profile == ScoreProfile::Calibration) {
                         if (!calibration_score) {
-                            calibration_score = CalibrationScore(gray, mask, settings.score);
+                            calibration_score = CalibrationScore(region, mask, settings.score);
                         }
                         result.score = calibration_score->score;
                         result.warnings.insert(

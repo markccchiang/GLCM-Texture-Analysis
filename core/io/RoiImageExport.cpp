@@ -84,16 +84,17 @@ std::vector<ExportedFile> ExportRoiImages(
         Json entry = Json::object();
         entry["roi"] = json_detail::RoiToJson(roi);
 
-        cv::Mat mask;
+        // Only the box around the ROI is rasterized
+        CroppedMask cropped;
         try {
-            mask = RasterizeMask(roi.shape, gray.size());
+            cropped = RasterizeCroppedMask(roi.shape, gray.size());
         } catch (const std::exception& error) {
             entry["skipped"] = true;
             entry["reason"] = error.what();
             entries.push_back(entry);
             continue;
         }
-        const int pixel_count = CountMaskPixels(mask);
+        const int pixel_count = CountMaskPixels(cropped.mask);
         if (pixel_count == 0) {
             entry["skipped"] = true;
             entry["reason"] = "The ROI contains no pixels";
@@ -102,8 +103,10 @@ std::vector<ExportedFile> ExportRoiImages(
         }
 
         const std::string base = UniqueBase(SanitizeFileName(roi.name.empty() ? roi.id : roi.name), suffixes, used_names);
-        const cv::Rect box = MaskBoundingBox(mask);
-        const cv::Mat mask_crop = mask(box).clone();
+        // Bounding box of the ROI's pixels, within the cropped mask and in image coordinates
+        const cv::Rect local_box = MaskBoundingBox(cropped.mask);
+        const cv::Rect box = local_box + cropped.box.tl();
+        const cv::Mat mask_crop = cropped.mask(local_box).clone();
         cv::Mat crop = gray(box).clone();
         crop.setTo(cv::Scalar(0), mask_crop == 0);
 
@@ -127,9 +130,9 @@ std::vector<ExportedFile> ExportRoiImages(
 
         if (options.include_quantized) {
             try {
-                const QuantizationResult quantized = Quantize(gray, mask, settings.gray_levels, settings.quantization);
+                const QuantizationResult quantized = Quantize(gray(cropped.box), cropped.mask, settings.gray_levels, settings.quantization);
                 const std::string quantized_name = base + quantized_suffix;
-                files.push_back({quantized_name, Encode(".png", quantized.image(box).clone())});
+                files.push_back({quantized_name, Encode(".png", quantized.image(local_box).clone())});
                 entry["quantized"] = quantized_name;
             } catch (const std::invalid_argument& error) {
                 entry["quantized"] = nullptr;

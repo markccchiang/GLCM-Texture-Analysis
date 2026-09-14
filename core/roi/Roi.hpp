@@ -49,10 +49,21 @@ struct Roi {
 // Shapes are clipped to the image. Non-finite coordinates throw std::invalid_argument.
 cv::Mat RasterizeMask(const RoiShape& shape, cv::Size image_size);
 
+// The same mask restricted to a box around the shape, so that small ROIs on large images neither allocate nor visit the
+// whole image: `mask` has the size of `box`, which lies inside the image, and mask pixel (c, r) is image pixel
+// (box.x + c, box.y + r). Every pixel outside `box` is outside the shape, so RasterizeMask(shape, size)(box) equals `mask`
+// and the full mask is 0 elsewhere. `box` may be larger than MaskBoundingBox(mask). Both are empty when the shape covers
+// no pixel of the image. Analysing image(box) with `mask` gives the same results as the whole image with the full mask.
+struct CroppedMask {
+    cv::Rect box;
+    cv::Mat mask;
+};
+CroppedMask RasterizeCroppedMask(const RoiShape& shape, cv::Size image_size);
+
 // Smallest rectangle containing all non-zero mask pixels; an empty cv::Rect for an empty mask
 cv::Rect MaskBoundingBox(const cv::Mat& mask);
 
-// Number of non-zero mask pixels
+// Number of non-zero mask pixels (0 for an empty mask)
 int CountMaskPixels(const cv::Mat& mask);
 
 } // namespace glcm

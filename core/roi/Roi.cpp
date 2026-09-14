@@ -19,6 +19,12 @@ void RequireFinite(std::initializer_list<double> values, const char* shape) {
     }
 }
 
+void RequireImageSize(cv::Size image_size) {
+    if (image_size.width <= 0 || image_size.height <= 0) {
+        throw std::invalid_argument("The image size must be positive");
+    }
+}
+
 // Clamps a (possibly huge) floating-point index to [0, size] before converting it to int. The callers never pass NaN;
 // if one did, it maps to 0 instead of an undefined conversion.
 int ClampIndex(double index, int size) {
@@ -34,77 +40,136 @@ int FirstCentreAtOrAfter(double edge, int size) {
     return ClampIndex(std::ceil(edge - 0.5), size);
 }
 
-void Fill(const RectangleRoi& rectangle, cv::Mat& mask) {
+// Half-open pixel ranges in image coordinates, clamped to the image, containing every pixel a shape can cover
+struct PixelRange {
+    int first_col = 0;
+    int end_col = 0;
+    int first_row = 0;
+    int end_row = 0;
+};
+
+cv::Rect ToRect(const PixelRange& range) {
+    if (range.first_col >= range.end_col || range.first_row >= range.end_row) {
+        return cv::Rect();
+    }
+    return cv::Rect(range.first_col, range.first_row, range.end_col - range.first_col, range.end_row - range.first_row);
+}
+
+// The fill functions compute pixel ranges in image coordinates, exactly as for a full-size mask, and write into `mask`,
+// which covers the image pixels [origin.x, origin.x + mask.cols) x [origin.y, origin.y + mask.rows). Writes outside that
+// area are skipped.
+
+PixelRange Range(const RectangleRoi& rectangle, cv::Size image_size) {
     RequireFinite({rectangle.x, rectangle.y, rectangle.width, rectangle.height}, "Rectangle");
 
     const double left = std::min(rectangle.x, rectangle.x + rectangle.width);
     const double right = std::max(rectangle.x, rectangle.x + rectangle.width);
     const double top = std::min(rectangle.y, rectangle.y + rectangle.height);
     const double bottom = std::max(rectangle.y, rectangle.y + rectangle.height);
+    return {FirstCentreAtOrAfter(left, image_size.width), FirstCentreAtOrAfter(right, image_size.width),
+        FirstCentreAtOrAfter(top, image_size.height), FirstCentreAtOrAfter(bottom, image_size.height)};
+}
 
-    const int first_col = FirstCentreAtOrAfter(left, mask.cols);
-    const int end_col = FirstCentreAtOrAfter(right, mask.cols);
-    const int first_row = FirstCentreAtOrAfter(top, mask.rows);
-    const int end_row = FirstCentreAtOrAfter(bottom, mask.rows);
-
-    if (first_col < end_col && first_row < end_row) {
-        mask(cv::Range(first_row, end_row), cv::Range(first_col, end_col)).setTo(cv::Scalar(INSIDE));
+void Fill(const RectangleRoi& rectangle, cv::Size image_size, cv::Mat& mask, cv::Point origin) {
+    const cv::Rect area = ToRect(Range(rectangle, image_size)) & cv::Rect(origin, mask.size());
+    if (area.area() > 0) {
+        mask(area - origin).setTo(cv::Scalar(INSIDE));
     }
 }
 
-void Fill(const EllipseRoi& ellipse, cv::Mat& mask) {
+struct EllipseGeometry {
+    bool empty = true;
+    double cos_theta = 1.0;
+    double sin_theta = 0.0;
+    double rx2 = 0.0;
+    double ry2 = 0.0;
+    PixelRange range;
+};
+
+EllipseGeometry Geometry(const EllipseRoi& ellipse, cv::Size image_size) {
     RequireFinite({ellipse.cx, ellipse.cy, ellipse.rx, ellipse.ry, ellipse.angle_deg}, "Ellipse");
+    EllipseGeometry geometry;
     if (ellipse.rx <= 0.0 || ellipse.ry <= 0.0) {
-        return;
+        return geometry;
     }
 
     const double theta = ellipse.angle_deg * CV_PI / 180.0;
-    const double cos_theta = std::cos(theta);
-    const double sin_theta = std::sin(theta);
-    const double rx2 = ellipse.rx * ellipse.rx;
-    const double ry2 = ellipse.ry * ellipse.ry;
+    geometry.empty = false;
+    geometry.cos_theta = std::cos(theta);
+    geometry.sin_theta = std::sin(theta);
+    geometry.rx2 = ellipse.rx * ellipse.rx;
+    geometry.ry2 = ellipse.ry * ellipse.ry;
 
     // Half extents of the rotated ellipse's bounding box, used only to limit the pixels tested. std::hypot avoids squaring
     // the radii: for a huge radius the square overflows, and sqrt(inf * 0) would be NaN when the angle is 0 or 90 degrees.
-    const double half_width = std::hypot(ellipse.rx * cos_theta, ellipse.ry * sin_theta);
-    const double half_height = std::hypot(ellipse.rx * sin_theta, ellipse.ry * cos_theta);
-    const int first_col = ClampIndex(std::floor(ellipse.cx - half_width), mask.cols);
-    const int end_col = ClampIndex(std::ceil(ellipse.cx + half_width) + 1.0, mask.cols);
-    const int first_row = ClampIndex(std::floor(ellipse.cy - half_height), mask.rows);
-    const int end_row = ClampIndex(std::ceil(ellipse.cy + half_height) + 1.0, mask.rows);
+    const double half_width = std::hypot(ellipse.rx * geometry.cos_theta, ellipse.ry * geometry.sin_theta);
+    const double half_height = std::hypot(ellipse.rx * geometry.sin_theta, ellipse.ry * geometry.cos_theta);
+    geometry.range = {ClampIndex(std::floor(ellipse.cx - half_width), image_size.width),
+        ClampIndex(std::ceil(ellipse.cx + half_width) + 1.0, image_size.width),
+        ClampIndex(std::floor(ellipse.cy - half_height), image_size.height),
+        ClampIndex(std::ceil(ellipse.cy + half_height) + 1.0, image_size.height)};
+    return geometry;
+}
 
-    for (int row = first_row; row < end_row; ++row) {
+PixelRange Range(const EllipseRoi& ellipse, cv::Size image_size) {
+    return Geometry(ellipse, image_size).range;
+}
+
+void Fill(const EllipseRoi& ellipse, cv::Size image_size, cv::Mat& mask, cv::Point origin) {
+    const EllipseGeometry geometry = Geometry(ellipse, image_size);
+    if (geometry.empty) {
+        return;
+    }
+    const cv::Rect area = ToRect(geometry.range) & cv::Rect(origin, mask.size());
+    for (int row = area.y; row < area.y + area.height; ++row) {
         const double dy = (row + 0.5) - ellipse.cy;
-        uchar* line = mask.ptr<uchar>(row);
-        for (int col = first_col; col < end_col; ++col) {
+        uchar* line = mask.ptr<uchar>(row - origin.y);
+        for (int col = area.x; col < area.x + area.width; ++col) {
             const double dx = (col + 0.5) - ellipse.cx;
             // Coordinates in the ellipse's own (unrotated) axes
-            const double u = dx * cos_theta + dy * sin_theta;
-            const double v = -dx * sin_theta + dy * cos_theta;
-            if (u * u / rx2 + v * v / ry2 <= 1.0) {
-                line[col] = INSIDE;
+            const double u = dx * geometry.cos_theta + dy * geometry.sin_theta;
+            const double v = -dx * geometry.sin_theta + dy * geometry.cos_theta;
+            if (u * u / geometry.rx2 + v * v / geometry.ry2 <= 1.0) {
+                line[col - origin.x] = INSIDE;
             }
         }
     }
 }
 
-void Fill(const PolygonRoi& polygon, cv::Mat& mask) {
+PixelRange Range(const PolygonRoi& polygon, cv::Size image_size) {
     for (const auto& point : polygon.points) {
         RequireFinite({point[0], point[1]}, "Polygon");
     }
+    if (polygon.points.size() < 3) {
+        return {};
+    }
+
+    double min_x = polygon.points[0][0];
+    double max_x = polygon.points[0][0];
+    double min_y = polygon.points[0][1];
+    double max_y = polygon.points[0][1];
+    for (const auto& point : polygon.points) {
+        min_x = std::min(min_x, point[0]);
+        max_x = std::max(max_x, point[0]);
+        min_y = std::min(min_y, point[1]);
+        max_y = std::max(max_y, point[1]);
+    }
+    // Rows as scanned by Fill. A crossing lies between the x coordinates of its edge's end points (up to rounding), so
+    // the vertex extents with a margin of one pixel on each side contain every filled column.
+    return {ClampIndex(std::floor(min_x) - 1.0, image_size.width), ClampIndex(std::ceil(max_x) + 2.0, image_size.width),
+        ClampIndex(std::floor(min_y), image_size.height), ClampIndex(std::ceil(max_y) + 1.0, image_size.height)};
+}
+
+void Fill(const PolygonRoi& polygon, cv::Size image_size, cv::Mat& mask, cv::Point origin) {
+    const PixelRange range = Range(polygon, image_size);
     const size_t count = polygon.points.size();
     if (count < 3) {
         return;
     }
-
-    double min_y = polygon.points[0][1];
-    double max_y = polygon.points[0][1];
-    for (const auto& point : polygon.points) {
-        min_y = std::min(min_y, point[1]);
-        max_y = std::max(max_y, point[1]);
-    }
-    const int first_row = ClampIndex(std::floor(min_y), mask.rows);
-    const int end_row = ClampIndex(std::ceil(max_y) + 1.0, mask.rows);
+    const int first_row = std::max(range.first_row, origin.y);
+    const int end_row = std::min(range.end_row, origin.y + mask.rows);
+    const int first_target_col = origin.x;
+    const int end_target_col = origin.x + mask.cols;
 
     // Scanline fill at every pixel-centre row. An edge crosses the scanline y if y is in [min(ya, yb), max(ya, yb)),
     // so shared vertices are counted once and horizontal edges never cross.
@@ -128,12 +193,12 @@ void Fill(const PolygonRoi& polygon, cv::Mat& mask) {
         }
         std::sort(crossings.begin(), crossings.end());
 
-        uchar* line = mask.ptr<uchar>(row);
+        uchar* line = mask.ptr<uchar>(row - origin.y);
         for (size_t k = 0; k + 1 < crossings.size(); k += 2) {
-            const int first_col = FirstCentreAtOrAfter(crossings[k], mask.cols);
-            const int end_col = FirstCentreAtOrAfter(crossings[k + 1], mask.cols);
+            const int first_col = std::max(FirstCentreAtOrAfter(crossings[k], image_size.width), first_target_col);
+            const int end_col = std::min(FirstCentreAtOrAfter(crossings[k + 1], image_size.width), end_target_col);
             if (first_col < end_col) {
-                std::fill(line + first_col, line + end_col, INSIDE);
+                std::fill(line + (first_col - origin.x), line + (end_col - origin.x), INSIDE);
             }
         }
     }
@@ -148,12 +213,23 @@ void RequireMask(const cv::Mat& mask) {
 } // namespace
 
 cv::Mat RasterizeMask(const RoiShape& shape, cv::Size image_size) {
-    if (image_size.width <= 0 || image_size.height <= 0) {
-        throw std::invalid_argument("The image size must be positive");
-    }
+    RequireImageSize(image_size);
     cv::Mat mask = cv::Mat::zeros(image_size, CV_8UC1);
-    std::visit([&mask](const auto& s) { Fill(s, mask); }, shape);
+    std::visit([&](const auto& s) { Fill(s, image_size, mask, cv::Point(0, 0)); }, shape);
     return mask;
+}
+
+CroppedMask RasterizeCroppedMask(const RoiShape& shape, cv::Size image_size) {
+    RequireImageSize(image_size);
+    CroppedMask cropped;
+    cropped.box = std::visit([&](const auto& s) { return ToRect(Range(s, image_size)); }, shape);
+    if (cropped.box.area() == 0) {
+        cropped.box = cv::Rect();
+        return cropped;
+    }
+    cropped.mask = cv::Mat::zeros(cropped.box.size(), CV_8UC1);
+    std::visit([&](const auto& s) { Fill(s, image_size, cropped.mask, cropped.box.tl()); }, shape);
+    return cropped;
 }
 
 cv::Rect MaskBoundingBox(const cv::Mat& mask) {
@@ -181,7 +257,7 @@ cv::Rect MaskBoundingBox(const cv::Mat& mask) {
 
 int CountMaskPixels(const cv::Mat& mask) {
     RequireMask(mask);
-    return cv::countNonZero(mask);
+    return mask.empty() ? 0 : cv::countNonZero(mask);
 }
 
 } // namespace glcm

@@ -326,7 +326,7 @@ paths are relative to ``core/``. The main entry points:
    * - ``imaging/ImageLoader.hpp``
      - ``LoadImageFile``, ``LoadImageBytes`` → ``LoadedImage{gray, info, warnings}``
    * - ``roi/Roi.hpp``
-     - ``RectangleRoi``, ``EllipseRoi``, ``PolygonRoi``, ``Roi``; ``RasterizeMask``, ``MaskBoundingBox``,
+     - ``RectangleRoi``, ``EllipseRoi``, ``PolygonRoi``, ``Roi``; ``RasterizeMask``, ``RasterizeCroppedMask``, ``MaskBoundingBox``,
        ``CountMaskPixels``
    * - ``imaging/Quantizer.hpp``
      - ``QuantizationSettings``, ``Quantize``
