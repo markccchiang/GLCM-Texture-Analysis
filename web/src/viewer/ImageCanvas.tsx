@@ -82,6 +82,8 @@ export function ImageCanvas() {
   const draftRef = useRef<PolygonDraft | null>(null);
   const pixelLookup = useRef<{ timer?: number; controller?: AbortController }>({});
   const tooltipTimer = useRef<number | undefined>(undefined);
+  /** Last pointer position over the canvas (container coordinates); null when the pointer is outside */
+  const lastPointerRef = useRef<Point | null>(null);
   const [draft, setDraftState] = useState<PolygonDraft | null>(null);
   /** Screen position and time of the click that last closed a polygon on its first vertex */
   const polygonClosedRef = useRef<{ x: number; y: number; time: number } | null>(null);
@@ -209,6 +211,41 @@ export function ImageCanvas() {
       setTooltip((current) => (current ? { roiId, x: local.x, y: local.y } : current));
     }
   };
+
+  // Hover follows the canvas as well as the pointer. Zooming with keys, switching tools or editing ROIs changes what lies
+  // under a resting pointer, and Konva draws the hit graph only after the last pointer event (a frame or more later on a
+  // slow GPU), so a hit test on that event finds nothing. After every layer draw the hover is tested again at the last
+  // pointer position.
+  const refreshHover = () => {
+    const local = lastPointerRef.current;
+    if (!local || gestureRef.current || useViewer.getState().tool !== 'pointer') {
+      return;
+    }
+    const hit = hitTest(local);
+    updateRoiHover(hit && hit.kind !== 'transformer' ? hit.roiId : null, local);
+  };
+  const refreshHoverRef = useRef(refreshHover);
+  useEffect(() => {
+    refreshHoverRef.current = refreshHover;
+  });
+  const hasStage = viewSize.width > 0 && viewSize.height > 0;
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) {
+      return;
+    }
+    // "draw" fires after the scene; the hit graph is drawn right after it in the same call, hence the microtask
+    const onDraw = () => queueMicrotask(() => refreshHoverRef.current());
+    const layers = stage.getLayers();
+    for (const layer of layers) {
+      layer.on('draw.hover', onDraw);
+    }
+    return () => {
+      for (const layer of layers) {
+        layer.off('draw.hover');
+      }
+    };
+  }, [hasStage, image]);
 
   // Wheel, trackpad and Safari pinch; listeners are non-passive so the page does not scroll or zoom
   useEffect(() => {
@@ -450,6 +487,7 @@ export function ImageCanvas() {
       return;
     }
     const local = localPoint(event.clientX, event.clientY);
+    lastPointerRef.current = local;
     const point = screenToImage(state.viewport, local);
     const gesture = gestureRef.current;
     const roiStore = useRois.getState();
@@ -576,6 +614,7 @@ export function ImageCanvas() {
       onPointerCancel={endGesture}
       onDoubleClick={onDoubleClick}
       onPointerLeave={() => {
+        lastPointerRef.current = null;
         if (!gestureRef.current) {
           if (useViewer.getState().hover) {
             useViewer.getState().setHover(null);
