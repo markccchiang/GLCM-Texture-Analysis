@@ -71,6 +71,14 @@ describe('web app and samples', () => {
     expect(asset.headers['cache-control']).toBe('public, max-age=31536000, immutable');
   });
 
+  it('serves files created after startup, e.g. a rebuilt app', async () => {
+    await fs.writeFile(path.join(fixtures, 'dist', 'assets', 'index-rebuilt.js'), 'console.log(2);');
+    const asset = await t.app.inject({ method: 'GET', url: '/assets/index-rebuilt.js' });
+    expect(asset.statusCode).toBe(200);
+    expect(asset.body).toBe('console.log(2);');
+    expect(asset.headers['cache-control']).toBe('public, max-age=31536000, immutable');
+  });
+
   it('falls back to index.html for page requests but keeps JSON 404s for the API', async () => {
     const page = await t.app.inject({ method: 'GET', url: '/some/client/route', headers: { accept: 'text/html,*/*' } });
     expect(page.statusCode).toBe(200);

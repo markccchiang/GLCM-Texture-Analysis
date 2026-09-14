@@ -1,0 +1,204 @@
+// ROI Manager (doc/ui-design-plan.md, section 6.2).
+
+import { ActionIcon, Button, Menu, Text, TextInput, Tooltip } from '@mantine/core';
+import { IconAlertTriangle, IconCopy, IconDots, IconEye, IconEyeOff, IconPlus, IconTrash } from '@tabler/icons-react';
+import type { MouseEvent } from 'react';
+import { PanelSection } from '../components/PanelSection';
+import { useUi } from '../stores/uiStore';
+import { useViewer } from '../stores/viewerStore';
+import { SHAPE_LABELS, shapeBounds, shapeKind } from './geometry';
+import { useRois, type ManagedRoi } from './roiStore';
+import { roiProblem, useRoiStatistics } from './useRoiStatistics';
+
+function RoiRow({ roi, pixelCount, problem }: { roi: ManagedRoi; pixelCount: number | undefined; problem: string | null }) {
+  const selected = useRois((state) => state.selectedIds.includes(roi.id));
+  const hovered = useRois((state) => state.hoveredId === roi.id);
+  const renaming = useUi((state) => state.renamingRoiId === roi.id);
+  const store = useRois.getState;
+
+  const onClick = (event: MouseEvent) => {
+    if (event.metaKey || event.ctrlKey) {
+      store().toggleSelected(roi.id);
+    } else if (event.shiftKey) {
+      store().selectRange(roi.id);
+    } else {
+      store().select([roi.id]);
+    }
+  };
+
+  const finishRename = (name: string | null) => {
+    if (name !== null) {
+      store().renameRoi(roi.id, name);
+    }
+    useUi.getState().setRenamingRoiId(null);
+  };
+
+  return (
+    <div
+      className="roi-row"
+      role="option"
+      aria-selected={selected}
+      data-hovered={hovered || undefined}
+      data-testid="roi-row"
+      onClick={onClick}
+      onDoubleClick={() => useUi.getState().setRenamingRoiId(roi.id)}
+      onMouseEnter={() => store().setHovered(roi.id)}
+      onMouseLeave={() => store().setHovered(null)}
+    >
+      <ActionIcon
+        size="sm"
+        variant="subtle"
+        color="gray"
+        aria-label={roi.visible ? 'Hide ROI' : 'Show ROI'}
+        onClick={(event) => {
+          event.stopPropagation();
+          store().setVisible(roi.id, !roi.visible);
+        }}
+      >
+        {roi.visible ? <IconEye size={14} /> : <IconEyeOff size={14} />}
+      </ActionIcon>
+      <span className="roi-swatch" style={{ background: roi.color }} />
+      {renaming ? (
+        <TextInput
+          size="xs"
+          autoFocus
+          defaultValue={roi.name}
+          aria-label="ROI name"
+          onClick={(event) => event.stopPropagation()}
+          onBlur={(event) => finishRename(event.currentTarget.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              finishRename(event.currentTarget.value);
+            } else if (event.key === 'Escape') {
+              finishRename(null);
+            }
+          }}
+        />
+      ) : (
+        <Text size="sm" truncate title={roi.name}>
+          {roi.name}
+        </Text>
+      )}
+      <Text size="xs" c="dimmed">
+        {SHAPE_LABELS[shapeKind(roi.shape)]}
+      </Text>
+      <Text size="xs" className="mono roi-pixels" ta="right">
+        {problem ? (
+          <Tooltip label={problem} multiline w={220}>
+            <span className="roi-problem">
+              <IconAlertTriangle size={12} /> {pixelCount ?? ''}
+            </span>
+          </Tooltip>
+        ) : pixelCount === undefined ? (
+          '…'
+        ) : (
+          `${pixelCount.toLocaleString()} px`
+        )}
+      </Text>
+      <Menu position="bottom-end" withinPortal>
+        <Menu.Target>
+          <ActionIcon size="sm" variant="subtle" color="gray" aria-label="ROI actions" onClick={(event) => event.stopPropagation()}>
+            <IconDots size={14} />
+          </ActionIcon>
+        </Menu.Target>
+        <Menu.Dropdown onClick={(event) => event.stopPropagation()}>
+          <Menu.Item
+            onClick={() => {
+              store().select([roi.id]);
+              useViewer.getState().zoomToRegion(shapeBounds(roi.shape));
+            }}
+          >
+            Zoom to ROI
+          </Menu.Item>
+          <Menu.Item onClick={() => useUi.getState().setRenamingRoiId(roi.id)}>Rename</Menu.Item>
+          <Menu.Item onClick={() => store().duplicateRois([roi.id])}>Duplicate</Menu.Item>
+          <Menu.Item color="red" onClick={() => store().deleteRois([roi.id])}>
+            Delete
+          </Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
+    </div>
+  );
+}
+
+export function RoiManager() {
+  const rois = useRois((state) => state.rois);
+  const hasSelection = useRois((state) => state.selectedIds.length > 0);
+  const hasActive = useRois((state) => state.activeShape !== null);
+  const hasImage = useViewer((state) => state.image !== null);
+  const statistics = useRoiStatistics();
+  const store = useRois.getState;
+
+  return (
+    <PanelSection
+      title={`ROI Manager${rois.length ? ` (${rois.length})` : ''}`}
+      bodyClassName="roi-list"
+      actions={
+        <Menu position="bottom-end">
+          <Menu.Target>
+            <ActionIcon size="sm" variant="subtle" color="gray" aria-label="ROI Manager actions">
+              <IconDots size={14} />
+            </ActionIcon>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Item disabled={rois.length === 0} onClick={() => store().setAllVisible(true)}>
+              Show all
+            </Menu.Item>
+            <Menu.Item disabled={rois.length === 0} onClick={() => store().setAllVisible(false)}>
+              Hide all
+            </Menu.Item>
+            <Menu.Divider />
+            <Menu.Item disabled title="Arrives with save/import/export (phase 4)">
+              Import ROI Set…
+            </Menu.Item>
+            <Menu.Item disabled title="Arrives with save/import/export (phase 4)">
+              Export ROI Set…
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+      }
+      footer={
+        <>
+          <Button size="compact-xs" leftSection={<IconPlus size={12} />} disabled={!hasActive} onClick={() => store().addActiveRoi()}>
+            Add (T)
+          </Button>
+          <Button
+            size="compact-xs"
+            variant="default"
+            leftSection={<IconCopy size={12} />}
+            disabled={!hasSelection}
+            onClick={() => store().duplicateRois(store().selectedIds)}
+          >
+            Duplicate
+          </Button>
+          <Button
+            size="compact-xs"
+            variant="default"
+            color="red"
+            leftSection={<IconTrash size={12} />}
+            disabled={!hasSelection}
+            onClick={() => store().deleteRois(store().selectedIds)}
+          >
+            Delete
+          </Button>
+        </>
+      }
+    >
+      <div role="listbox" aria-multiselectable aria-label="ROIs">
+        {rois.map((roi) => {
+          const roiStatistics = statistics.get(roi.id);
+          return <RoiRow key={roi.id} roi={roi} pixelCount={roiStatistics?.pixelCount} problem={roiProblem(roiStatistics)} />;
+        })}
+      </div>
+      {rois.length === 0 && (
+        <Text size="sm" c="dimmed" p="sm">
+          {!hasImage
+            ? 'Open an image to draw ROIs.'
+            : hasActive
+              ? 'Press T or Add to keep the drawn ROI.'
+              : 'Draw an ROI with the rectangle (R), ellipse (E), polygon (P) or freehand (F) tool.'}
+        </Text>
+      )}
+    </PanelSection>
+  );
+}

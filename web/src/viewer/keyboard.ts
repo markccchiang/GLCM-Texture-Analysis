@@ -1,6 +1,8 @@
-// Keyboard shortcuts of the image canvas (doc/ui-design-plan.md, section 6.1).
+// Keyboard shortcuts of the image canvas (doc/ui-design-plan.md, sections 5.2 and 6.1).
 
 import type { Size } from './viewport';
+
+export type ToolName = 'pointer' | 'pan' | 'rectangle' | 'ellipse' | 'polygon' | 'freehand';
 
 export type ViewerAction =
   | { kind: 'zoomIn' }
@@ -12,7 +14,16 @@ export type ViewerAction =
   /** Move the view (the image moves on screen by dx, dy screen pixels) */
   | { kind: 'pan'; dx: number; dy: number }
   /** Move the selected ROIs by dx, dy image pixels */
-  | { kind: 'nudge'; dx: number; dy: number };
+  | { kind: 'nudge'; dx: number; dy: number }
+  | { kind: 'tool'; tool: ToolName }
+  /** Add the active ROI to the ROI Manager */
+  | { kind: 'addRoi' }
+  | { kind: 'measure'; scope: 'selected' | 'all' }
+  | { kind: 'deleteSelection' }
+  /** Remove the last vertex of the polygon being drawn */
+  | { kind: 'removeLastVertex' }
+  /** Cancel drawing, or clear the active ROI and the selection */
+  | { kind: 'cancel' };
 
 export interface KeyInput {
   key: string;
@@ -25,6 +36,8 @@ export interface KeyInput {
 export interface KeyContext {
   /** Whether ROIs are selected (arrow keys then move them instead of the view) */
   hasSelection: boolean;
+  /** Whether a polygon is being drawn */
+  drawing?: boolean;
   view: Size;
 }
 
@@ -37,6 +50,13 @@ const ARROWS: Record<string, [number, number]> = {
   ArrowRight: [1, 0],
   ArrowUp: [0, -1],
   ArrowDown: [0, 1],
+};
+
+const TOOL_KEYS: Record<string, ToolName> = {
+  r: 'rectangle',
+  e: 'ellipse',
+  p: 'polygon',
+  f: 'freehand',
 };
 
 /**
@@ -61,6 +81,11 @@ export function keyToAction(input: KeyInput, context: KeyContext): ViewerAction 
     return { kind: 'pan', dx: -horizontal * stepX, dy: -vertical * stepY };
   }
 
+  const letter = input.key.length === 1 ? input.key.toLowerCase() : '';
+  if (TOOL_KEYS[letter]) {
+    return { kind: 'tool', tool: TOOL_KEYS[letter] };
+  }
+
   switch (input.key) {
     case '+':
     case '=':
@@ -72,12 +97,25 @@ export function keyToAction(input: KeyInput, context: KeyContext): ViewerAction 
       return { kind: 'zoom100' };
     case '0':
       return { kind: 'fit' };
+    case 'Escape':
+      return { kind: 'cancel' };
+    case 'Backspace':
+    case 'Delete':
+      if (context.drawing) {
+        return { kind: 'removeLastVertex' };
+      }
+      return context.hasSelection ? { kind: 'deleteSelection' } : null;
+  }
+
+  switch (letter) {
     case 'n':
-    case 'N':
       return { kind: 'toggleNavigator' };
     case 'z':
-    case 'Z':
       return context.hasSelection ? { kind: 'zoomToSelection' } : null;
+    case 't':
+      return { kind: 'addRoi' };
+    case 'm':
+      return { kind: 'measure', scope: input.shiftKey ? 'all' : 'selected' };
     default:
       return null;
   }

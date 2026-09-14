@@ -13,7 +13,7 @@ export interface PreferencesState {
 }
 
 /** localStorage that silently does nothing when storage is blocked */
-const safeStorage = createJSONStorage(() => {
+export const safeStorage = createJSONStorage(() => {
   try {
     const probe = '__glcm_probe__';
     window.localStorage.setItem(probe, probe);

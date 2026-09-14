@@ -3,11 +3,13 @@
 import type { ImageInfo } from '@glcm/api';
 import { create } from 'zustand';
 import type { RawImage } from '../image/raw';
-import type { ViewerAction } from '../viewer/keyboard';
-import { fitToView, imageFits, nextZoomStep, pan, zoomTo, type Point, type Size, type Viewport } from '../viewer/viewport';
+import { shapeBounds, unionBounds } from '../rois/geometry';
+import { useRois } from '../rois/roiStore';
+import type { ToolName, ViewerAction } from '../viewer/keyboard';
+import { fitToView, imageFits, nextZoomStep, pan, zoomTo, zoomToRect, type Point, type Rect, type Size, type Viewport } from '../viewer/viewport';
 
 export type RendererKind = 'webgl2' | 'lut' | 'server';
-export type Tool = 'pointer' | 'pan';
+export type Tool = ToolName;
 export type NavigatorMode = 'auto' | 'shown' | 'hidden';
 
 export interface LoadedImage {
@@ -66,11 +68,16 @@ export interface ViewerState {
   zoomStep(direction: 1 | -1, anchor?: Point): void;
   zoomToScale(scale: number, anchor?: Point): void;
   fit(): void;
+  /** Frames a rectangle in image coordinates with 10 % padding */
+  zoomToRegion(rect: Rect): void;
+  /** Frames the selected ROIs; false if none is selected */
+  zoomToSelection(): boolean;
   panBy(dx: number, dy: number): void;
   setTool(tool: Tool): void;
   toggleNavigator(): void;
   setHover(hover: HoverState | null): void;
   setDisplaySource(source: CanvasImageSource | null, kind: RendererKind | null): void;
+  /** View actions; other actions are ignored */
   runAction(action: ViewerAction): void;
 }
 
@@ -101,8 +108,12 @@ export const useViewer = create<ViewerState>()((set, get) => ({
   setLoading: (loading) => set({ loading }),
 
   openImage: (image) => {
-    const { viewSize } = get();
+    const { viewSize, image: previous } = get();
     const canFit = hasArea(viewSize);
+    // ROIs belong to one image
+    if (previous?.info.imageId !== image.info.imageId) {
+      useRois.getState().reset();
+    }
     set({
       image,
       window: { min: image.info.windowMin, max: image.info.windowMax },
@@ -116,7 +127,10 @@ export const useViewer = create<ViewerState>()((set, get) => ({
     });
   },
 
-  closeImage: () => set({ image: null, hover: null, displaySource: null, rendererKind: null, viewport: INITIAL_VIEWPORT, needsFit: false }),
+  closeImage: () => {
+    useRois.getState().reset();
+    set({ image: null, hover: null, displaySource: null, rendererKind: null, viewport: INITIAL_VIEWPORT, needsFit: false });
+  },
 
   setWindow: (min, max) => {
     const { image } = get();
@@ -172,6 +186,23 @@ export const useViewer = create<ViewerState>()((set, get) => ({
     }
   },
 
+  zoomToRegion: (rect) => {
+    const { viewSize } = get();
+    if (hasArea(viewSize)) {
+      set({ viewport: zoomToRect(rect, viewSize) });
+    }
+  },
+
+  zoomToSelection: () => {
+    const { rois, selectedIds } = useRois.getState();
+    const bounds = unionBounds(rois.filter((roi) => selectedIds.includes(roi.id)).map((roi) => shapeBounds(roi.shape)));
+    if (!bounds) {
+      return false;
+    }
+    get().zoomToRegion(bounds);
+    return true;
+  },
+
   panBy: (dx, dy) => set({ viewport: pan(get().viewport, dx, dy) }),
 
   setTool: (tool) => set({ tool }),
@@ -203,9 +234,18 @@ export const useViewer = create<ViewerState>()((set, get) => ({
       case 'pan':
         state.panBy(action.dx, action.dy);
         break;
-      case 'nudge':
+      case 'nudge': {
+        const rois = useRois.getState();
+        rois.nudgeRois(rois.selectedIds, action.dx, action.dy);
+        break;
+      }
       case 'zoomToSelection':
-        // ROIs arrive in phase 3
+        state.zoomToSelection();
+        break;
+      case 'tool':
+        state.setTool(action.tool);
+        break;
+      default:
         break;
     }
   },

@@ -5,8 +5,8 @@
   "type": "module",
   "description": "GLCM texture analysis API server",
   "scripts": {
-    "start": "tsx src/main.ts",
-    "dev": "tsx watch src/main.ts",
+    "start": "UV_THREADPOOL_SIZE=${UV_THREADPOOL_SIZE:-16} tsx src/main.ts",
+    "dev": "UV_THREADPOOL_SIZE=${UV_THREADPOOL_SIZE:-16} tsx watch src/main.ts",
     "openapi": "tsx scripts/openapi.ts"
   },
   "dependencies": {

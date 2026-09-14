@@ -1,26 +1,29 @@
 # GLCM Texture Analysis
 
-Interactive tool that computes Haralick texture features from the Gray Level Co-occurrence Matrix (GLCM) of a region you select in a grayscale image.
+Computes Haralick texture features from the Gray Level Co-occurrence Matrix (GLCM) of regions of interest (ROIs) in grayscale images.
 
-Select a rectangle or draw a polygon on the image. The tool computes the features in four directions (0°, 45°, 90° and 135°), shows intensity, entropy, contrast and an age-based score in a panel, and appends the results to a CSV file.
+Open an 8- or 16-bit image in the browser, draw rectangle, ellipse, polygon or freehand ROIs, choose the features and GLCM settings (gray levels, quantization, distances, directions), and measure. Results appear in a table, per direction and aggregated, optionally with an age-based score.
+
+The application has three parts:
+- a C++ library (`core/`);
+- a Node.js server that uses the library through a Node-API addon;
+- a TypeScript web app (see [Web application](#web-application)).
 
 ## Requirements
 
 - CMake 3.22 or newer
 - A C++17 compiler
-- [OpenCV](https://opencv.org/) with the contrib modules (for `selectROI`). OpenCV 4 and 5 both work.
+- [OpenCV](https://opencv.org/) (core, imgproc, imgcodecs). OpenCV 4 and 5 both work.
 - [Eigen](https://eigen.tuxfamily.org/) 3.3 or newer (5.x works)
 - [nlohmann/json](https://github.com/nlohmann/json) 3.11 or newer
 - [GoogleTest](https://github.com/google/googletest) (optional, for the unit tests)
-- [Node.js](https://nodejs.org/) 24 or newer (only for the web server)
+- [Node.js](https://nodejs.org/) 24 or newer (for the server and web app)
 
 On macOS with Homebrew:
 
 ```bash
-brew install cmake opencv eigen nlohmann-json googletest
+brew install cmake opencv eigen nlohmann-json googletest node
 ```
-
-> OpenCV's contrib modules and HighGUI are only needed for the legacy desktop application. Configure with `-DGLCM_BUILD_LEGACY_APP=OFF` to build just the library and its tests.
 
 ## Build
 
@@ -34,52 +37,13 @@ This builds:
 | Target | Description |
 | --- | --- |
 | `glcm_core` | Texture analysis library (`core/`): features, ROI masks, image loading, quantization, analysis pipeline, exports |
-| `glcm-analysis` | The (legacy) texture analysis desktop application |
 | `glcm-tests` | Unit tests (only if GoogleTest is found) |
-| `canvas-example` | A small [cvui](https://github.com/Dovyski/cvui) demo |
 
-## Usage
-
-```bash
-./build/glcm-analysis <image> [rect|polygon] [distance]
-```
-
-| Argument | Default | Description |
-| --- | --- | --- |
-| `image` | – | Image file. It is read as 8-bit grayscale. |
-| `rect` / `polygon` | `rect` | How the region is selected |
-| `distance` | `1` | Pixel distance between the two pixels of a pair (≥ 1) |
-
-Example:
-
-```bash
-./build/glcm-analysis samples/lena.jpg polygon 2
-```
-
-### Rectangle mode
-
-1. Drag a rectangle on the image.
-2. Press **Enter** or **Space** to confirm it. Press **c** to cancel the selection, which exits the program.
-3. The score panel opens. Use the **Age** slider to update the score, and press **Esc** to close the panel.
-4. Select the next region, or cancel to exit.
-
-### Polygon mode
-
-1. **Left-click** to add vertices.
-2. **Right-click** to close the polygon (at least 3 vertices).
-3. The score panel opens. Use the **Age** slider to update the score, and press **Esc** to close the panel.
-4. Draw the next polygon, or press **Esc** on the image to exit.
-
-Only pixel pairs whose two pixels are both inside the polygon are counted.
-
-### Output
-
-- The selected features are printed to the terminal for each direction (H = 0°, RD = 45°, V = 90°, LD = 135°) and their average.
-- After each score panel is closed, one row per direction plus an average row is appended to `glcm-analysis.csv` in the current working directory. The header is written only when the file is created, so delete or rename the file if you change the selected features.
+To run the application, build the addon and web app and start the server; see [Web application](#web-application).
 
 ## Features
 
-`glcm::TextureAnalysis` can compute these features (the application uses Mean, Entropy and Contrast):
+`glcm::TextureAnalysis` can compute these features:
 
 | Group | Features |
 | --- | --- |
@@ -121,11 +85,11 @@ ctest --test-dir build
 
 The tests (`core/tests/`) check the features against Haralick's worked example and against a simple, independent GLCM implementation, and cover ROI masks, image loading, quantization, display rendering, the analysis pipeline and the exporters.
 
-## Web application (in development)
+## Web application
 
 The web application (`doc/ui-design-plan.md`) has three parts:
-- `web/` is the browser app (React, Mantine, Konva). So far it opens images (file dialog, drag-and-drop or sample images) and has zoom/pan, a navigator, window/level and a pixel readout. ROI tools and measurement follow in later phases.
-- `server/` is the API server. It uses the C++ core through a Node-API addon (`bindings/node`) and serves the built web app.
+- `web/` is the browser app (React, Mantine, Konva). It opens images, draws and manages ROIs, edits the analysis settings, measures, and shows the results table.
+- `server/` is the API server. It uses the C++ core through a Node-API addon (`bindings/node`), runs analyses as jobs, and serves the built web app.
 - `packages/api` holds the request and response schemas shared by both.
 
 It needs Node.js 24 or newer, plus the C++ dependencies above.
@@ -136,9 +100,20 @@ npm run build:native    # build the addon with cmake-js (again after changing co
 npm run build:web       # build the web app into web/dist
 npm start               # open http://127.0.0.1:8080/
 npm test                # addon, server and web unit tests (Vitest)
+npm run test:e2e        # end-to-end tests in Chromium and WebKit (Playwright; run `npx playwright install chromium webkit` once)
 npm run typecheck       # TypeScript
 npm run openapi         # regenerate packages/api/openapi.json
 ```
+
+A typical session:
+1. **Open an image:** use *File ▸ Open Image*, drag a file onto the window, or open a sample image.
+2. **Draw ROIs:** use the rectangle (`R`), ellipse (`E`), polygon (`P`, double-click or `Enter` to close) or freehand (`F`) tool. Press `T` to add the drawn ROI to the ROI Manager.
+   - The manager shows each ROI's pixel count, computed by the core with the same pixel-centre rule the analysis uses.
+   - With the pointer tool, click to select (⌘/Ctrl or Shift to add), drag to move, and use the handles to resize or rotate. On a selected polygon, drag its vertices, double-click an edge to add a vertex, or Alt-click a vertex to remove it.
+   - Arrow keys move selected ROIs (Shift: 10 px). `Z` zooms to the selection, and ⌘/Ctrl+Z undoes.
+3. **Choose settings:** in *Analysis Settings*, choose a preset or features, gray levels, quantization, distances, directions and aggregation. The age-based score is under *Advanced*. Non-standard features are marked ⚠.
+4. **Measure:** press `M` to measure the selected ROIs, or `⇧M` to measure all of them. Each ROI × distance pair is a job on the server; progress appears in the status bar, where the measurement can be cancelled.
+5. **Review results:** rows are appended to the Results table and keep the settings they were computed with (hover a row to see them). You can sort, choose columns, and copy the table as tab-separated text.
 
 For web development, run `npm start` and `npm run dev:web` side by side, then open http://127.0.0.1:5173/. The Vite dev server reloads on changes and forwards `/api` to port 8080.
 
@@ -161,7 +136,12 @@ For now the server only listens on a loopback address; token authentication for 
 | `GLCM_RAW_TRANSFER_MAX_PIXELS` | 16,777,216 (4096²) | Images up to this size are sent to the browser as raw data |
 | `GLCM_DISPLAY_MAX_SIZE` | `4096` | Largest long side of `display.png` |
 | `GLCM_DISPLAY_CACHE_BYTES` | 536,870,912 (512 MiB) | Disk space for cached `display.png` renderings |
+| `GLCM_ANALYSIS_CONCURRENCY` | number of CPU cores | Analysis jobs (ROI × distance) running at the same time |
+| `GLCM_WEB_DIR` | `web/dist` | Built web app |
+| `GLCM_SAMPLES_DIR` | `samples/` | Sample images offered on the start screen |
 | `GLCM_LOG_LEVEL` | `info` | Fastify log level |
+
+`npm start` sets `UV_THREADPOOL_SIZE` to 16 unless it is already set. Analyses run in Node's libuv thread pool, which has only 4 threads by default.
 
 Endpoints (full details in `packages/api/openapi.json`):
 
@@ -174,6 +154,12 @@ Endpoints (full details in `packages/api/openapi.json`):
 | `GET /api/v1/images/{id}/display.png?min&max&maxSize` | 8-bit rendering with window/level |
 | `GET /api/v1/images/{id}/raw` | Raw little-endian samples, zstd or gzip compressed, for images up to 4096 × 4096 |
 | `GET /api/v1/images/{id}/pixel?x&y` | One pixel value |
+| `POST /api/v1/images/{id}/roi-stats` | Pixel count, bounding box, min/max/mean/STD of ROIs |
+| `POST /api/v1/analyses` | Start an analysis (image id, ROIs, settings); returns `202` |
+| `GET`, `DELETE /api/v1/analyses/{id}` | Status; cancel (queued jobs are dropped) |
+| `GET /api/v1/analyses/{id}/events` | Server-Sent Events: `result`, `progress`, `finished` |
+| `GET /api/v1/analyses/{id}/results` | Results of the finished jobs (`glcm-results` JSON) |
+| `GET /api/v1/samples`, `GET /api/v1/samples/file?path` | Sample images |
 
 ## Documentation
 
@@ -203,11 +189,11 @@ To rebuild later, activate the environment again with `source .venv/bin/activate
 | Path | Contents |
 | --- | --- |
 | `core/` | `glcm_core` library: `analysis/` (GLCM features), `roi/` (ROI masks), `imaging/` (loading, quantization, display), `pipeline/` (settings, analysis runner), `io/` (JSON, CSV, ROI image export), `tests/` |
-| `controller/`, `viewer/` | Legacy desktop application: selection loops and the cvui score panel (removed in phase 3 of `doc/ui-design-plan.md`) |
 | `bindings/node/` | Node-API addon (`@glcm/native`) exposing `glcm_core` to the server |
 | `packages/api/` | Shared API schemas and types (`@glcm/api`) and the generated OpenAPI document |
 | `server/` | Fastify API server (`@glcm/server`); also serves the built web app and the sample images |
-| `web/` | Browser app (`@glcm/web`): React, Mantine, Konva, WebGL2 image rendering |
+| `web/` | Browser app (`@glcm/web`): React, Mantine, Konva, WebGL2 image rendering, ROI tools, settings and results |
+| `e2e/` | Playwright end-to-end tests (`npm run test:e2e`) |
 | `doc/` | Sphinx documentation: GLCM equations and references |
 | `samples/` | Sample images: synthetic test patterns, CC0 textures and `lena.jpg` (see `samples/README.md`) |
 | `scripts/` | Helper scripts, e.g. `generate-samples.ts` (`npm run samples`) |

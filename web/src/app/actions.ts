@@ -1,0 +1,38 @@
+// Actions shared by keyboard shortcuts, menus and toolbar buttons.
+
+import { measure } from '../analysis/measure';
+import { useRois } from '../rois/roiStore';
+import { useUi } from '../stores/uiStore';
+import { useViewer } from '../stores/viewerStore';
+import type { ViewerAction } from '../viewer/keyboard';
+
+export function runAppAction(action: ViewerAction): void {
+  const rois = useRois.getState();
+  switch (action.kind) {
+    case 'addRoi':
+      rois.addActiveRoi();
+      break;
+    case 'measure':
+      void measure(action.scope);
+      break;
+    case 'deleteSelection':
+      rois.deleteRois(rois.selectedIds);
+      break;
+    case 'cancel':
+      rois.setActiveShape(null);
+      rois.select([]);
+      break;
+    case 'removeLastVertex':
+      // Handled by the canvas, which owns the polygon being drawn
+      break;
+    default:
+      useViewer.getState().runAction(action);
+  }
+}
+
+export function renameSelectedRoi(): void {
+  const { selectedIds } = useRois.getState();
+  if (selectedIds.length === 1) {
+    useUi.getState().setRenamingRoiId(selectedIds[0]);
+  }
+}

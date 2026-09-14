@@ -38,6 +38,24 @@ describe('keyToAction', () => {
     expect(keyToAction(key('z'), { hasSelection: false, view })).toBeNull();
   });
 
+  it('selects ROI tools and runs ROI and measurement shortcuts', () => {
+    const context = { hasSelection: false, view };
+    expect(keyToAction(key('r'), context)).toEqual({ kind: 'tool', tool: 'rectangle' });
+    expect(keyToAction(key('E', { shiftKey: true }), context)).toEqual({ kind: 'tool', tool: 'ellipse' });
+    expect(keyToAction(key('p'), context)).toEqual({ kind: 'tool', tool: 'polygon' });
+    expect(keyToAction(key('f'), context)).toEqual({ kind: 'tool', tool: 'freehand' });
+    expect(keyToAction(key('t'), context)).toEqual({ kind: 'addRoi' });
+    expect(keyToAction(key('m'), context)).toEqual({ kind: 'measure', scope: 'selected' });
+    expect(keyToAction(key('M', { shiftKey: true }), context)).toEqual({ kind: 'measure', scope: 'all' });
+    expect(keyToAction(key('Escape'), context)).toEqual({ kind: 'cancel' });
+  });
+
+  it('deletes the selection or the last polygon vertex', () => {
+    expect(keyToAction(key('Backspace'), { hasSelection: false, view })).toBeNull();
+    expect(keyToAction(key('Delete'), { hasSelection: true, view })).toEqual({ kind: 'deleteSelection' });
+    expect(keyToAction(key('Backspace'), { hasSelection: true, drawing: true, view })).toEqual({ kind: 'removeLastVertex' });
+  });
+
   it('leaves modified keys and other keys alone', () => {
     const context = { hasSelection: false, view };
     expect(keyToAction(key('0', { metaKey: true }), context)).toBeNull();

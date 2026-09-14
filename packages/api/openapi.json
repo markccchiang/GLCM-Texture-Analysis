@@ -1116,6 +1116,2373 @@
         }
       }
     },
+    "/api/v1/images/{id}/roi-stats": {
+      "post": {
+        "summary": "Pixel count and intensity statistics of ROIs",
+        "tags": [
+          "rois"
+        ],
+        "description": "Masks follow the pixel-centre rule of glcm::RasterizeMask, so the counts equal those used by analyses.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "rois"
+                ],
+                "properties": {
+                  "rois": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "shape"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "maxLength": 100
+                        },
+                        "shape": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "required": [
+                                "type",
+                                "x",
+                                "y",
+                                "width",
+                                "height"
+                              ],
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "rectangle"
+                                  ]
+                                },
+                                "x": {
+                                  "type": "number",
+                                  "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                                },
+                                "y": {
+                                  "type": "number",
+                                  "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                                },
+                                "width": {
+                                  "type": "number"
+                                },
+                                "height": {
+                                  "type": "number"
+                                }
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "required": [
+                                "type",
+                                "cx",
+                                "cy",
+                                "rx",
+                                "ry"
+                              ],
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "ellipse"
+                                  ]
+                                },
+                                "cx": {
+                                  "type": "number",
+                                  "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                                },
+                                "cy": {
+                                  "type": "number",
+                                  "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                                },
+                                "rx": {
+                                  "type": "number",
+                                  "description": "Semi-axis along the ellipse x axis"
+                                },
+                                "ry": {
+                                  "type": "number",
+                                  "description": "Semi-axis along the ellipse y axis"
+                                },
+                                "angle": {
+                                  "type": "number",
+                                  "description": "Rotation in degrees, clockwise on screen"
+                                }
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "required": [
+                                "type",
+                                "points"
+                              ],
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "polygon"
+                                  ]
+                                },
+                                "points": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "array",
+                                    "additionalItems": false,
+                                    "items": [
+                                      {
+                                        "type": "number",
+                                        "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                                      },
+                                      {
+                                        "type": "number",
+                                        "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                                      }
+                                    ],
+                                    "minItems": 2
+                                  },
+                                  "maxItems": 10000
+                                },
+                                "freehand": {
+                                  "type": "boolean"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "maxItems": 1000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^img_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Image id returned by POST /images"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "stats"
+                  ],
+                  "properties": {
+                    "stats": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "roiId",
+                          "pixelCount",
+                          "boundingBox",
+                          "min",
+                          "max",
+                          "mean",
+                          "std",
+                          "error"
+                        ],
+                        "properties": {
+                          "roiId": {
+                            "type": "string"
+                          },
+                          "pixelCount": {
+                            "type": "integer",
+                            "description": "Pixels whose centre lies inside the shape, clipped to the image"
+                          },
+                          "boundingBox": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "required": [
+                                  "x",
+                                  "y",
+                                  "width",
+                                  "height"
+                                ],
+                                "properties": {
+                                  "x": {
+                                    "type": "integer"
+                                  },
+                                  "y": {
+                                    "type": "integer"
+                                  },
+                                  "width": {
+                                    "type": "integer"
+                                  },
+                                  "height": {
+                                    "type": "integer"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "min": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "max": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "mean": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "std": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "error": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Invalid geometry"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analyses": {
+      "post": {
+        "summary": "Start an analysis",
+        "tags": [
+          "analyses"
+        ],
+        "description": "Measures every ROI at every distance. Progress and results are streamed by GET /analyses/{id}/events.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "imageId",
+                  "rois",
+                  "settings"
+                ],
+                "properties": {
+                  "imageId": {
+                    "type": "string",
+                    "pattern": "^img_[0-9a-f]{32}$"
+                  },
+                  "rois": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "shape"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "maxLength": 100
+                        },
+                        "name": {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "color": {
+                          "type": "string",
+                          "pattern": "^#[0-9A-Fa-f]{6}$"
+                        },
+                        "shape": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "required": [
+                                "type",
+                                "x",
+                                "y",
+                                "width",
+                                "height"
+                              ],
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "rectangle"
+                                  ]
+                                },
+                                "x": {
+                                  "type": "number",
+                                  "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                                },
+                                "y": {
+                                  "type": "number",
+                                  "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                                },
+                                "width": {
+                                  "type": "number"
+                                },
+                                "height": {
+                                  "type": "number"
+                                }
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "required": [
+                                "type",
+                                "cx",
+                                "cy",
+                                "rx",
+                                "ry"
+                              ],
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "ellipse"
+                                  ]
+                                },
+                                "cx": {
+                                  "type": "number",
+                                  "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                                },
+                                "cy": {
+                                  "type": "number",
+                                  "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                                },
+                                "rx": {
+                                  "type": "number",
+                                  "description": "Semi-axis along the ellipse x axis"
+                                },
+                                "ry": {
+                                  "type": "number",
+                                  "description": "Semi-axis along the ellipse y axis"
+                                },
+                                "angle": {
+                                  "type": "number",
+                                  "description": "Rotation in degrees, clockwise on screen"
+                                }
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "required": [
+                                "type",
+                                "points"
+                              ],
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "polygon"
+                                  ]
+                                },
+                                "points": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "array",
+                                    "additionalItems": false,
+                                    "items": [
+                                      {
+                                        "type": "number",
+                                        "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                                      },
+                                      {
+                                        "type": "number",
+                                        "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                                      }
+                                    ],
+                                    "minItems": 2
+                                  },
+                                  "maxItems": 10000
+                                },
+                                "freehand": {
+                                  "type": "boolean"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "minItems": 1,
+                    "maxItems": 1000
+                  },
+                  "settings": {
+                    "type": "object",
+                    "required": [
+                      "features",
+                      "grayLevels",
+                      "quantization",
+                      "distances",
+                      "directions",
+                      "aggregation",
+                      "logBase",
+                      "score"
+                    ],
+                    "properties": {
+                      "features": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "minItems": 1,
+                        "maxItems": 64,
+                        "description": "Feature ids from GET /catalog"
+                      },
+                      "grayLevels": {
+                        "type": "integer",
+                        "minimum": 2,
+                        "maximum": 256
+                      },
+                      "quantization": {
+                        "type": "object",
+                        "required": [
+                          "method",
+                          "min",
+                          "max",
+                          "binWidth"
+                        ],
+                        "properties": {
+                          "method": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fixedRange"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "roiMinMax"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fixedBinWidth"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "none"
+                                ]
+                              }
+                            ]
+                          },
+                          "min": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 65535,
+                            "description": "fixedRange: lowest intensity"
+                          },
+                          "max": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 65535,
+                            "description": "fixedRange: highest intensity"
+                          },
+                          "binWidth": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "fixedBinWidth: intensities per gray level"
+                          }
+                        }
+                      },
+                      "distances": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 64
+                        },
+                        "minItems": 1,
+                        "maxItems": 64
+                      },
+                      "directions": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "enum": [
+                                0
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                45
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                90
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                135
+                              ]
+                            }
+                          ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 4
+                      },
+                      "aggregation": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "perDirectionAndMean"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "meanOnly"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "meanAndRange"
+                            ]
+                          }
+                        ]
+                      },
+                      "logBase": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "natural"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "log2"
+                            ]
+                          }
+                        ]
+                      },
+                      "score": {
+                        "type": "object",
+                        "required": [
+                          "enabled",
+                          "age",
+                          "coefficients",
+                          "profile",
+                          "intensityMin",
+                          "intensityMax"
+                        ],
+                        "properties": {
+                          "enabled": {
+                            "type": "boolean"
+                          },
+                          "age": {
+                            "type": "number"
+                          },
+                          "coefficients": {
+                            "type": "array",
+                            "additionalItems": false,
+                            "items": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "number"
+                              }
+                            ],
+                            "minItems": 4,
+                            "description": "Age, mean, entropy and contrast coefficients"
+                          },
+                          "profile": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "calibration"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "currentSettings"
+                                ]
+                              }
+                            ]
+                          },
+                          "intensityMin": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 65535,
+                            "description": "Calibration profile on 16-bit images: mapped to 0"
+                          },
+                          "intensityMax": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 65535,
+                            "description": "Calibration profile on 16-bit images: mapped to 255"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "analysisId",
+                    "imageId",
+                    "imageName",
+                    "imageSha256",
+                    "status",
+                    "total",
+                    "completed",
+                    "error",
+                    "createdAt",
+                    "finishedAt",
+                    "coreVersion",
+                    "settings"
+                  ],
+                  "properties": {
+                    "analysisId": {
+                      "type": "string",
+                      "pattern": "^ana_[0-9a-f]{32}$"
+                    },
+                    "imageId": {
+                      "type": "string",
+                      "pattern": "^img_[0-9a-f]{32}$"
+                    },
+                    "imageName": {
+                      "type": "string"
+                    },
+                    "imageSha256": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "queued"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "running"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "completed"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "cancelled"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "failed"
+                          ]
+                        }
+                      ]
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "Jobs: ROIs × distances"
+                    },
+                    "completed": {
+                      "type": "integer"
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why the whole analysis failed"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "coreVersion": {
+                      "type": "string"
+                    },
+                    "settings": {
+                      "type": "object",
+                      "required": [
+                        "features",
+                        "grayLevels",
+                        "quantization",
+                        "distances",
+                        "directions",
+                        "aggregation",
+                        "logBase",
+                        "score"
+                      ],
+                      "properties": {
+                        "features": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "minItems": 1,
+                          "maxItems": 64,
+                          "description": "Feature ids from GET /catalog"
+                        },
+                        "grayLevels": {
+                          "type": "integer",
+                          "minimum": 2,
+                          "maximum": 256
+                        },
+                        "quantization": {
+                          "type": "object",
+                          "required": [
+                            "method",
+                            "min",
+                            "max",
+                            "binWidth"
+                          ],
+                          "properties": {
+                            "method": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "fixedRange"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "roiMinMax"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "fixedBinWidth"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "none"
+                                  ]
+                                }
+                              ]
+                            },
+                            "min": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 65535,
+                              "description": "fixedRange: lowest intensity"
+                            },
+                            "max": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 65535,
+                              "description": "fixedRange: highest intensity"
+                            },
+                            "binWidth": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "fixedBinWidth: intensities per gray level"
+                            }
+                          }
+                        },
+                        "distances": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 64
+                          },
+                          "minItems": 1,
+                          "maxItems": 64
+                        },
+                        "directions": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "enum": [
+                                  0
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  45
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  90
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  135
+                                ]
+                              }
+                            ]
+                          },
+                          "minItems": 1,
+                          "maxItems": 4
+                        },
+                        "aggregation": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "perDirectionAndMean"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "meanOnly"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "meanAndRange"
+                              ]
+                            }
+                          ]
+                        },
+                        "logBase": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "natural"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "log2"
+                              ]
+                            }
+                          ]
+                        },
+                        "score": {
+                          "type": "object",
+                          "required": [
+                            "enabled",
+                            "age",
+                            "coefficients",
+                            "profile",
+                            "intensityMin",
+                            "intensityMax"
+                          ],
+                          "properties": {
+                            "enabled": {
+                              "type": "boolean"
+                            },
+                            "age": {
+                              "type": "number"
+                            },
+                            "coefficients": {
+                              "type": "array",
+                              "additionalItems": false,
+                              "items": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "number"
+                                }
+                              ],
+                              "minItems": 4,
+                              "description": "Age, mean, entropy and contrast coefficients"
+                            },
+                            "profile": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "calibration"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "currentSettings"
+                                  ]
+                                }
+                              ]
+                            },
+                            "intensityMin": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 65535,
+                              "description": "Calibration profile on 16-bit images: mapped to 0"
+                            },
+                            "intensityMax": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 65535,
+                              "description": "Calibration profile on 16-bit images: mapped to 255"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analyses/{id}": {
+      "get": {
+        "summary": "Analysis status",
+        "tags": [
+          "analyses"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^ana_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "analysisId",
+                    "imageId",
+                    "imageName",
+                    "imageSha256",
+                    "status",
+                    "total",
+                    "completed",
+                    "error",
+                    "createdAt",
+                    "finishedAt",
+                    "coreVersion",
+                    "settings"
+                  ],
+                  "properties": {
+                    "analysisId": {
+                      "type": "string",
+                      "pattern": "^ana_[0-9a-f]{32}$"
+                    },
+                    "imageId": {
+                      "type": "string",
+                      "pattern": "^img_[0-9a-f]{32}$"
+                    },
+                    "imageName": {
+                      "type": "string"
+                    },
+                    "imageSha256": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "queued"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "running"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "completed"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "cancelled"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "failed"
+                          ]
+                        }
+                      ]
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "Jobs: ROIs × distances"
+                    },
+                    "completed": {
+                      "type": "integer"
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why the whole analysis failed"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "coreVersion": {
+                      "type": "string"
+                    },
+                    "settings": {
+                      "type": "object",
+                      "required": [
+                        "features",
+                        "grayLevels",
+                        "quantization",
+                        "distances",
+                        "directions",
+                        "aggregation",
+                        "logBase",
+                        "score"
+                      ],
+                      "properties": {
+                        "features": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "minItems": 1,
+                          "maxItems": 64,
+                          "description": "Feature ids from GET /catalog"
+                        },
+                        "grayLevels": {
+                          "type": "integer",
+                          "minimum": 2,
+                          "maximum": 256
+                        },
+                        "quantization": {
+                          "type": "object",
+                          "required": [
+                            "method",
+                            "min",
+                            "max",
+                            "binWidth"
+                          ],
+                          "properties": {
+                            "method": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "fixedRange"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "roiMinMax"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "fixedBinWidth"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "none"
+                                  ]
+                                }
+                              ]
+                            },
+                            "min": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 65535,
+                              "description": "fixedRange: lowest intensity"
+                            },
+                            "max": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 65535,
+                              "description": "fixedRange: highest intensity"
+                            },
+                            "binWidth": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "fixedBinWidth: intensities per gray level"
+                            }
+                          }
+                        },
+                        "distances": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 64
+                          },
+                          "minItems": 1,
+                          "maxItems": 64
+                        },
+                        "directions": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "enum": [
+                                  0
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  45
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  90
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  135
+                                ]
+                              }
+                            ]
+                          },
+                          "minItems": 1,
+                          "maxItems": 4
+                        },
+                        "aggregation": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "perDirectionAndMean"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "meanOnly"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "meanAndRange"
+                              ]
+                            }
+                          ]
+                        },
+                        "logBase": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "natural"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "log2"
+                              ]
+                            }
+                          ]
+                        },
+                        "score": {
+                          "type": "object",
+                          "required": [
+                            "enabled",
+                            "age",
+                            "coefficients",
+                            "profile",
+                            "intensityMin",
+                            "intensityMax"
+                          ],
+                          "properties": {
+                            "enabled": {
+                              "type": "boolean"
+                            },
+                            "age": {
+                              "type": "number"
+                            },
+                            "coefficients": {
+                              "type": "array",
+                              "additionalItems": false,
+                              "items": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "number"
+                                }
+                              ],
+                              "minItems": 4,
+                              "description": "Age, mean, entropy and contrast coefficients"
+                            },
+                            "profile": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "calibration"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "currentSettings"
+                                  ]
+                                }
+                              ]
+                            },
+                            "intensityMin": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 65535,
+                              "description": "Calibration profile on 16-bit images: mapped to 0"
+                            },
+                            "intensityMax": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 65535,
+                              "description": "Calibration profile on 16-bit images: mapped to 255"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Cancel an analysis",
+        "tags": [
+          "analyses"
+        ],
+        "description": "Queued jobs are dropped; running jobs finish and their results are kept.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^ana_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Cancelled (no body)"
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analyses/{id}/results": {
+      "get": {
+        "summary": "Results of finished jobs",
+        "tags": [
+          "analyses"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^ana_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "format",
+                    "version",
+                    "analysisId",
+                    "status",
+                    "coreVersion",
+                    "timestamp",
+                    "image",
+                    "settings",
+                    "results"
+                  ],
+                  "properties": {
+                    "format": {
+                      "type": "string",
+                      "enum": [
+                        "glcm-results"
+                      ]
+                    },
+                    "version": {
+                      "type": "number",
+                      "enum": [
+                        1
+                      ]
+                    },
+                    "analysisId": {
+                      "type": "string",
+                      "pattern": "^ana_[0-9a-f]{32}$"
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "queued"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "running"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "completed"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "cancelled"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "failed"
+                          ]
+                        }
+                      ]
+                    },
+                    "coreVersion": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "image": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "sha256"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "sha256": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "settings": {
+                      "type": "object",
+                      "required": [
+                        "features",
+                        "grayLevels",
+                        "quantization",
+                        "distances",
+                        "directions",
+                        "aggregation",
+                        "logBase",
+                        "score"
+                      ],
+                      "properties": {
+                        "features": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "minItems": 1,
+                          "maxItems": 64,
+                          "description": "Feature ids from GET /catalog"
+                        },
+                        "grayLevels": {
+                          "type": "integer",
+                          "minimum": 2,
+                          "maximum": 256
+                        },
+                        "quantization": {
+                          "type": "object",
+                          "required": [
+                            "method",
+                            "min",
+                            "max",
+                            "binWidth"
+                          ],
+                          "properties": {
+                            "method": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "fixedRange"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "roiMinMax"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "fixedBinWidth"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "none"
+                                  ]
+                                }
+                              ]
+                            },
+                            "min": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 65535,
+                              "description": "fixedRange: lowest intensity"
+                            },
+                            "max": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 65535,
+                              "description": "fixedRange: highest intensity"
+                            },
+                            "binWidth": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "fixedBinWidth: intensities per gray level"
+                            }
+                          }
+                        },
+                        "distances": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 64
+                          },
+                          "minItems": 1,
+                          "maxItems": 64
+                        },
+                        "directions": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "enum": [
+                                  0
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  45
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  90
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  135
+                                ]
+                              }
+                            ]
+                          },
+                          "minItems": 1,
+                          "maxItems": 4
+                        },
+                        "aggregation": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "perDirectionAndMean"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "meanOnly"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "meanAndRange"
+                              ]
+                            }
+                          ]
+                        },
+                        "logBase": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "natural"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "log2"
+                              ]
+                            }
+                          ]
+                        },
+                        "score": {
+                          "type": "object",
+                          "required": [
+                            "enabled",
+                            "age",
+                            "coefficients",
+                            "profile",
+                            "intensityMin",
+                            "intensityMax"
+                          ],
+                          "properties": {
+                            "enabled": {
+                              "type": "boolean"
+                            },
+                            "age": {
+                              "type": "number"
+                            },
+                            "coefficients": {
+                              "type": "array",
+                              "additionalItems": false,
+                              "items": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "number"
+                                }
+                              ],
+                              "minItems": 4,
+                              "description": "Age, mean, entropy and contrast coefficients"
+                            },
+                            "profile": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "calibration"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "currentSettings"
+                                  ]
+                                }
+                              ]
+                            },
+                            "intensityMin": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 65535,
+                              "description": "Calibration profile on 16-bit images: mapped to 0"
+                            },
+                            "intensityMax": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 65535,
+                              "description": "Calibration profile on 16-bit images: mapped to 255"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "roiId",
+                          "roiName",
+                          "distance",
+                          "status",
+                          "error",
+                          "pixelCount",
+                          "pairCounts",
+                          "quantization",
+                          "values",
+                          "score",
+                          "warnings"
+                        ],
+                        "properties": {
+                          "roiId": {
+                            "type": "string"
+                          },
+                          "roiName": {
+                            "type": "string"
+                          },
+                          "distance": {
+                            "type": "integer"
+                          },
+                          "status": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "ok"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "skipped"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "failed"
+                                ]
+                              }
+                            ]
+                          },
+                          "error": {
+                            "type": "string",
+                            "description": "Reason for skipped or failed results"
+                          },
+                          "pixelCount": {
+                            "type": "integer"
+                          },
+                          "pairCounts": {
+                            "type": "object",
+                            "required": [
+                              "0",
+                              "45",
+                              "90",
+                              "135"
+                            ],
+                            "properties": {
+                              "0": {
+                                "type": "integer"
+                              },
+                              "45": {
+                                "type": "integer"
+                              },
+                              "90": {
+                                "type": "integer"
+                              },
+                              "135": {
+                                "type": "integer"
+                              }
+                            }
+                          },
+                          "quantization": {
+                            "type": "object",
+                            "required": [
+                              "lower",
+                              "upper"
+                            ],
+                            "properties": {
+                              "lower": {
+                                "type": "integer"
+                              },
+                              "upper": {
+                                "type": "integer"
+                              }
+                            }
+                          },
+                          "values": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "object",
+                              "required": [
+                                "0",
+                                "45",
+                                "90",
+                                "135",
+                                "mean",
+                                "range"
+                              ],
+                              "properties": {
+                                "0": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "45": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "90": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "135": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "mean": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "range": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "description": "Per direction, plus mean and range over the selected directions; null for unselected directions"
+                            }
+                          },
+                          "score": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "required": [
+                                  "0",
+                                  "45",
+                                  "90",
+                                  "135",
+                                  "mean",
+                                  "range"
+                                ],
+                                "properties": {
+                                  "0": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "45": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "90": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "135": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "mean": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "range": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "description": "Per direction, plus mean and range over the selected directions; null for unselected directions"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "warnings": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      "description": "Ordered by ROI, then distance; only finished jobs"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analyses/{id}/events": {
+      "get": {
+        "summary": "Progress as Server-Sent Events",
+        "tags": [
+          "analyses"
+        ],
+        "description": "Events: \"result\" {index, result} for every finished job (earlier ones are replayed on connect), \"progress\" {completed, total}, and a final \"finished\" {status, completed, total, error}, after which the stream ends.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^ana_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event stream",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/samples": {
       "get": {
         "summary": "List sample images",
@@ -1251,6 +3618,14 @@
     {
       "name": "images",
       "description": "Upload, display and pixel data"
+    },
+    {
+      "name": "rois",
+      "description": "ROI pixel counts and statistics"
+    },
+    {
+      "name": "analyses",
+      "description": "Texture measurements"
     },
     {
       "name": "samples",

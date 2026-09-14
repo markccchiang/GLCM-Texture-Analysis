@@ -16,7 +16,9 @@ export function hasWebApp(webDir: string | null): webDir is string {
 export async function registerWebApp(app: FastifyInstance, webDir: string): Promise<void> {
   await app.register(fastifyStatic, {
     root: webDir,
-    wildcard: false,
+    // Look files up per request, so a rebuilt app (new hashed asset names) is served without restarting. Missing
+    // files fall through to the not-found handler.
+    wildcard: true,
     index: 'index.html',
     setHeaders(reply, filePath) {
       // Vite puts content hashes in asset names; index.html must be revalidated to pick up new builds

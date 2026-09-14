@@ -1,4 +1,9 @@
-import { Text } from '@mantine/core';
+import { ActionIcon, Loader, Text, Tooltip } from '@mantine/core';
+import { IconX } from '@tabler/icons-react';
+import { cancelMeasurement } from '../analysis/measure';
+import { isRunning, useResults } from '../results/resultsStore';
+import { useRois } from '../rois/roiStore';
+import { useRoiStatistics } from '../rois/useRoiStatistics';
 import { useViewer, type RendererKind } from '../stores/viewerStore';
 
 const RENDERER_LABELS: Record<RendererKind, string> = {
@@ -12,7 +17,16 @@ export function StatusBar() {
   const image = useViewer((state) => state.image);
   const scale = useViewer((state) => state.viewport.scale);
   const rendererKind = useViewer((state) => state.rendererKind);
+  // Select the stored array and filter here: Zustand selectors must return stable references
+  const runs = useResults((state) => state.runs).filter(isRunning);
+  const rois = useRois((state) => state.rois);
+  const selectedIds = useRois((state) => state.selectedIds);
+  const statistics = useRoiStatistics();
   const info = image?.info;
+  const selected = selectedIds.length === 1 ? rois.find((roi) => roi.id === selectedIds[0]) : undefined;
+  const selectedPixels = selected ? statistics.get(selected.id)?.pixelCount : undefined;
+  const completed = runs.reduce((sum, run) => sum + run.completed, 0);
+  const total = runs.reduce((sum, run) => sum + run.total, 0);
 
   return (
     <footer className="status-bar" data-testid="status-bar">
@@ -28,8 +42,28 @@ export function StatusBar() {
           {info.sourceChannels > 1 ? ' (converted to grayscale)' : ''}
         </Text>
       )}
+      {selected && (
+        <Text size="xs" className="mono" truncate>
+          {selected.name} {selectedPixels === undefined ? '…' : `${selectedPixels.toLocaleString()} px`}
+        </Text>
+      )}
+      {selectedIds.length > 1 && <Text size="xs">{selectedIds.length} ROIs selected</Text>}
+      <span style={{ marginLeft: 'auto' }} />
+      {runs.length > 0 && (
+        <span className="status-jobs" data-testid="measurement-progress">
+          <Loader size={10} />
+          <Text size="xs" className="mono">
+            {completed}/{total} jobs
+          </Text>
+          <Tooltip label="Cancel the measurement">
+            <ActionIcon size="xs" variant="subtle" color="gray" aria-label="Cancel measurement" onClick={() => runs.forEach((run) => void cancelMeasurement(run.analysisId))}>
+              <IconX size={12} />
+            </ActionIcon>
+          </Tooltip>
+        </span>
+      )}
       {rendererKind && (
-        <Text size="xs" c="dimmed" ml="auto">
+        <Text size="xs" c="dimmed">
           {RENDERER_LABELS[rendererKind]}
         </Text>
       )}

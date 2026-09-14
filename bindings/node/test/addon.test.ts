@@ -149,6 +149,111 @@ describe('window/level', () => {
   });
 });
 
+// Haralick, Shanmugam and Dinstein (1973), figure 2: the 4 x 4 example image with gray levels 0-3
+const HARALICK_WIDTH = 4;
+const HARALICK_HEIGHT = 4;
+const HARALICK_PIXELS = Buffer.from([0, 0, 1, 1, 0, 0, 1, 1, 0, 2, 2, 2, 2, 2, 3, 3]);
+const FULL_IMAGE_ROI = { id: 'r1', name: 'Whole image', shape: { type: 'rectangle', x: 0, y: 0, width: 4, height: 4 } };
+
+describe('roiStats', () => {
+  it('counts pixels with the pixel-centre rule and reports original intensities', async () => {
+    const rois = [
+      { id: 'a', shape: { type: 'rectangle', x: 1, y: 1, width: 2, height: 2 } },
+      { id: 'b', shape: { type: 'ellipse', cx: 2, cy: 2, rx: 0, ry: 3 } },
+      { id: 'c', shape: { type: 'polygon', points: [[0, 0], [4, 0]] } },
+      FULL_IMAGE_ROI,
+    ];
+    const stats = await native.roiStats(HARALICK_PIXELS, HARALICK_WIDTH, HARALICK_HEIGHT, 8, JSON.stringify(rois));
+    expect(stats).toHaveLength(4);
+    // Pixels (1, 1), (2, 1), (1, 2), (2, 2) = 0, 1, 2, 2
+    expect(stats[0]).toMatchObject({ pixelCount: 4, boundingBox: { x: 1, y: 1, width: 2, height: 2 }, min: 0, max: 2, mean: 1.25, error: null });
+    expect(stats[0].std).toBeCloseTo(Math.sqrt(((0 - 1.25) ** 2 + (1 - 1.25) ** 2 + 2 * (2 - 1.25) ** 2) / 3), 12);
+    for (const empty of [stats[1], stats[2]]) {
+      expect(empty).toEqual({ pixelCount: 0, boundingBox: null, min: null, max: null, mean: null, std: null, error: null });
+    }
+    expect(stats[3]).toMatchObject({ pixelCount: 16, min: 0, max: 3, mean: 1.25 });
+  });
+
+  it('reads 16-bit samples', async () => {
+    const pixels = Buffer.alloc(8);
+    [1000, 60000, 3, 65535].forEach((value, i) => pixels.writeUInt16LE(value, 2 * i));
+    const rois = [{ shape: { type: 'rectangle', x: 0, y: 0, width: 2, height: 2 } }];
+    const [stats] = await native.roiStats(pixels, 2, 2, 16, JSON.stringify(rois));
+    expect(stats).toMatchObject({ pixelCount: 4, min: 3, max: 65535, mean: (1000 + 60000 + 3 + 65535) / 4 });
+  });
+
+  it('rejects malformed ROI lists', async () => {
+    expect(await rejectionCode(native.roiStats(HARALICK_PIXELS, 4, 4, 8, '[{"shape": {"type": "circle"}}]'))).toBe('INVALID_ARGUMENT');
+    expect(await rejectionCode(native.roiStats(HARALICK_PIXELS, 4, 4, 8, 'not json'))).toBe('INVALID_ARGUMENT');
+    expect(() => native.roiStats(HARALICK_PIXELS, 4, 4, 8, 42 as unknown as string)).toThrow(TypeError);
+  });
+});
+
+describe('analysis', () => {
+  const settings = {
+    features: ['Mean', 'Contrast'],
+    grayLevels: 4,
+    quantization: { method: 'none' },
+    distances: [1],
+    directions: [0, 45, 90, 135],
+  };
+
+  function codeOf(action: () => void): string | undefined {
+    try {
+      action();
+    } catch (error) {
+      return (error as { code?: string }).code;
+    }
+    return 'no error';
+  }
+
+  it('validates requests synchronously', () => {
+    expect(native.validateAnalysis(JSON.stringify([FULL_IMAGE_ROI]), JSON.stringify(settings))).toBeUndefined();
+    expect(codeOf(() => native.validateAnalysis('[]', JSON.stringify({ ...settings, features: ['NoSuchFeature'] })))).toBe('INVALID_ARGUMENT');
+    expect(codeOf(() => native.validateAnalysis('[]', JSON.stringify({ ...settings, grayLevels: 300 })))).toBe('INVALID_ARGUMENT');
+    expect(codeOf(() => native.validateAnalysis('[{"shape": {}}]', JSON.stringify(settings)))).toBe('INVALID_ARGUMENT');
+    try {
+      native.validateAnalysis('[]', JSON.stringify({ ...settings, distances: [0] }));
+    } catch (error) {
+      expect((error as Error).message).toMatch(/distance/i);
+    }
+  });
+
+  it("reproduces Haralick's worked example", async () => {
+    const json = await native.runAnalysis(HARALICK_PIXELS, HARALICK_WIDTH, HARALICK_HEIGHT, 8, JSON.stringify([FULL_IMAGE_ROI]), JSON.stringify(settings));
+    const document = JSON.parse(json);
+    expect(document).toMatchObject({ format: 'glcm-results', version: 1, coreVersion: '0.1.0' });
+    expect(document.results).toHaveLength(1);
+    const [result] = document.results;
+    expect(result).toMatchObject({ roiId: 'r1', roiName: 'Whole image', distance: 1, status: 'ok', pixelCount: 16 });
+    // Symmetric pair counts: 0° and 90° have 24 pairs, the diagonals 18
+    expect(result.pairCounts).toEqual({ '0': 24, '45': 18, '90': 24, '135': 18 });
+    expect(result.values.Mean.mean).toBe(1.25);
+    expect(result.values.Contrast['0']).toBeCloseTo(14 / 24, 12);
+    expect(result.values.Contrast['90']).toBeCloseTo(1, 12);
+    expect(result.score).toBeNull();
+  });
+
+  it('runs every distance and marks unmeasurable ROIs', async () => {
+    const rois = [FULL_IMAGE_ROI, { id: 'tiny', name: 'Tiny', shape: { type: 'rectangle', x: 0, y: 0, width: 1, height: 1 } }];
+    const document = JSON.parse(
+      await native.runAnalysis(HARALICK_PIXELS, 4, 4, 8, JSON.stringify(rois), JSON.stringify({ ...settings, distances: [1, 4] })),
+    );
+    expect(document.results.map((result: { roiId: string; distance: number; status: string }) => [result.roiId, result.distance, result.status])).toEqual([
+      ['r1', 1, 'ok'],
+      ['r1', 4, 'ok'],
+      ['tiny', 1, 'skipped'],
+      ['tiny', 4, 'skipped'],
+    ]);
+    expect(document.results[1].warnings.join(' ')).toContain('No pixel pairs at distance 4');
+  });
+
+  it('rejects invalid settings with INVALID_ARGUMENT', async () => {
+    const invalid = JSON.stringify({ ...settings, grayLevels: 1 });
+    expect(await rejectionCode(native.runAnalysis(HARALICK_PIXELS, 4, 4, 8, JSON.stringify([FULL_IMAGE_ROI]), invalid))).toBe('INVALID_ARGUMENT');
+  });
+});
+
 describe('renderDisplay', () => {
   const width = 40;
   const height = 20;

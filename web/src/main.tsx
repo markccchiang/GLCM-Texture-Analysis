@@ -4,18 +4,23 @@ import './app.css';
 
 import { createTheme, MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { queryClient } from './api/queryClient';
 import { App } from './App';
+import { useResults } from './results/resultsStore';
+import { useRois } from './rois/roiStore';
+import { useViewer } from './stores/viewerStore';
+
+// End-to-end tests (e2e/) open the app with ?testHooks to read viewport, ROI and result state
+if (new URLSearchParams(window.location.search).has('testHooks')) {
+  Object.assign(window, { __glcm: { viewer: useViewer, rois: useRois, results: useResults } });
+}
 
 const theme = createTheme({
   primaryColor: 'blue',
   fontFamilyMonospace: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-});
-
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 60_000, retry: 1, refetchOnWindowFocus: false } },
 });
 
 createRoot(document.getElementById('root')!).render(

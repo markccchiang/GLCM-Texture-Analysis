@@ -9,10 +9,16 @@ export interface UiState {
   layoutVersion: number;
   /** Incremented to ask the app to show the file dialog */
   openFileRequest: number;
+  /** View ▸ Show ROI Labels */
+  showRoiLabels: boolean;
+  /** ROI whose name the ROI Manager is editing */
+  renamingRoiId: string | null;
   setModal(modal: ModalName | null): void;
   setWindowPanelOpen(open: boolean): void;
   resetLayout(): void;
   requestOpenFile(): void;
+  toggleRoiLabels(): void;
+  setRenamingRoiId(id: string | null): void;
 }
 
 export const useUi = create<UiState>()((set, get) => ({
@@ -20,10 +26,14 @@ export const useUi = create<UiState>()((set, get) => ({
   windowPanelOpen: false,
   layoutVersion: 0,
   openFileRequest: 0,
+  showRoiLabels: false,
+  renamingRoiId: null,
   setModal: (modal) => set({ modal }),
   setWindowPanelOpen: (windowPanelOpen) => set({ windowPanelOpen }),
   resetLayout: () => set({ layoutVersion: get().layoutVersion + 1 }),
   requestOpenFile: () => set({ openFileRequest: get().openFileRequest + 1 }),
+  toggleRoiLabels: () => set({ showRoiLabels: !get().showRoiLabels }),
+  setRenamingRoiId: (renamingRoiId) => set({ renamingRoiId }),
 }));
 
 export const MOD_KEY = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl+';

@@ -1,14 +1,19 @@
 import { useHotkeys } from '@mantine/hooks';
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { Group as PanelGroup, Panel, Separator, useDefaultLayout } from 'react-resizable-panels';
+import { SettingsPanel } from './analysis/SettingsPanel';
 import { MenuBar } from './components/MenuBar';
 import { AppModals } from './components/Modals';
-import { AnalysisSettingsPlaceholder, ResultsPlaceholder, RoiManagerPlaceholder } from './components/Placeholders';
+import { PanelSection } from './components/PanelSection';
 import { StatusBar } from './components/StatusBar';
 import { Toolbar } from './components/Toolbar';
 import { layoutStorage } from './layout/layoutStorage';
+import { ResultsPanel } from './results/ResultsPanel';
+import { RoiManager } from './rois/RoiManager';
+import { useRois } from './rois/roiStore';
 import { openImageFile } from './stores/imageLoader';
 import { useUi } from './stores/uiStore';
+import { useViewer } from './stores/viewerStore';
 import { CanvasArea } from './viewer/CanvasArea';
 
 const ACCEPTED_TYPES = '.png,.jpg,.jpeg,.bmp,.tif,.tiff,image/png,image/jpeg,image/bmp,image/tiff';
@@ -20,6 +25,7 @@ function hasFiles(event: DragEvent): boolean {
 function Workspace() {
   const vertical = useDefaultLayout({ id: 'workspace-vertical', storage: layoutStorage });
   const horizontal = useDefaultLayout({ id: 'workspace-horizontal', storage: layoutStorage });
+  const sidebar = useDefaultLayout({ id: 'workspace-sidebar', storage: layoutStorage });
 
   return (
     <PanelGroup orientation="vertical" className="workspace" defaultLayout={vertical.defaultLayout} onLayoutChanged={vertical.onLayoutChanged}>
@@ -29,22 +35,24 @@ function Workspace() {
             <CanvasArea />
           </Panel>
           <Separator className="separator separator-vertical" />
-          <Panel id="sidebar" defaultSize={320} minSize={220} maxSize="50" collapsible>
-            <PanelGroup orientation="vertical">
-              <Panel id="roi-manager" minSize={80}>
-                <RoiManagerPlaceholder />
+          <Panel id="sidebar" defaultSize={340} minSize={240} maxSize="50" collapsible>
+            <PanelGroup orientation="vertical" defaultLayout={sidebar.defaultLayout} onLayoutChanged={sidebar.onLayoutChanged}>
+              <Panel id="roi-manager" defaultSize="40" minSize={100}>
+                <RoiManager />
               </Panel>
               <Separator className="separator separator-horizontal" />
-              <Panel id="analysis-settings" minSize={80}>
-                <AnalysisSettingsPlaceholder />
+              <Panel id="analysis-settings" minSize={100}>
+                <PanelSection title="Analysis Settings">
+                  <SettingsPanel />
+                </PanelSection>
               </Panel>
             </PanelGroup>
           </Panel>
         </PanelGroup>
       </Panel>
       <Separator className="separator separator-horizontal" />
-      <Panel id="results" defaultSize={150} minSize={60} collapsible>
-        <ResultsPlaceholder />
+      <Panel id="results" defaultSize={200} minSize={60} collapsible>
+        <ResultsPanel />
       </Panel>
     </PanelGroup>
   );
@@ -63,9 +71,18 @@ export function App() {
     }
   }, [openFileRequest]);
 
+  const withImage = (action: () => void) => () => {
+    if (useViewer.getState().image) {
+      action();
+    }
+  };
+
   useHotkeys([
     ['mod+O', () => useUi.getState().requestOpenFile()],
     ['mod+comma', () => useUi.getState().setModal('preferences')],
+    ['mod+Z', withImage(() => useRois.getState().undo())],
+    ['mod+shift+Z', withImage(() => useRois.getState().redo())],
+    ['mod+A', withImage(() => useRois.getState().selectAll())],
   ]);
 
   const onDragEnter = (event: DragEvent) => {

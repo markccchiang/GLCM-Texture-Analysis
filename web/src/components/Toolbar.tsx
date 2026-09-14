@@ -13,6 +13,8 @@ import {
   IconZoomOut,
 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
+import { measure } from '../analysis/measure';
+import { useResults, isRunning } from '../results/resultsStore';
 import { useViewer, type Tool } from '../stores/viewerStore';
 import { WindowLevelControl } from './WindowLevelControl';
 
@@ -28,16 +30,24 @@ function ToolButton({ label, active, disabled, onClick, children }: { label: str
   );
 }
 
+const ROI_TOOLS: Array<{ tool: Tool; label: string; icon: ReactNode }> = [
+  { tool: 'rectangle', label: 'Rectangle (R); Shift = square', icon: <IconSquare size={18} /> },
+  { tool: 'ellipse', label: 'Ellipse (E); Shift = circle', icon: <IconOvalVertical size={18} /> },
+  { tool: 'polygon', label: 'Polygon (P): click vertices, double-click or Enter to close', icon: <IconPolygon size={18} /> },
+  { tool: 'freehand', label: 'Freehand (F)', icon: <IconScribble size={18} /> },
+];
+
 export function Toolbar() {
   const tool = useViewer((state) => state.tool);
   const scale = useViewer((state) => state.viewport.scale);
   const hasImage = useViewer((state) => state.image !== null);
+  const running = useResults((state) => state.runs.some(isRunning));
   const viewer = useViewer.getState;
   const selectTool = (next: Tool) => () => viewer().setTool(next);
 
   return (
     <div className="toolbar" role="toolbar" aria-label="Tools">
-      <ToolButton label="Pointer" active={tool === 'pointer'} onClick={selectTool('pointer')}>
+      <ToolButton label="Pointer: select, move and edit ROIs" active={tool === 'pointer'} onClick={selectTool('pointer')}>
         <IconPointer size={18} />
       </ToolButton>
       <ToolButton label="Pan (hold Space)" active={tool === 'pan'} onClick={selectTool('pan')}>
@@ -45,18 +55,11 @@ export function Toolbar() {
       </ToolButton>
 
       <Divider orientation="vertical" my={8} />
-      <ToolButton label="Rectangle (R) — phase 3" disabled>
-        <IconSquare size={18} />
-      </ToolButton>
-      <ToolButton label="Ellipse (E) — phase 3" disabled>
-        <IconOvalVertical size={18} />
-      </ToolButton>
-      <ToolButton label="Polygon (P) — phase 3" disabled>
-        <IconPolygon size={18} />
-      </ToolButton>
-      <ToolButton label="Freehand (F) — phase 3" disabled>
-        <IconScribble size={18} />
-      </ToolButton>
+      {ROI_TOOLS.map(({ tool: roiTool, label, icon }) => (
+        <ToolButton key={roiTool} label={label} active={tool === roiTool} disabled={!hasImage} onClick={selectTool(roiTool)}>
+          {icon}
+        </ToolButton>
+      ))}
 
       <Divider orientation="vertical" my={8} />
       <ToolButton label="Zoom out (−)" disabled={!hasImage} onClick={() => viewer().zoomStep(-1)}>
@@ -86,11 +89,22 @@ export function Toolbar() {
       <Divider orientation="vertical" my={8} />
       <WindowLevelControl />
 
-      <Tooltip label="Measurement arrives in phase 4">
-        <Button ml="auto" size="compact-sm" leftSection={<IconPlayerPlay size={14} />} disabled>
+      <Button.Group ml="auto">
+        <Button size="compact-sm" leftSection={<IconPlayerPlay size={14} />} disabled={!hasImage} loading={running} onClick={() => void measure('selected')} data-testid="measure-button">
           Measure
         </Button>
-      </Tooltip>
+        <Menu position="bottom-end">
+          <Menu.Target>
+            <Button size="compact-sm" px={6} disabled={!hasImage} aria-label="Measure options">
+              <IconChevronDown size={14} />
+            </Button>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Item onClick={() => void measure('selected')}>Measure selected (M)</Menu.Item>
+            <Menu.Item onClick={() => void measure('all')}>Measure all (⇧M)</Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+      </Button.Group>
     </div>
   );
 }

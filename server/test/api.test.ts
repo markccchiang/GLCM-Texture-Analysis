@@ -49,6 +49,10 @@ describe('system routes', () => {
     const spec = t.app.swagger() as { openapi: string; paths: Record<string, Record<string, unknown>> };
     expect(spec.openapi).toBe('3.1.0');
     expect(Object.keys(spec.paths).sort()).toEqual([
+      '/api/v1/analyses',
+      '/api/v1/analyses/{id}',
+      '/api/v1/analyses/{id}/events',
+      '/api/v1/analyses/{id}/results',
       '/api/v1/catalog',
       '/api/v1/health',
       '/api/v1/images',
@@ -56,6 +60,7 @@ describe('system routes', () => {
       '/api/v1/images/{id}/display.png',
       '/api/v1/images/{id}/pixel',
       '/api/v1/images/{id}/raw',
+      '/api/v1/images/{id}/roi-stats',
       '/api/v1/samples',
       '/api/v1/samples/file',
     ]);

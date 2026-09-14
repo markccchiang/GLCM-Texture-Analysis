@@ -305,7 +305,7 @@ sequenceDiagram
     N-->>S: progress
     S-->>W: event: progress {done, total}
     N-->>S: MeasurementResult[]
-    S-->>W: event: completed
+    S-->>W: event: finished
     W->>S: GET /api/v1/analyses/{id}/results
     W-->>U: rows appended to Results table
     U->>W: Export ▸ CSV
@@ -600,7 +600,7 @@ Example analysis request (`POST /api/v1/analyses`):
 | `GET /images/{id}/raw` · `GET /images/{id}/pixel?x&y` | Raw grayscale buffer for images ≤ 4096² (little-endian, size headers, compressed, immutable cache; `409` otherwise) · single value |
 | `POST /images/{id}/roi-stats` | Pixel count, bounding box, min/max/mean for ROIs |
 | `POST /analyses` · `GET /analyses/{id}` · `DELETE /analyses/{id}` | Start (202) · status · cancel |
-| `GET /analyses/{id}/events` | SSE: `progress`, `result`, `failed`, `completed` |
+| `GET /analyses/{id}/events` | SSE: `result` (each finished job, including failed ones; earlier results are replayed on connect), `progress`, `finished` (status `completed`, `cancelled` or `failed`) |
 | `GET /analyses/{id}/results[.csv|.json]` | Results |
 | `POST /exports/results` | CSV/JSON for an arbitrary list of result rows (the current table) |
 | `POST /exports/roi-images` | ZIP of ROI crops, masks, manifest |
@@ -626,7 +626,7 @@ The OpenAPI document is generated from the TypeBox schemas and published at `/ap
 | **0. Core preparation** — implemented | §7 items 1–11, repository layout, CMake changes | All existing and new GoogleTest tests pass on macOS and Linux. **Met:** 80 tests, 0 warnings on macOS (Apple Clang, OpenCV 5) and on Ubuntu 24.04 arm64 and x86_64 (GCC 13, OpenCV 4.6). |
 | **1. Addon + API skeleton** — implemented | N-API addon, Fastify server, `packages/api` schemas, `/health`, `/catalog`, `/images` (upload, display, raw, pixel) | Vitest server/addon tests pass; OpenAPI generated. **Met:** the addon builds without warnings, and 37 Vitest tests and `tsc` pass on macOS (Node 25) and Linux arm64 (`node:24-bookworm`, GCC 12, OpenCV 4.6); `packages/api/openapi.json` generated. Until phase 5 the server refuses non-loopback addresses; the image SHA-256 is computed by the server while streaming the upload. |
 | **2. Web shell + image viewer** — implemented | Vite/React app, layout, menus, open image, zoom/pan, window/level, pixel readout | **R1 met** in local mode. **Met:**<br>• **Opening:** `npm start` serves the built app; images open by file dialog, drag-and-drop or `GET /samples`.<br>• **Rendering:** raw transfer with the WebGL2 integer shader (LUT fallback); in Chrome it matched the formula pixel for pixel for 8- and 16-bit windows.<br>• **Large images:** served as `display.png`, with `/pixel` hover values.<br>• **Navigation and display:** zoom/pan/navigator/keyboard/wheel classification, window/level with histogram.<br>• **Checks:** 98 Vitest tests (38 web unit tests) and `tsc` pass, and the web app builds, on macOS (Node 25) and Linux arm64 (`node:24-bookworm`). Component tests are deferred to the Playwright suite of phase 3. |
-| **3. ROI tools + measurement** | ROI tools and manager, undo/redo, roi-stats, settings panel, presets, analyses + SSE, results table; **remove `controller/`, `viewer/`, `cvui.h`, `glcm-analysis`, `canvas-example`** | **R2, R3 met**; Playwright test values equal core test values. |
+| **3. ROI tools + measurement** — implemented | ROI tools and manager, undo/redo, roi-stats, settings panel, presets, analyses + SSE, results table; **remove `controller/`, `viewer/`, `cvui.h`, `glcm-analysis`, `canvas-example`** | **R2, R3 met**; Playwright test values equal core test values. **Met:**<br>• **ROI tools:** rectangle, ellipse, polygon and freehand. The drawn shape stays active until **T** adds it. The ROI Manager has visibility, rename, duplicate, delete, zoom to ROI and multi-select. Transformer handles and polygon vertex edits work, with undo/redo of 200 steps. Pixel counts come from `POST /roi-stats`.<br>• **Measurement:** the settings panel covers presets, the feature picker with ⚠ non-standard badges, Ng, quantization, distances, directions, aggregation, log base and score; it is kept in localStorage. `POST /analyses` queues one addon job per ROI × distance with limited concurrency. Progress arrives over SSE and can be cancelled.<br>• **Results table:** rows per aggregation keep their settings; sorting, column chooser and TSV copy.<br>• **Legacy app:** removed, together with `TextureAnalysis::Print`/`SaveAsCSV`.<br>• **Checks:** 3 Playwright tests pass in Chromium and WebKit. They draw every ROI type and measure; measured values equal the addon's for the same geometry and settings, and pixel counts equal `roiStats`. They also cover the hover readout after key and wheel zoom, arrows, Space-drag, **Z**, navigator drag, ROI tooltip and undo. Core tests (80), Vitest (150) and `tsc` pass on macOS and Linux arm64 (`node:24-bookworm`). |
 | **4. Save / import / export** | Results CSV/JSON, ROI set import/export, ROI image ZIP, projects | **R4 met**; import/export round trips are lossless. |
 | **5. Server deployment** | Docker image with a data volume, config, bearer-token authentication, limits, retention, CI | Image runs on Linux; security checklist (§8.2) passes. |
 | **6. Large data (later)** | Job queue + workers, S3 storage, tile pyramid viewer, batch over many images | Defined when phase 5 is done. |

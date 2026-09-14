@@ -1,9 +1,14 @@
 import { Badge, Button, Menu, Text } from '@mantine/core';
+import { IconCheck } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
+import { measure } from '../analysis/measure';
+import { renameSelectedRoi } from '../app/actions';
 import { clearStoredLayouts } from '../layout/layoutStorage';
+import { useResults } from '../results/resultsStore';
+import { useRois } from '../rois/roiStore';
 import { cancelImageLoad } from '../stores/imageLoader';
 import { MOD_KEY, useUi } from '../stores/uiStore';
-import { isNavigatorVisible, useViewer } from '../stores/viewerStore';
+import { isNavigatorVisible, useViewer, type Tool } from '../stores/viewerStore';
 
 function Shortcut({ children }: { children: ReactNode }) {
   return (
@@ -15,7 +20,7 @@ function Shortcut({ children }: { children: ReactNode }) {
 
 function TopMenu({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <Menu position="bottom-start" offset={2} shadow="md" width={250} trigger="click-hover" openDelay={0} closeDelay={150}>
+    <Menu position="bottom-start" offset={2} shadow="md" width={260} trigger="click-hover" openDelay={0} closeDelay={150}>
       <Menu.Target>
         <Button variant="subtle" color="gray" size="compact-sm">
           {label}
@@ -26,20 +31,36 @@ function TopMenu({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-const LATER = { phase3: 'Arrives with ROI tools (phase 3)', phase4: 'Arrives with analysis (phase 4)', phase6: 'Arrives with projects (phase 6)' };
+const PHASE_4 = 'Arrives with save, import and export (phase 4)';
 
-function Later({ children, phase }: { children: ReactNode; phase: keyof typeof LATER }) {
+function Later({ children }: { children: ReactNode }) {
   return (
-    <Menu.Item disabled title={LATER[phase]}>
+    <Menu.Item disabled title={PHASE_4}>
       {children}
     </Menu.Item>
   );
 }
 
+const TOOL_ITEMS: Array<{ tool: Tool; label: string; key: string }> = [
+  { tool: 'rectangle', label: 'Rectangle', key: 'R' },
+  { tool: 'ellipse', label: 'Ellipse', key: 'E' },
+  { tool: 'polygon', label: 'Polygon', key: 'P' },
+  { tool: 'freehand', label: 'Freehand', key: 'F' },
+];
+
 export function MenuBar() {
   const hasImage = useViewer((state) => state.image !== null);
+  const tool = useViewer((state) => state.tool);
   const navigatorVisible = useViewer(isNavigatorVisible);
+  const canUndo = useRois((state) => state.past.length > 0);
+  const canRedo = useRois((state) => state.future.length > 0);
+  const hasRois = useRois((state) => state.rois.length > 0);
+  const selectedCount = useRois((state) => state.selectedIds.length);
+  const hasActive = useRois((state) => state.activeShape !== null);
+  const hasResults = useResults((state) => state.rows.length > 0);
+  const showLabels = useUi((state) => state.showRoiLabels);
   const viewer = useViewer.getState;
+  const rois = useRois.getState;
   const ui = useUi.getState;
   const local = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
 
@@ -54,10 +75,10 @@ export function MenuBar() {
           Open Image…
         </Menu.Item>
         <Menu.Item onClick={() => ui().setModal('samples')}>Open Sample Image…</Menu.Item>
-        <Later phase="phase6">Open Project…</Later>
-        <Later phase="phase6">Save Project</Later>
+        <Later>Open Project…</Later>
+        <Later>Save Project</Later>
         <Menu.Divider />
-        <Later phase="phase4">Export Results</Later>
+        <Later>Export Results</Later>
         <Menu.Divider />
         <Menu.Item
           disabled={!hasImage}
@@ -71,9 +92,19 @@ export function MenuBar() {
       </TopMenu>
 
       <TopMenu label="Edit">
-        <Later phase="phase3">Undo</Later>
-        <Later phase="phase3">Redo</Later>
-        <Later phase="phase3">Select All ROIs</Later>
+        <Menu.Item disabled={!canUndo} rightSection={<Shortcut>{MOD_KEY}Z</Shortcut>} onClick={() => rois().undo()}>
+          Undo
+        </Menu.Item>
+        <Menu.Item disabled={!canRedo} rightSection={<Shortcut>{MOD_KEY}⇧Z</Shortcut>} onClick={() => rois().redo()}>
+          Redo
+        </Menu.Item>
+        <Menu.Divider />
+        <Menu.Item disabled={!hasRois} rightSection={<Shortcut>{MOD_KEY}A</Shortcut>} onClick={() => rois().selectAll()}>
+          Select All ROIs
+        </Menu.Item>
+        <Menu.Item disabled={selectedCount === 0} rightSection={<Shortcut>⌫</Shortcut>} onClick={() => rois().deleteRois(rois().selectedIds)}>
+          Delete ROI
+        </Menu.Item>
         <Menu.Divider />
         <Menu.Item rightSection={<Shortcut>{MOD_KEY},</Shortcut>} onClick={() => ui().setModal('preferences')}>
           Preferences…
@@ -93,7 +124,9 @@ export function MenuBar() {
         <Menu.Item disabled={!hasImage} rightSection={<Shortcut>0</Shortcut>} onClick={() => viewer().fit()}>
           Fit to Window
         </Menu.Item>
-        <Later phase="phase3">Zoom to Selection</Later>
+        <Menu.Item disabled={selectedCount === 0} rightSection={<Shortcut>Z</Shortcut>} onClick={() => viewer().zoomToSelection()}>
+          Zoom to Selection
+        </Menu.Item>
         <Menu.Divider />
         <Menu.Label>Window/Level</Menu.Label>
         <Menu.Item disabled={!hasImage} onClick={() => viewer().resetWindow('auto')}>
@@ -112,24 +145,52 @@ export function MenuBar() {
       </TopMenu>
 
       <TopMenu label="ROI">
-        <Later phase="phase3">Rectangle</Later>
-        <Later phase="phase3">Ellipse</Later>
-        <Later phase="phase3">Polygon</Later>
-        <Later phase="phase3">Freehand</Later>
+        {TOOL_ITEMS.map((item) => (
+          <Menu.Item
+            key={item.tool}
+            disabled={!hasImage}
+            leftSection={tool === item.tool ? <IconCheck size={14} /> : <span style={{ width: 14 }} />}
+            rightSection={<Shortcut>{item.key}</Shortcut>}
+            onClick={() => viewer().setTool(item.tool)}
+          >
+            {item.label}
+          </Menu.Item>
+        ))}
         <Menu.Divider />
-        <Later phase="phase3">Import ROI Set…</Later>
-        <Later phase="phase3">Export ROI Set…</Later>
+        <Menu.Item disabled={!hasActive} rightSection={<Shortcut>T</Shortcut>} onClick={() => rois().addActiveRoi()}>
+          Add to Manager
+        </Menu.Item>
+        <Menu.Item disabled={selectedCount === 0} onClick={() => rois().duplicateRois(rois().selectedIds)}>
+          Duplicate
+        </Menu.Item>
+        <Menu.Item disabled={selectedCount !== 1} onClick={renameSelectedRoi}>
+          Rename
+        </Menu.Item>
+        <Menu.Divider />
+        <Later>Import ROI Set…</Later>
+        <Later>Export ROI Set…</Later>
+        <Later>Export ROI Images…</Later>
       </TopMenu>
 
       <TopMenu label="Analyze">
-        <Later phase="phase4">Measure Selected</Later>
-        <Later phase="phase4">Measure All</Later>
-        <Later phase="phase4">Clear Results</Later>
+        <Menu.Item disabled={!hasImage} rightSection={<Shortcut>M</Shortcut>} onClick={() => void measure('selected')}>
+          Measure Selected
+        </Menu.Item>
+        <Menu.Item disabled={!hasImage} rightSection={<Shortcut>⇧M</Shortcut>} onClick={() => void measure('all')}>
+          Measure All
+        </Menu.Item>
+        <Menu.Divider />
+        <Menu.Item disabled={!hasResults} onClick={() => useResults.getState().clear()}>
+          Clear Results
+        </Menu.Item>
       </TopMenu>
 
       <TopMenu label="View">
         <Menu.Item disabled={!hasImage} rightSection={<Shortcut>N</Shortcut>} onClick={() => viewer().toggleNavigator()}>
           {navigatorVisible ? 'Hide Navigator' : 'Show Navigator'}
+        </Menu.Item>
+        <Menu.Item leftSection={showLabels ? <IconCheck size={14} /> : <span style={{ width: 14 }} />} onClick={() => ui().toggleRoiLabels()}>
+          Show ROI Labels
         </Menu.Item>
         <Menu.Divider />
         <Menu.Item

@@ -22,9 +22,11 @@
     "start": "npm run start -w @glcm/server",
     "dev": "npm run dev -w @glcm/server",
     "openapi": "npm run openapi -w @glcm/server",
-    "samples": "tsx scripts/generate-samples.ts"
+    "samples": "tsx scripts/generate-samples.ts",
+    "test:e2e": "npm run build:web && playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "26.5.1",
     "@types/pngjs": "6.0.5",
     "cmake-js": "8.0.0",

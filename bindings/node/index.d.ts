@@ -54,6 +54,20 @@ export interface DecodedImage {
   pixels: Buffer;
 }
 
+export interface NativeRoiStatistics {
+  /** Pixels whose centre lies inside the shape, after clipping to the image */
+  pixelCount: number;
+  boundingBox: { x: number; y: number; width: number; height: number } | null;
+  /** Original intensities; null for an empty mask */
+  min: number | null;
+  max: number | null;
+  mean: number | null;
+  /** Sample standard deviation */
+  std: number | null;
+  /** Invalid geometry (e.g. non-finite coordinates); the other fields then describe an empty mask */
+  error: string | null;
+}
+
 export function coreVersion(): string;
 
 export function catalog(): NativeCatalog;
@@ -72,6 +86,28 @@ export function renderDisplay(
   maxSize: number,
 ): Promise<Buffer>;
 
+/**
+ * Pixel count, bounding box and intensity statistics of each ROI.
+ * @param roisJson JSON array of ROI objects in the ROI set format (doc/ui-design-plan.md, section 8.4)
+ */
+export function roiStats(pixels: Uint8Array, width: number, height: number, bitDepth: 8 | 16, roisJson: string): Promise<NativeRoiStatistics[]>;
+
+/** Parses and validates an analysis request; throws an Error with code INVALID_ARGUMENT describing the first problem. */
+export function validateAnalysis(roisJson: string, settingsJson: string): void;
+
+/**
+ * Measures every ROI at every distance (glcm::RunAnalysis).
+ * @returns the "glcm-results" JSON document (without image name, SHA-256 or timestamp)
+ */
+export function runAnalysis(
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+  bitDepth: 8 | 16,
+  roisJson: string,
+  settingsJson: string,
+): Promise<string>;
+
 /** glcm::WindowLevel: the 8-bit display value of one intensity. */
 export function windowLevel(value: number, windowMin: number, windowMax: number): number;
 
@@ -80,6 +116,9 @@ declare const native: {
   catalog: typeof catalog;
   decodeImageFile: typeof decodeImageFile;
   renderDisplay: typeof renderDisplay;
+  roiStats: typeof roiStats;
+  validateAnalysis: typeof validateAnalysis;
+  runAnalysis: typeof runAnalysis;
   windowLevel: typeof windowLevel;
 };
 export default native;

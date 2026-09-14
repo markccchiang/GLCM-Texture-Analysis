@@ -4,5 +4,5 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const native = require('./build/Release/glcm_native.node');
 
-export const { coreVersion, catalog, decodeImageFile, renderDisplay, windowLevel } = native;
+export const { coreVersion, catalog, decodeImageFile, renderDisplay, roiStats, validateAnalysis, runAnalysis, windowLevel } = native;
 export default native;

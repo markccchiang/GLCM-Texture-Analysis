@@ -4,25 +4,17 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
-#include <ctime>
-#include <filesystem>
-#include <fstream>
 #include <functional>
-#include <iomanip>
 #include <stdexcept>
 
 #include "analysis/Score.hpp"
 
 using namespace glcm;
 
-namespace fs = std::filesystem;
-
 namespace {
 
 const int white_color = 255;
 const double NAN_VALUE = std::numeric_limits<double>::quiet_NaN();
-
-const Direction DIRECTIONS_WITH_AVG[] = {Direction::H, Direction::V, Direction::LD, Direction::RD, Direction::Avg};
 
 struct Offset {
     int row;
@@ -845,56 +837,4 @@ std::string TextureAnalysis::DirectionToString(Direction direction) {
     }
     std::cerr << "Unknown direction!\n";
     return "";
-}
-
-void TextureAnalysis::Print(const std::map<Type, Features>& features) const {
-    for (const auto& [type, values] : features) {
-        std::cout << TypeToString(type) << std::endl;
-        for (Direction direction : DIRECTIONS_WITH_AVG) {
-            std::cout << std::setw(30) << DirectionToString(direction) << " = " << values.Get(direction) << std::endl;
-        }
-    }
-}
-
-void TextureAnalysis::SaveAsCSV(
-    const std::string& image_name, const std::map<Type, Features>& features, const std::string& csv_name) const {
-    // check whether the csv file exists or not
-    bool csv_file_exists = fs::exists(csv_name);
-
-    // open the csv file as the writing mode and append at the end
-    std::ofstream csv_file(csv_name, std::ios::out | std::ios::app);
-    if (!csv_file) {
-        std::cerr << "Can't open the file: " << csv_name << std::endl;
-        return;
-    }
-
-    if (!csv_file_exists) {
-        // write a row of titles
-        csv_file << "Date,Image,Direction,";
-        for (const auto& [type, values] : features) {
-            csv_file << TypeToString(type) << ",";
-        }
-        csv_file << "\n";
-    }
-
-    // write a row of values for each direction and their average
-    std::string image_base_name = fs::path(image_name).filename().string();
-    std::string current_time = GetCurrentTime();
-    for (Direction direction : DIRECTIONS_WITH_AVG) {
-        csv_file << current_time << "," << image_base_name << "," << DirectionToString(direction) << ",";
-        for (const auto& [type, values] : features) {
-            csv_file << values.Get(direction) << ",";
-        }
-        csv_file << "\n";
-    }
-}
-
-std::string TextureAnalysis::GetCurrentTime() {
-    time_t rawtime;
-    time(&rawtime);
-    struct tm* timeinfo = localtime(&rawtime);
-
-    char buffer[80];
-    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeinfo);
-    return std::string(buffer);
 }

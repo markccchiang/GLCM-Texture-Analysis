@@ -2,6 +2,11 @@
 
 import {
   API_PREFIX,
+  type AnalysisInfo,
+  type AnalysisRequest,
+  type AnalysisResults,
+  type RoiStatsRequest,
+  type RoiStatsResponse,
   type CatalogResponse,
   type ErrorResponse,
   type ImageInfo,
@@ -160,4 +165,37 @@ export async function fetchDisplayBlob(imageId: string, options: DisplayOptions,
 
 export function getPixel(imageId: string, x: number, y: number, signal?: AbortSignal): Promise<PixelResponse> {
   return getJson(`${API_PREFIX}/images/${imageId}/pixel?x=${x}&y=${y}`, signal);
+}
+
+async function sendJson<T>(method: 'POST' | 'DELETE', url: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(url, {
+    method,
+    signal,
+    headers: body === undefined ? { accept: 'application/json' } : { accept: 'application/json', 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw await errorFromResponse(response);
+  }
+  return (response.status === 204 ? undefined : await response.json()) as T;
+}
+
+export function getRoiStats(imageId: string, rois: RoiStatsRequest['rois'], signal?: AbortSignal): Promise<RoiStatsResponse> {
+  return sendJson('POST', `${API_PREFIX}/images/${imageId}/roi-stats`, { rois }, signal);
+}
+
+export function startAnalysis(request: AnalysisRequest): Promise<AnalysisInfo> {
+  return sendJson('POST', `${API_PREFIX}/analyses`, request);
+}
+
+export function getAnalysisResults(analysisId: string, signal?: AbortSignal): Promise<AnalysisResults> {
+  return getJson(`${API_PREFIX}/analyses/${analysisId}/results`, signal);
+}
+
+export function cancelAnalysis(analysisId: string): Promise<void> {
+  return sendJson('DELETE', `${API_PREFIX}/analyses/${analysisId}`);
+}
+
+export function analysisEventsUrl(analysisId: string): string {
+  return `${API_PREFIX}/analyses/${analysisId}/events`;
 }

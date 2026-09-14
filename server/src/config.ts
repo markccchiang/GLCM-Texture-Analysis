@@ -14,6 +14,8 @@ export interface ServerConfig {
   displayMaxSize: number;
   /** Disk space for cached display.png renderings */
   displayCacheBytes: number;
+  /** Analysis jobs (ROI × distance) running at the same time */
+  analysisConcurrency: number;
   logLevel: string;
   /** Built web app (web/dist); not served when missing */
   webDir: string | null;
@@ -33,6 +35,7 @@ export const DEFAULT_CONFIG: Omit<ServerConfig, 'dataDir' | 'webDir' | 'samplesD
   rawTransferMaxPixels: 4096 * 4096,
   displayMaxSize: 4096,
   displayCacheBytes: 512 * MIB,
+  analysisConcurrency: Math.max(1, os.availableParallelism()),
   logLevel: 'info',
 };
 
@@ -59,6 +62,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     rawTransferMaxPixels: integerSetting(env, 'GLCM_RAW_TRANSFER_MAX_PIXELS', DEFAULT_CONFIG.rawTransferMaxPixels, 0),
     displayMaxSize: integerSetting(env, 'GLCM_DISPLAY_MAX_SIZE', DEFAULT_CONFIG.displayMaxSize, 1),
     displayCacheBytes: integerSetting(env, 'GLCM_DISPLAY_CACHE_BYTES', DEFAULT_CONFIG.displayCacheBytes, 0),
+    analysisConcurrency: integerSetting(env, 'GLCM_ANALYSIS_CONCURRENCY', DEFAULT_CONFIG.analysisConcurrency, 1),
     logLevel: env.GLCM_LOG_LEVEL || DEFAULT_CONFIG.logLevel,
     webDir: path.resolve(env.GLCM_WEB_DIR || path.join(REPOSITORY_ROOT, 'web', 'dist')),
     samplesDir: path.resolve(env.GLCM_SAMPLES_DIR || path.join(REPOSITORY_ROOT, 'samples')),

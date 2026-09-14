@@ -128,7 +128,7 @@ public:
     void ProcessRectImage(const cv::Mat& image, int distance);
     // Pixels with mask value 255 form the region; a pair counts only if both pixels are inside it
     void ProcessMaskedImage(const cv::Mat& image, const cv::Mat& mask, int distance);
-    // Same as ProcessMaskedImage; kept for the legacy polygon controller
+    // Same as ProcessMaskedImage; kept for existing callers
     void ProcessPolygonImage(const cv::Mat& original_image, const cv::Mat& mask_image, int distance);
 
     // Number of pixel pairs counted for a direction by the last Process call (0 for directions not computed)
@@ -167,9 +167,6 @@ public:
 
     std::map<Type, Features> Calculate(const std::set<Type>& types) const; // Calculate selected features
     void CalculateScore(double age, std::map<Type, Features>& features_map) const;
-
-    void Print(const std::map<Type, Features>& features) const;
-    void SaveAsCSV(const std::string& image_name, const std::map<Type, Features>& features, const std::string& csv_name) const;
 
     static std::string TypeToString(Type type);
     static std::string DirectionToString(Direction direction);
@@ -210,8 +207,6 @@ private:
     double P(const DirectionData& data, int i, int j) const {
         return data.p[i * _Ng + j];
     }
-
-    static std::string GetCurrentTime();
 
     int _Ng; // grey scale number, 256 (0 ~ 255) for example
     TextureOptions _options;
