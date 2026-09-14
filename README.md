@@ -197,7 +197,8 @@ To rebuild later, activate the environment again with `source .venv/bin/activate
 | `packages/api/` | Shared API schemas and types (`@glcm/api`) and the generated OpenAPI document |
 | `server/` | Fastify API server (`@glcm/server`) |
 | `doc/` | Sphinx documentation: GLCM equations and references |
-| `samples/` | Sample image |
+| `samples/` | Sample images: synthetic test patterns, CC0 textures and `lena.jpg` (see `samples/README.md`) |
+| `scripts/` | Helper scripts, e.g. `generate-samples.ts` (`npm run samples`) |
 
 ## References
 

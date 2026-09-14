@@ -18,7 +18,8 @@
     "test": "vitest run",
     "start": "npm run start -w @glcm/server",
     "dev": "npm run dev -w @glcm/server",
-    "openapi": "npm run openapi -w @glcm/server"
+    "openapi": "npm run openapi -w @glcm/server",
+    "samples": "tsx scripts/generate-samples.ts"
   },
   "devDependencies": {
     "@types/node": "26.5.1",
