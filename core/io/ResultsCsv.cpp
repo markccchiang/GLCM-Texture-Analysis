@@ -28,6 +28,15 @@ std::string Escape(const std::string& field) {
     return quoted + "\"";
 }
 
+// Text from users (image and ROI names, ids, messages) gets a leading apostrophe when it starts with a character that
+// makes spreadsheets evaluate a cell as a formula (CSV injection). Numbers are written by FormatNumber and never pass here.
+std::string TextField(const std::string& text) {
+    if (!text.empty() && (text[0] == '=' || text[0] == '+' || text[0] == '-' || text[0] == '@' || text[0] == '\t' || text[0] == '\r')) {
+        return "'" + text;
+    }
+    return text;
+}
+
 // Keeps a comment value on one line
 std::string OneLine(std::string text) {
     for (char& c : text) {
@@ -169,9 +178,9 @@ std::string ResultsToCsv(const std::vector<MeasurementResult>& results, const An
     const std::vector<RowKind> kinds = RowKinds(settings);
 
     for (const MeasurementResult& result : results) {
-        const std::vector<std::string> common = {context.timestamp, context.image_name, context.image_sha256, result.roi_name,
-            result.roi_id, MeasurementStatusId(result.status), std::to_string(result.pixel_count), std::to_string(settings.gray_levels),
-            quantization, std::to_string(result.distance)};
+        const std::vector<std::string> common = {TextField(context.timestamp), TextField(context.image_name),
+            TextField(context.image_sha256), TextField(result.roi_name), TextField(result.roi_id), MeasurementStatusId(result.status),
+            std::to_string(result.pixel_count), std::to_string(settings.gray_levels), quantization, std::to_string(result.distance)};
 
         std::vector<std::string> notes = result.warnings;
         if (!result.error.empty()) {
@@ -182,7 +191,7 @@ std::string ResultsToCsv(const std::vector<MeasurementResult>& results, const An
             std::vector<std::string> row = common;
             row.push_back("");
             row.insert(row.end(), columns.size() + (settings.score.enabled ? 1 : 0), "");
-            row.push_back(Join(notes, " | "));
+            row.push_back(TextField(Join(notes, " | ")));
             WriteRow(out, row);
             continue;
         }
@@ -197,7 +206,7 @@ std::string ResultsToCsv(const std::vector<MeasurementResult>& results, const An
             if (settings.score.enabled) {
                 row.push_back(result.score ? FormatNumber(kind.value(*result.score)) : "");
             }
-            row.push_back(Join(notes, " | "));
+            row.push_back(TextField(Join(notes, " | ")));
             WriteRow(out, row);
         }
     }

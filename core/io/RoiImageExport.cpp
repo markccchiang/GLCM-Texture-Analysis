@@ -1,5 +1,6 @@
 #include "io/RoiImageExport.hpp"
 
+#include <algorithm>
 #include <opencv2/imgcodecs.hpp>
 #include <set>
 #include <stdexcept>
@@ -24,10 +25,18 @@ std::vector<uchar> Encode(const std::string& extension, const cv::Mat& image) {
     return bytes;
 }
 
-std::string UniqueName(const std::string& base, std::set<std::string>& used) {
+// A base name (base, base_2, base_3, ...) for which every file name base + suffix is still unused, so that e.g. the mask
+// of ROI "a" (a_mask.png) and the image of ROI "a_mask" (a_mask.png) cannot collide. Registers the file names.
+std::string UniqueBase(const std::string& base, const std::vector<std::string>& suffixes, std::set<std::string>& used) {
     std::string candidate = base;
-    for (int suffix = 2; !used.insert(candidate).second; ++suffix) {
-        candidate = base + "_" + std::to_string(suffix);
+    const auto taken = [&](const std::string& name) {
+        return std::any_of(suffixes.begin(), suffixes.end(), [&](const std::string& suffix) { return used.count(name + suffix) > 0; });
+    };
+    for (int number = 2; taken(candidate); ++number) {
+        candidate = base + "_" + std::to_string(number);
+    }
+    for (const std::string& suffix : suffixes) {
+        used.insert(candidate + suffix);
     }
     return candidate;
 }
@@ -60,8 +69,16 @@ std::vector<ExportedFile> ExportRoiImages(
     const bool sixteen_bit = gray.depth() == CV_16U;
 
     std::vector<ExportedFile> files;
-    std::set<std::string> used_names;
+    std::set<std::string> used_names = {"manifest.json"};
     Json entries = Json::array();
+
+    // Files written per ROI: image, mask and optionally the quantized image
+    const std::string image_extension = sixteen_bit ? ".tif" : ".png";
+    const std::string quantized_suffix = "_q" + std::to_string(settings.gray_levels) + ".png";
+    std::vector<std::string> suffixes = {image_extension, "_mask.png"};
+    if (options.include_quantized) {
+        suffixes.push_back(quantized_suffix);
+    }
 
     for (const Roi& roi : rois) {
         Json entry = Json::object();
@@ -84,23 +101,20 @@ std::vector<ExportedFile> ExportRoiImages(
             continue;
         }
 
-        const std::string base = UniqueName(SanitizeFileName(roi.name.empty() ? roi.id : roi.name), used_names);
+        const std::string base = UniqueBase(SanitizeFileName(roi.name.empty() ? roi.id : roi.name), suffixes, used_names);
         const cv::Rect box = MaskBoundingBox(mask);
         const cv::Mat mask_crop = mask(box).clone();
         cv::Mat crop = gray(box).clone();
         crop.setTo(cv::Scalar(0), mask_crop == 0);
 
-        std::string image_name;
+        const std::string image_name = base + image_extension;
         if (sixteen_bit) {
-            image_name = base + ".tif";
             files.push_back({image_name, Encode(".tif", crop)});
         } else if (options.transparent_outside) {
             cv::Mat bgra;
             cv::merge(std::vector<cv::Mat>{crop, crop, crop, mask_crop}, bgra);
-            image_name = base + ".png";
             files.push_back({image_name, Encode(".png", bgra)});
         } else {
-            image_name = base + ".png";
             files.push_back({image_name, Encode(".png", crop)});
         }
         const std::string mask_name = base + "_mask.png";
@@ -114,7 +128,7 @@ std::vector<ExportedFile> ExportRoiImages(
         if (options.include_quantized) {
             try {
                 const QuantizationResult quantized = Quantize(gray, mask, settings.gray_levels, settings.quantization);
-                const std::string quantized_name = base + "_q" + std::to_string(settings.gray_levels) + ".png";
+                const std::string quantized_name = base + quantized_suffix;
                 files.push_back({quantized_name, Encode(".png", quantized.image(box).clone())});
                 entry["quantized"] = quantized_name;
             } catch (const std::invalid_argument& error) {

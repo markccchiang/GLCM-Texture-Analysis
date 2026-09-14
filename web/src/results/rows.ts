@@ -142,6 +142,14 @@ export function sortRows(rows: readonly ResultRow[], column: Column, direction: 
     .map(({ row }) => row);
 }
 
+/**
+ * Text that spreadsheets would evaluate as a formula when pasted (it starts with =, +, - or @) gets a leading
+ * apostrophe, as in the core's CSV export. Used for text cells only; numbers are pasted as numbers.
+ */
+export function spreadsheetText(text: string): string {
+  return /^[=+\-@]/.test(text) ? `'${text}` : text;
+}
+
 /** Tab-separated text with a header row; numbers keep full precision */
 export function rowsToTsv(rows: readonly ResultRow[], columns: readonly Column[]): string {
   const clean = (text: string) => text.replace(/[\t\r\n]+/g, ' ');
@@ -149,7 +157,7 @@ export function rowsToTsv(rows: readonly ResultRow[], columns: readonly Column[]
   const lines = rows.map((row) =>
     columns.map((column) => {
       const value = column.value(row);
-      return clean(typeof value === 'number' ? String(value) : (value ?? ''));
+      return typeof value === 'number' ? String(value) : spreadsheetText(clean(value ?? ''));
     }),
   );
   return [header, ...lines].map((line) => line.join('\t')).join('\n');

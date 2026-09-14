@@ -25,7 +25,8 @@ struct RoiImageExportOptions {
 // - "<name>_mask.png": the mask (255 inside)
 // - "<name>_q<Ng>.png": the quantized gray levels, when requested
 // plus "manifest.json" describing every ROI (geometry, bounding box, pixel count, file names, or why it was skipped).
-// Names come from SanitizeFileName(roi name, or id if the name is empty), made unique with "_2", "_3", ...
+// Names come from SanitizeFileName(roi name, or id if the name is empty). "_2", "_3", ... is appended until none of the
+// ROI's file names is used by another ROI or by the manifest, so every exported file name is unique.
 std::vector<ExportedFile> ExportRoiImages(const cv::Mat& gray, const std::vector<Roi>& rois, const AnalysisSettings& settings,
     const RoiImageExportOptions& options = RoiImageExportOptions());
 

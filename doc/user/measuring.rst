@@ -113,6 +113,8 @@ Use the buttons above the table to work with it:
   measurement.
 - **Columns** shows or hides columns.
 - **Copy** copies the table (visible columns, current order) as tab-separated text, ready to paste into a spreadsheet.
+  Text cells starting with ``=``, ``+``, ``-`` or ``@`` get a leading apostrophe, so the spreadsheet does not run them
+  as formulas.
 - **Export** saves the results as CSV or JSON (see :ref:`export-results`).
 - The trash button clears the table (*Analyze ▸ Clear Results*).
 

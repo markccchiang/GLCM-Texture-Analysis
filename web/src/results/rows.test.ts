@@ -1,6 +1,6 @@
 import type { AnalysisSettings, FeatureInfo, MeasurementResult } from '@glcm/api';
 import { describe, expect, it } from 'vitest';
-import { cellText, columnsForRows, formatValue, rowDirections, rowsForResult, rowsToTsv, sortRows } from './rows';
+import { cellText, columnsForRows, formatValue, rowDirections, rowsForResult, rowsToTsv, sortRows, spreadsheetText } from './rows';
 
 const settings: AnalysisSettings = {
   features: ['Contrast', 'CorrelationIII'],
@@ -96,5 +96,23 @@ describe('formatting, columns and export', () => {
     expect(tsv[0]).toBe('ROI\td\tDir\tPixels\tNg\tContrast\tCorrelation III [non-standard]\tScore\tStatus');
     expect(tsv[1]).toBe('ROI 1\t1\t0°\t100\t32\t2\t0.001\t70\t');
     expect(tsv).toHaveLength(4);
+  });
+
+  it('keeps pasted text from running as a spreadsheet formula', () => {
+    expect(spreadsheetText('=HYPERLINK("http://example.org")')).toBe(`'=HYPERLINK("http://example.org")`);
+    for (const text of ['+1', '-left', '@SUM(A1)']) {
+      expect(spreadsheetText(text)).toBe(`'${text}`);
+    }
+    for (const text of ['ROI 1', 'a=b', '', "'quoted"]) {
+      expect(spreadsheetText(text)).toBe(text);
+    }
+
+    const negative: MeasurementResult = { ...ok, roiName: '=1+1', values: { ...ok.values, CorrelationIII: values(-0.5, -0.25) } };
+    const rows = rowsForResult(negative, context);
+    const tsv = rowsToTsv(rows, columnsForRows(rows, features)).split('\n');
+    const cells = tsv[1].split('\t');
+    expect(cells[0]).toBe("'=1+1");
+    // Numbers stay numbers, including negative ones
+    expect(cells[6]).toBe('-0.5');
   });
 });

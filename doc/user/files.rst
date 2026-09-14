@@ -46,6 +46,9 @@ Exporting results
   score and the warnings.
 - Columns of non-standard features end with ``[non-standard]``.
 - Numbers are written with full precision.
+- Text cells (image and ROI names, ids and warnings) that start with ``=``, ``+``, ``-`` or ``@`` get a leading
+  apostrophe, so that spreadsheet programs show them as text instead of running them as formulas. The same applies
+  when you copy rows from the Results table.
 
 Most spreadsheet programs open the file directly; if they show the ``#`` lines as data, skip the lines before the
 header row when importing.
@@ -94,6 +97,9 @@ Exporting ROI images
 - **Transparent outside the ROI** (8-bit images) makes the outside pixels transparent instead of black.
 - **Include quantized gray levels** adds ``<name>_q<Ng>.png`` with the gray levels computed with the current analysis
   settings.
+- File names come from the ROI names (characters other than letters, digits, ``-``, ``_`` and ``.`` become ``_``).
+  When two ROIs would share a file name, for example ROIs named ``a`` and ``a_mask``, ``_2``, ``_3``, ... is appended,
+  so no file overwrites another.
 - ``manifest.json`` lists every ROI with its shape, bounding box, pixel count and files, or why it was skipped.
 
 Projects

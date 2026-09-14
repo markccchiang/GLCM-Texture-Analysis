@@ -535,6 +535,48 @@ TEST(ResultsJsonTest, ReportsWhereResultsAreInvalid) {
     EXPECT_EQ(minimal.settings.features, std::set<Type>{Type::Contrast});
 }
 
+TEST(ResultsCsvTest, PrefixesFormulaTextButNotNumbers) {
+    AnalysisSettings settings = DefaultSettings(8);
+    settings.features = {Type::Contrast, Type::InformationMeasuresOfCorrelationI};
+    const std::vector<std::string> formulas = {"=HYPERLINK(\"http://example.org\",\"x\")", "+1", "-left", "@SUM(A1)", "\tindented"};
+    std::vector<Roi> rois;
+    for (size_t i = 0; i < formulas.size(); ++i) {
+        rois.push_back(MakeRoi("r" + std::to_string(i), formulas[i], RectangleRoi{2, 2, 20, 20}));
+    }
+    rois.push_back(MakeRoi("-id", "a=b", RectangleRoi{2, 2, 20, 20}));
+    const AnalysisOutput output = RunAnalysis(Pattern8(30, 30), rois, settings);
+    const ExportContext context{"=calc.png", "sha-1", "2026-09-14T12:00:00Z"};
+    const CsvTable table = ParseCsv(ResultsToCsv(output.results, settings, context));
+
+    std::string imc_header;
+    for (const glcm::FeatureInfo& info : glcm::FeatureCatalog()) {
+        if (info.type == Type::InformationMeasuresOfCorrelationI) {
+            imc_header = info.non_standard ? info.name + " [non-standard]" : info.name;
+        }
+    }
+    const size_t roi_name = table.Column("roiName");
+    const size_t roi_id = table.Column("roiId");
+    const size_t image = table.Column("image");
+    const size_t imc = table.Column(imc_header);
+
+    // Four directions and the mean per ROI
+    ASSERT_EQ(table.rows.size(), rois.size() * 5);
+    bool negative = false;
+    for (size_t r = 0; r < table.rows.size(); ++r) {
+        const auto& row = table.rows[r];
+        const Roi& roi = rois[r / 5];
+        const bool formula = std::string("=+-@\t").find(roi.name[0]) != std::string::npos;
+        EXPECT_EQ(row[roi_name], formula ? "'" + roi.name : roi.name);
+        EXPECT_EQ(row[roi_id], roi.id == "-id" ? "'-id" : roi.id);
+        EXPECT_EQ(row[image], "'=calc.png");
+        // Numbers are never prefixed, including negative ones (IMC1 is at most 0)
+        ASSERT_FALSE(row[imc].empty());
+        EXPECT_NE(row[imc][0], '\'');
+        negative = negative || std::strtod(row[imc].c_str(), nullptr) < 0.0;
+    }
+    EXPECT_TRUE(negative);
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // ROI image export
 // ---------------------------------------------------------------------------------------------------------------------
@@ -622,4 +664,25 @@ TEST(RoiImageExportTest, SanitizesFileNames) {
     EXPECT_EQ(SanitizeFileName("R\xC3\xA9gion"), "R__gion");
     EXPECT_EQ(SanitizeFileName(std::string(150, 'a')).size(), 100u);
     EXPECT_EQ(SanitizeFileName("tumor-2_left.v1"), "tumor-2_left.v1");
+}
+
+TEST(RoiImageExportTest, DerivedFileNamesNeverCollide) {
+    const cv::Mat image = Pattern8(40, 40);
+    const RectangleRoi square{2, 2, 6, 6};
+    // ROI names equal to another ROI's mask or quantized file name, in both orders
+    const std::vector<Roi> rois = {MakeRoi("1", "a", square), MakeRoi("2", "a_mask", square), MakeRoi("3", "b_mask", square),
+        MakeRoi("4", "b", square), MakeRoi("5", "x", square), MakeRoi("6", "x_q32", square), MakeRoi("7", "manifest.json", square)};
+    RoiImageExportOptions options;
+    options.include_quantized = true;
+
+    const std::vector<ExportedFile> files = ExportRoiImages(image, rois, DefaultSettings(8), options);
+    std::set<std::string> names;
+    for (const ExportedFile& file : files) {
+        EXPECT_TRUE(names.insert(file.name).second) << "duplicate file name " << file.name;
+    }
+    EXPECT_EQ(files.size(), rois.size() * 3 + 1);
+    for (const char* name : {"a.png", "a_mask.png", "a_mask_2.png", "a_mask_2_mask.png", "b_mask.png", "b_mask_mask.png", "b_2.png",
+             "b_2_mask.png", "x_q32.png", "x_q32_2.png", "x_q32_2_q32.png", "manifest.json.png", "manifest.json"}) {
+        EXPECT_EQ(names.count(name), 1u) << name;
+    }
 }
