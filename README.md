@@ -238,15 +238,15 @@ To rebuild later, activate the environment again with `source .venv/bin/activate
 | `Dockerfile`, `compose.yaml` | Server image and deployment example (`doc/deployment.md`) |
 | `.github/workflows/` | CI: core, unit and end-to-end tests on macOS and Ubuntu; Docker image smoke test |
 | `doc/` | Sphinx documentation (user guide with screenshots, GLCM equations and references, developer guide), the design plan and the deployment guide |
-| `samples/` | Sample images: synthetic test patterns, CC0 textures, including the default sample `textures/camera.png` (see `samples/README.md`) |
-| `scripts/` | Helper scripts, e.g. `generate-samples.ts` (`npm run samples`) |
+| `samples/` | Sample images: synthetic test patterns, CC0 textures (including the default sample `textures/camera.png`) and medical images: CT, MRI and a chest X-ray (see `samples/README.md`) |
+| `scripts/` | Helper scripts, e.g. `generate-samples.ts` (`npm run samples`) and `fetch-medical-samples.py` |
 
 ## License
 
 GLCM Texture Analysis is free and open-source software, released under the [MIT License](LICENSE). You may use, copy, modify and distribute it, including in commercial and closed-source software, as long as the copyright notice and the license text are kept.
 
 Exceptions:
-- **Sample images from other sources:** the images in `samples/textures/` come from scikit-image and keep their own licenses (CC0 or no known copyright restrictions). See [`samples/README.md`](samples/README.md).
+- **Sample images from other sources:** the images in `samples/textures/` come from scikit-image (CC0 or no known copyright restrictions), and those in `samples/medical/` from The Cancer Imaging Archive (CC BY 3.0 and CC BY 4.0, with required citations) and OpenNeuro (CC0). They keep their own licenses. See [`samples/README.md`](samples/README.md).
 - **Dependencies:** OpenCV, Eigen, nlohmann/json, Node.js packages and the other dependencies are distributed under their own licenses.
 
 ## References

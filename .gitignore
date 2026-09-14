@@ -1,6 +1,7 @@
 build/
 doc/_build/
 doc/.venv/
+.venv-medical/
 CLAUDE.md
 .idea/
 node_modules/

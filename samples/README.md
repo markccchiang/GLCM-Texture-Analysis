@@ -34,3 +34,28 @@ These are copied unchanged from [scikit-image 0.25.2, `skimage/data`](https://gi
 | `coins.png` | 384 × 303 | Greek coins from Pompeii | No known copyright restrictions | 352 / 525 / 333 / 530 |
 
 All five are 8-bit grayscale PNGs. `camera.png` is the default sample: **Open sample image** on the start screen opens it, and the documentation screenshots use it.
+
+## Medical images (`medical/`)
+
+One slice or radiograph each, from public de-identified datasets, stored as lossless 16-bit grayscale PNGs. They exercise the 16-bit path with real clinical intensities; choose **Quantization** and **Gray levels** in the Analysis Settings to suit each image's value range. They are for testing and demonstration only, not for diagnosis.
+
+`scripts/fetch-medical-samples.py` downloads the source data and writes these files; the pinned series and instances make the output identical on every run (see the script for the Python packages it needs). They keep the licences below, not the repository's MIT License.
+
+| File | Size | Content | Conversion |
+| --- | --- | --- | --- |
+| `ct-chest.png` | 512 × 512 | Axial chest CT at z = −115 mm (0.70 mm pixels, 2.5 mm slices): both lungs, the heart and great vessels, and a nodule in the left lung | Stored value = Hounsfield units + 1024, clipped to 0–4095 (12 bits); air ≈ 0, water ≈ 1024, outside the scan field 0 |
+| `mri-brain-t1.png` | 160 × 192 | Axial T1-weighted brain MRI above the ventricles: gray and white matter, sulci and skull; pixels are 1 mm wide and 1.33 mm high | Slice 120 of the volume in RAS orientation, anterior at the top; original values 0–504 |
+| `xray-chest.png` | 1024 × 838 | Posteroanterior (PA) chest radiograph with an "R" marker | Reduced from 2846 × 2330 (0.148 mm pixels) by area averaging; 15-bit detector values, 76–30,619 |
+
+### Sources, licences and required citations
+
+- **`ct-chest.png`** — [LIDC-IDRI](https://www.cancerimagingarchive.net/collection/lidc-idri/) collection, patient LIDC-IDRI-0001, from The Cancer Imaging Archive (TCIA). Licence: [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+  - Armato III, S. G., McLennan, G., Bidaut, L., McNitt-Gray, M. F., Meyer, C. R., Reeves, A. P., et al. (2015). *Data From LIDC-IDRI* (Version 4) [Dataset]. The Cancer Imaging Archive. https://doi.org/10.7937/K9/TCIA.2015.LO9QL9SX
+  - Armato, S. G., McLennan, G., Bidaut, L., et al. (2011). The Lung Image Database Consortium (LIDC) and Image Database Resource Initiative (IDRI): A Completed Reference Database of Lung Nodules on CT Scans. *Medical Physics*, 38(2), 915–931. https://doi.org/10.1118/1.3528204
+- **`xray-chest.png`** — [COVID-19-AR](https://www.cancerimagingarchive.net/collection/covid-19-ar/) collection, patient COVID-19-AR-16406496, from TCIA. Licence: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+  - Desai, S., Baghal, A., Wongsurawat, T., Al-Shukri, S., Gates, K., Farmer, P., et al. (2020). *Chest Imaging with Clinical and Genomic Correlates Representing a Rural COVID-19 Positive Population* (Version 1) [Dataset]. The Cancer Imaging Archive. https://doi.org/10.7937/TCIA.2020.PY71-5978
+  - Desai, S., Baghal, A., Wongsurawat, T., et al. (2020). Chest imaging representing a COVID-19 positive rural U.S. population. *Scientific Data*, 7(1). https://doi.org/10.1038/s41597-020-00741-6
+- **`mri-brain-t1.png`** — OpenNeuro dataset [ds000001](https://openneuro.org/datasets/ds000001), subject sub-01, `anat/sub-01_T1w.nii.gz`. Licence: [CC0](https://creativecommons.org/publicdomain/zero/1.0/).
+  - Schonberg, T., Trepel, C., Fox, C., & Poldrack, R. A. (2020). *Balloon Analog Risk-taking Task* [Dataset]. OpenNeuro. https://doi.org/10.18112/openneuro.ds000001.v1.0.0
+
+Data from TCIA is used under the [TCIA Data Usage Policy](https://www.cancerimagingarchive.net/data-usage-policies-and-restrictions/): keep the attribution above with the images, and do not attempt to identify the participants.

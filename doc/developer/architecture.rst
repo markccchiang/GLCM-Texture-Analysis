@@ -59,7 +59,7 @@ Repository layout
    * - ``e2e/``
      - Playwright tests against the built app and real servers
    * - ``samples/``, ``scripts/``
-     - Sample images (``scripts/generate-samples.ts`` makes the synthetic ones) and the Docker smoke test
+     - Sample images (``scripts/generate-samples.ts`` makes the synthetic ones, ``scripts/fetch-medical-samples.py`` the medical ones) and the Docker smoke test
    * - ``doc/``
      - This documentation, the design plan and the deployment guide
    * - ``Dockerfile``, ``compose.yaml``, ``.github/workflows/``
