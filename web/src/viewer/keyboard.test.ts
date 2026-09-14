@@ -1,0 +1,48 @@
+import { describe, expect, it } from 'vitest';
+import { keyToAction, type KeyInput } from './keyboard';
+
+const view = { width: 800, height: 600 };
+const key = (name: string, modifiers: Partial<KeyInput> = {}): KeyInput => ({
+  key: name,
+  shiftKey: false,
+  ctrlKey: false,
+  metaKey: false,
+  altKey: false,
+  ...modifiers,
+});
+
+describe('keyToAction', () => {
+  it('maps zoom keys', () => {
+    const context = { hasSelection: false, view };
+    expect(keyToAction(key('+'), context)).toEqual({ kind: 'zoomIn' });
+    expect(keyToAction(key('='), context)).toEqual({ kind: 'zoomIn' });
+    expect(keyToAction(key('-'), context)).toEqual({ kind: 'zoomOut' });
+    expect(keyToAction(key('1'), context)).toEqual({ kind: 'zoom100' });
+    expect(keyToAction(key('0'), context)).toEqual({ kind: 'fit' });
+    expect(keyToAction(key('n'), context)).toEqual({ kind: 'toggleNavigator' });
+  });
+
+  it('pans with arrows when nothing is selected', () => {
+    const context = { hasSelection: false, view };
+    expect(keyToAction(key('ArrowLeft'), context)).toEqual({ kind: 'pan', dx: 50, dy: -0 });
+    expect(keyToAction(key('ArrowDown'), context)).toEqual({ kind: 'pan', dx: -0, dy: -50 });
+    expect(keyToAction(key('ArrowRight', { shiftKey: true }), context)).toEqual({ kind: 'pan', dx: -800, dy: -0 });
+    expect(keyToAction(key('ArrowUp', { shiftKey: true }), context)).toEqual({ kind: 'pan', dx: -0, dy: 600 });
+  });
+
+  it('nudges the selection with arrows and zooms to it with Z', () => {
+    const context = { hasSelection: true, view };
+    expect(keyToAction(key('ArrowLeft'), context)).toEqual({ kind: 'nudge', dx: -1, dy: 0 });
+    expect(keyToAction(key('ArrowDown', { shiftKey: true }), context)).toEqual({ kind: 'nudge', dx: 0, dy: 10 });
+    expect(keyToAction(key('z'), context)).toEqual({ kind: 'zoomToSelection' });
+    expect(keyToAction(key('z'), { hasSelection: false, view })).toBeNull();
+  });
+
+  it('leaves modified keys and other keys alone', () => {
+    const context = { hasSelection: false, view };
+    expect(keyToAction(key('0', { metaKey: true }), context)).toBeNull();
+    expect(keyToAction(key('ArrowLeft', { altKey: true }), context)).toBeNull();
+    expect(keyToAction(key('+', { ctrlKey: true }), context)).toBeNull();
+    expect(keyToAction(key('q'), context)).toBeNull();
+  });
+});

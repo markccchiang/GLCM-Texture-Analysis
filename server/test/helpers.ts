@@ -17,7 +17,7 @@ export interface TestApp {
 /** App with its own temporary data directory */
 export async function createTestApp(overrides: Partial<ServerConfig> = {}): Promise<TestApp> {
   const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'glcm-server-test-'));
-  const config: ServerConfig = { ...DEFAULT_CONFIG, dataDir, logLevel: 'silent', ...overrides };
+  const config: ServerConfig = { ...DEFAULT_CONFIG, dataDir, logLevel: 'silent', webDir: null, samplesDir: null, ...overrides };
   const app = await buildApp(config, { logger: false });
   return {
     app,

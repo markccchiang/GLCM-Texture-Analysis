@@ -15,11 +15,17 @@ export interface ServerConfig {
   /** Disk space for cached display.png renderings */
   displayCacheBytes: number;
   logLevel: string;
+  /** Built web app (web/dist); not served when missing */
+  webDir: string | null;
+  /** Sample images offered on the start screen; none when null */
+  samplesDir: string | null;
 }
+
+const REPOSITORY_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
 const MIB = 1024 * 1024;
 
-export const DEFAULT_CONFIG: Omit<ServerConfig, 'dataDir'> = {
+export const DEFAULT_CONFIG: Omit<ServerConfig, 'dataDir' | 'webDir' | 'samplesDir'> = {
   host: '127.0.0.1',
   port: 8080,
   maxUploadBytes: 200 * MIB,
@@ -54,6 +60,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     displayMaxSize: integerSetting(env, 'GLCM_DISPLAY_MAX_SIZE', DEFAULT_CONFIG.displayMaxSize, 1),
     displayCacheBytes: integerSetting(env, 'GLCM_DISPLAY_CACHE_BYTES', DEFAULT_CONFIG.displayCacheBytes, 0),
     logLevel: env.GLCM_LOG_LEVEL || DEFAULT_CONFIG.logLevel,
+    webDir: path.resolve(env.GLCM_WEB_DIR || path.join(REPOSITORY_ROOT, 'web', 'dist')),
+    samplesDir: path.resolve(env.GLCM_SAMPLES_DIR || path.join(REPOSITORY_ROOT, 'samples')),
   };
 }
 

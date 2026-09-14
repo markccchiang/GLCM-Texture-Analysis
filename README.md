@@ -121,22 +121,33 @@ ctest --test-dir build
 
 The tests (`core/tests/`) check the features against Haralick's worked example and against a simple, independent GLCM implementation, and cover ROI masks, image loading, quantization, display rendering, the analysis pipeline and the exporters.
 
-## Web server (in development)
+## Web application (in development)
 
-`server/` is the API server of the planned web application (`doc/ui-design-plan.md`, phase 1):
-- it uses the C++ core through a Node-API addon (`bindings/node`);
-- it shares its request and response schemas with the future web app through `packages/api`.
+The web application (`doc/ui-design-plan.md`) has three parts:
+- `web/` is the browser app (React, Mantine, Konva). So far it opens images (file dialog, drag-and-drop or sample images) and has zoom/pan, a navigator, window/level and a pixel readout. ROI tools and measurement follow in later phases.
+- `server/` is the API server. It uses the C++ core through a Node-API addon (`bindings/node`) and serves the built web app.
+- `packages/api` holds the request and response schemas shared by both.
 
 It needs Node.js 24 or newer, plus the C++ dependencies above.
 
 ```bash
 npm install             # all workspaces
 npm run build:native    # build the addon with cmake-js (again after changing core/)
-npm test                # addon and server tests (Vitest)
+npm run build:web       # build the web app into web/dist
+npm start               # open http://127.0.0.1:8080/
+npm test                # addon, server and web unit tests (Vitest)
 npm run typecheck       # TypeScript
-npm start               # http://127.0.0.1:8080/api/v1/health
 npm run openapi         # regenerate packages/api/openapi.json
 ```
+
+For web development, run `npm start` and `npm run dev:web` side by side, then open http://127.0.0.1:5173/. The Vite dev server reloads on changes and forwards `/api` to port 8080.
+
+Images up to 4096 × 4096 px are sent to the browser as raw samples and rendered there with a WebGL2 shader, which falls back to a lookup table. Its output is identical to the server's `display.png` rendering. Larger images are shown through `display.png`, and their pixel values come from `/pixel`.
+
+Viewer controls:
+- Wheel or pinch zooms; a trackpad two-finger scroll pans (configurable in *Edit ▸ Preferences*).
+- Space + drag, a middle-button drag or the Pan tool pans.
+- `+`/`−` zoom, `1` shows 100 %, `0` fits the image, arrow keys pan and `N` toggles the navigator.
 
 For now the server only listens on a loopback address; token authentication for server deployments comes in a later phase. It is configured with environment variables:
 
@@ -195,7 +206,8 @@ To rebuild later, activate the environment again with `source .venv/bin/activate
 | `controller/`, `viewer/` | Legacy desktop application: selection loops and the cvui score panel (removed in phase 3 of `doc/ui-design-plan.md`) |
 | `bindings/node/` | Node-API addon (`@glcm/native`) exposing `glcm_core` to the server |
 | `packages/api/` | Shared API schemas and types (`@glcm/api`) and the generated OpenAPI document |
-| `server/` | Fastify API server (`@glcm/server`) |
+| `server/` | Fastify API server (`@glcm/server`); also serves the built web app and the sample images |
+| `web/` | Browser app (`@glcm/web`): React, Mantine, Konva, WebGL2 image rendering |
 | `doc/` | Sphinx documentation: GLCM equations and references |
 | `samples/` | Sample images: synthetic test patterns, CC0 textures and `lena.jpg` (see `samples/README.md`) |
 | `scripts/` | Helper scripts, e.g. `generate-samples.ts` (`npm run samples`) |

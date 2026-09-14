@@ -7,14 +7,17 @@
   "workspaces": [
     "packages/api",
     "bindings/node",
-    "server"
+    "server",
+    "web"
   ],
   "engines": {
     "node": ">=24"
   },
   "scripts": {
     "build:native": "npm run build -w @glcm/native",
-    "typecheck": "tsc -p tsconfig.json",
+    "build:web": "npm run build -w @glcm/web",
+    "dev:web": "npm run dev -w @glcm/web",
+    "typecheck": "tsc -p tsconfig.json && tsc -p web/tsconfig.json",
     "test": "vitest run",
     "start": "npm run start -w @glcm/server",
     "dev": "npm run dev -w @glcm/server",

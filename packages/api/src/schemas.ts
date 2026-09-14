@@ -135,6 +135,26 @@ export const PixelResponse = Type.Object({
 });
 export type PixelResponse = Static<typeof PixelResponse>;
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Sample images
+// ---------------------------------------------------------------------------------------------------------------------
+
+export const SAMPLE_PATH_PATTERN = '^[A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)*\\.[A-Za-z0-9]+$';
+
+export const SampleInfo = Type.Object({
+  path: Type.String({ pattern: SAMPLE_PATH_PATTERN, description: 'Path relative to the samples directory, e.g. "textures/brick.png"' }),
+  name: Type.String({ description: 'File name' }),
+  group: Type.String({ description: 'Sub-directory, or "" for the top level' }),
+  sizeBytes: Type.Integer(),
+});
+export type SampleInfo = Static<typeof SampleInfo>;
+
+export const SamplesResponse = Type.Object({
+  samples: Type.Array(SampleInfo),
+  defaultSample: Type.Union([Type.String(), Type.Null()], { description: 'Sample opened by "Open sample image"' }),
+});
+export type SamplesResponse = Static<typeof SamplesResponse>;
+
 // Headers of GET /images/{id}/raw
 export const RAW_HEADERS = {
   width: 'x-image-width',

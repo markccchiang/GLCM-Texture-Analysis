@@ -5,3 +5,4 @@ CLAUDE.md
 .idea/
 node_modules/
 bindings/node/build/
+web/dist/

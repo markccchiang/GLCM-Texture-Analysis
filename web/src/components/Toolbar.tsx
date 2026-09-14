@@ -1,0 +1,96 @@
+import { ActionIcon, Button, Divider, Menu, Tooltip } from '@mantine/core';
+import {
+  IconArrowsMaximize,
+  IconChevronDown,
+  IconHandStop,
+  IconOvalVertical,
+  IconPlayerPlay,
+  IconPointer,
+  IconPolygon,
+  IconScribble,
+  IconSquare,
+  IconZoomIn,
+  IconZoomOut,
+} from '@tabler/icons-react';
+import type { ReactNode } from 'react';
+import { useViewer, type Tool } from '../stores/viewerStore';
+import { WindowLevelControl } from './WindowLevelControl';
+
+const ZOOM_PRESETS = [0.25, 0.5, 1, 2, 4, 8, 16, 32];
+
+function ToolButton({ label, active, disabled, onClick, children }: { label: string; active?: boolean; disabled?: boolean; onClick?: () => void; children: ReactNode }) {
+  return (
+    <Tooltip label={label} openDelay={400}>
+      <ActionIcon variant={active ? 'filled' : 'subtle'} color={active ? 'blue' : 'gray'} size="md" disabled={disabled} onClick={onClick} aria-label={label} aria-pressed={active}>
+        {children}
+      </ActionIcon>
+    </Tooltip>
+  );
+}
+
+export function Toolbar() {
+  const tool = useViewer((state) => state.tool);
+  const scale = useViewer((state) => state.viewport.scale);
+  const hasImage = useViewer((state) => state.image !== null);
+  const viewer = useViewer.getState;
+  const selectTool = (next: Tool) => () => viewer().setTool(next);
+
+  return (
+    <div className="toolbar" role="toolbar" aria-label="Tools">
+      <ToolButton label="Pointer" active={tool === 'pointer'} onClick={selectTool('pointer')}>
+        <IconPointer size={18} />
+      </ToolButton>
+      <ToolButton label="Pan (hold Space)" active={tool === 'pan'} onClick={selectTool('pan')}>
+        <IconHandStop size={18} />
+      </ToolButton>
+
+      <Divider orientation="vertical" my={8} />
+      <ToolButton label="Rectangle (R) — phase 3" disabled>
+        <IconSquare size={18} />
+      </ToolButton>
+      <ToolButton label="Ellipse (E) — phase 3" disabled>
+        <IconOvalVertical size={18} />
+      </ToolButton>
+      <ToolButton label="Polygon (P) — phase 3" disabled>
+        <IconPolygon size={18} />
+      </ToolButton>
+      <ToolButton label="Freehand (F) — phase 3" disabled>
+        <IconScribble size={18} />
+      </ToolButton>
+
+      <Divider orientation="vertical" my={8} />
+      <ToolButton label="Zoom out (−)" disabled={!hasImage} onClick={() => viewer().zoomStep(-1)}>
+        <IconZoomOut size={18} />
+      </ToolButton>
+      <Menu position="bottom" width={110}>
+        <Menu.Target>
+          <Button variant="subtle" color="gray" size="compact-sm" w={78} disabled={!hasImage} rightSection={<IconChevronDown size={12} />} className="mono" aria-label="Zoom level">
+            {hasImage ? `${Math.round(scale * 100)}%` : '–'}
+          </Button>
+        </Menu.Target>
+        <Menu.Dropdown>
+          {ZOOM_PRESETS.map((preset) => (
+            <Menu.Item key={preset} onClick={() => viewer().zoomToScale(preset)}>
+              {preset * 100} %
+            </Menu.Item>
+          ))}
+        </Menu.Dropdown>
+      </Menu>
+      <ToolButton label="Zoom in (+)" disabled={!hasImage} onClick={() => viewer().zoomStep(1)}>
+        <IconZoomIn size={18} />
+      </ToolButton>
+      <ToolButton label="Fit to window (0)" disabled={!hasImage} onClick={() => viewer().fit()}>
+        <IconArrowsMaximize size={18} />
+      </ToolButton>
+
+      <Divider orientation="vertical" my={8} />
+      <WindowLevelControl />
+
+      <Tooltip label="Measurement arrives in phase 4">
+        <Button ml="auto" size="compact-sm" leftSection={<IconPlayerPlay size={14} />} disabled>
+          Measure
+        </Button>
+      </Tooltip>
+    </div>
+  );
+}

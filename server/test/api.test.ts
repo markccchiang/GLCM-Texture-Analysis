@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { CatalogResponse } from '@glcm/api';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { isLoopbackHost, loadConfig } from '../src/config.js';
@@ -55,6 +56,8 @@ describe('system routes', () => {
       '/api/v1/images/{id}/display.png',
       '/api/v1/images/{id}/pixel',
       '/api/v1/images/{id}/raw',
+      '/api/v1/samples',
+      '/api/v1/samples/file',
     ]);
     expect(Object.keys(spec.paths['/api/v1/images/{id}']).sort()).toEqual(['delete', 'get']);
   });
@@ -64,6 +67,13 @@ describe('configuration', () => {
   it('reads GLCM_* variables with defaults', () => {
     const config = loadConfig({ GLCM_PORT: '9000', GLCM_DATA_DIR: '/tmp/glcm-data', GLCM_MAX_UPLOAD_BYTES: '1048576' });
     expect(config).toMatchObject({ host: '127.0.0.1', port: 9000, dataDir: '/tmp/glcm-data', maxUploadBytes: 1048576, displayMaxSize: 4096 });
+    const repository = path.resolve(import.meta.dirname, '..', '..');
+    expect(config.webDir).toBe(path.join(repository, 'web', 'dist'));
+    expect(config.samplesDir).toBe(path.join(repository, 'samples'));
+    expect(loadConfig({ GLCM_WEB_DIR: '/srv/web', GLCM_SAMPLES_DIR: '/srv/samples' })).toMatchObject({
+      webDir: '/srv/web',
+      samplesDir: '/srv/samples',
+    });
     expect(() => loadConfig({ GLCM_PORT: 'eighty' })).toThrow(/GLCM_PORT/);
     expect(() => loadConfig({ GLCM_MAX_UPLOAD_BYTES: '0' })).toThrow(/GLCM_MAX_UPLOAD_BYTES/);
   });

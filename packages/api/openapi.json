@@ -1115,6 +1115,132 @@
           }
         }
       }
+    },
+    "/api/v1/samples": {
+      "get": {
+        "summary": "List sample images",
+        "tags": [
+          "samples"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "samples",
+                    "defaultSample"
+                  ],
+                  "properties": {
+                    "samples": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "path",
+                          "name",
+                          "group",
+                          "sizeBytes"
+                        ],
+                        "properties": {
+                          "path": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)*\\.[A-Za-z0-9]+$",
+                            "description": "Path relative to the samples directory, e.g. \"textures/brick.png\""
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "File name"
+                          },
+                          "group": {
+                            "type": "string",
+                            "description": "Sub-directory, or \"\" for the top level"
+                          },
+                          "sizeBytes": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "defaultSample": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Sample opened by \"Open sample image\""
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/samples/file": {
+      "get": {
+        "summary": "Download a sample image",
+        "tags": [
+          "samples"
+        ],
+        "description": "The web app uploads the downloaded file with POST /images, like a file chosen by the user.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 1024
+            },
+            "in": "query",
+            "name": "path",
+            "required": true,
+            "description": "Sample path from GET /samples"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image file",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "tags": [
@@ -1125,6 +1251,10 @@
     {
       "name": "images",
       "description": "Upload, display and pixel data"
+    },
+    {
+      "name": "samples",
+      "description": "Sample images for the start screen"
     }
   ]
 }

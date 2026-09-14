@@ -10,8 +10,10 @@ import { ApiError } from './errors.js';
 import { catalogRoutes } from './routes/catalog.js';
 import { healthRoutes } from './routes/health.js';
 import { imageRoutes } from './routes/images.js';
+import { sampleRoutes } from './routes/samples.js';
 import { DisplayCache } from './storage/DisplayCache.js';
 import { ImageStore } from './storage/ImageStore.js';
+import { hasWebApp, registerWebApp, sendWebApp, wantsWebApp } from './web.js';
 
 export interface BuildAppOptions {
   /** false disables request logging (tests, OpenAPI generation) */
@@ -41,6 +43,7 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
       tags: [
         { name: 'system', description: 'Health and feature catalog' },
         { name: 'images', description: 'Upload, display and pixel data' },
+        { name: 'samples', description: 'Sample images for the start screen' },
       ],
     },
   });
@@ -67,15 +70,24 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
     return reply.code(500).send({ error: 'InternalError', message: 'Internal server error' });
   });
 
-  app.setNotFoundHandler((request, reply) =>
-    reply.code(404).send({ error: 'NotFound', message: `Route ${request.method} ${request.url} was not found` }),
-  );
+  const serveWebApp = hasWebApp(config.webDir);
+  if (serveWebApp) {
+    await registerWebApp(app, config.webDir!);
+  }
+
+  app.setNotFoundHandler((request, reply) => {
+    if (serveWebApp && wantsWebApp(request)) {
+      return sendWebApp(reply);
+    }
+    return reply.code(404).send({ error: 'NotFound', message: `Route ${request.method} ${request.url} was not found` });
+  });
 
   await app.register(
     async (api) => {
       await api.register(healthRoutes);
       await api.register(catalogRoutes, { config });
       await api.register(imageRoutes, { config, store, displayCache });
+      await api.register(sampleRoutes, { samplesDir: config.samplesDir });
     },
     { prefix: API_PREFIX },
   );
