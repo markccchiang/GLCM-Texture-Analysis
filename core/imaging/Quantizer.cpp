@@ -4,6 +4,7 @@
 #include <climits>
 #include <cmath>
 #include <cstdint>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 
@@ -76,9 +77,16 @@ QuantizationResult Quantize(const cv::Mat& gray, const cv::Mat& mask, int gray_l
             result.upper = roi_max;
             const double levels_needed = std::floor((roi_max - roi_min) / settings.bin_width) + 1.0;
             if (levels_needed > gray_levels) {
-                throw std::invalid_argument("A bin width of " + std::to_string(settings.bin_width) + " needs " +
-                                            std::to_string(static_cast<long long>(levels_needed)) +
-                                            " gray levels for this ROI, more than Ng = " + std::to_string(gray_levels));
+                std::ostringstream message;
+                message << "A bin width of " << settings.bin_width << " needs ";
+                // For tiny bin widths the count exceeds every integer type (and is infinite for the smallest ones)
+                if (levels_needed < 1e15) {
+                    message << static_cast<long long>(levels_needed);
+                } else {
+                    message << "more than 10^15";
+                }
+                message << " gray levels for this ROI, more than Ng = " << gray_levels;
+                throw std::invalid_argument(message.str());
             }
             break;
         }

@@ -177,3 +177,28 @@ TEST(RoiTest, InvalidInputsThrow) {
     EXPECT_THROW(MaskBoundingBox(cv::Mat::zeros(5, 5, CV_16UC1)), std::invalid_argument);
     EXPECT_THROW(CountMaskPixels(cv::Mat::zeros(5, 5, CV_32FC1)), std::invalid_argument);
 }
+
+// Finite coordinates far outside the image must neither produce NaN (undefined when converted to int) nor wrong masks
+TEST(RoiTest, ExtremeCoordinatesGiveCorrectMasks) {
+    const cv::Size size(10, 10);
+    const double max = std::numeric_limits<double>::max();
+
+    // The edge from (-1e308, 0.5) to (1e308, 9.5) crosses the image at y = 5, so the polygon covers the rows below it.
+    // The direct crossing formula would overflow: (y - 0.5) * (1e308 - -1e308) is 0 * inf at row 0 and inf below.
+    const cv::Mat above_edge = RasterizeMask(Polygon({{-1e308, 0.5}, {1e308, 9.5}, {1e308, 20.0}, {-1e308, 20.0}}), size);
+    EXPECT_TRUE(MasksEqual(above_edge, RasterizeMask(RectangleRoi{0.0, 5.0, 10.0, 5.0}, size)));
+    const cv::Mat full_band = RasterizeMask(Polygon({{-max, 2.0}, {max, 2.0}, {max, 6.0}, {-max, 6.0}}), size);
+    EXPECT_TRUE(MasksEqual(full_band, RasterizeMask(RectangleRoi{0.0, 2.0, 10.0, 4.0}, size)));
+
+    // A radius whose square overflows: the bounding box computation would take sqrt(inf * 0)
+    const cv::Mat wide_ellipse = RasterizeMask(EllipseRoi{5.0, 5.0, 1e200, 3.0, 0.0}, size);
+    EXPECT_TRUE(MasksEqual(wide_ellipse, RasterizeMask(RectangleRoi{0.0, 2.0, 10.0, 6.0}, size)));
+    const cv::Mat tall_ellipse = RasterizeMask(EllipseRoi{5.0, 5.0, 3.0, 1e200, 0.0}, size);
+    EXPECT_TRUE(MasksEqual(tall_ellipse, RasterizeMask(RectangleRoi{2.0, 0.0, 6.0, 10.0}, size)));
+    // A radius whose square underflows to 0 contains no pixel centre
+    EXPECT_EQ(CountMaskPixels(RasterizeMask(EllipseRoi{5.0, 5.0, 1e-200, 3.0, 0.0}, size)), 0);
+
+    // Rectangles whose far corner is computed from extreme values: ending at the origin, and covering the image
+    EXPECT_EQ(CountMaskPixels(RasterizeMask(RectangleRoi{-max, -max, max, max}, size)), 0);
+    EXPECT_EQ(CountMaskPixels(RasterizeMask(RectangleRoi{-1e308, -1e308, max, max}, size)), 100);
+}

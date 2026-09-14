@@ -148,6 +148,26 @@ TEST(QuantizerTest, FixedBinWidthStartsAtRoiMinimum) {
     EXPECT_THROW(Quantize(image, mask, 8, Settings(QuantizationMethod::FixedBinWidth, 0, 0, 1.0)), std::invalid_argument);
 }
 
+TEST(QuantizerTest, TinyBinWidthsAreReportedWithoutOverflow) {
+    cv::Mat image(1, 2, CV_16UC1);
+    image.at<uint16_t>(0, 0) = 0;
+    image.at<uint16_t>(0, 1) = 65535;
+    // The number of levels needed does not fit into an integer for tiny widths (and is infinite for the smallest double)
+    const std::vector<std::pair<double, std::string>> cases = {
+        {1e-15, "needs more than"}, {5e-324, "needs more than"}, {1.0, "needs 65536"}};
+    for (const auto& [bin_width, expected] : cases) {
+        SCOPED_TRACE(bin_width);
+        try {
+            Quantize(image, FullMask(image), 256, Settings(QuantizationMethod::FixedBinWidth, 0, 65535, bin_width));
+            FAIL() << "expected std::invalid_argument";
+        } catch (const std::invalid_argument& error) {
+            const std::string message = error.what();
+            EXPECT_NE(message.find(expected), std::string::npos) << message;
+            EXPECT_EQ(message.find("0.000000"), std::string::npos) << message;
+        }
+    }
+}
+
 TEST(QuantizerTest, NoneKeepsValuesBelowNg) {
     cv::Mat image = Gradient8()(cv::Rect(0, 0, 16, 1)).clone(); // values 0 ... 15
     const auto result = Quantize(image, FullMask(image), 16, Settings(QuantizationMethod::None));
@@ -347,15 +367,20 @@ void Append(std::vector<uchar>& bytes, std::initializer_list<int> values) {
     }
 }
 
+// Bytes beyond the eighth are 0 (shifting a 64-bit value by 64 or more bits is undefined)
+uchar ByteOf(uint64_t value, int index) {
+    return index < 8 ? static_cast<uchar>((value >> (8 * index)) & 0xFF) : 0;
+}
+
 void AppendBig(std::vector<uchar>& bytes, uint64_t value, int count) {
     for (int i = count - 1; i >= 0; --i) {
-        bytes.push_back(static_cast<uchar>((value >> (8 * i)) & 0xFF));
+        bytes.push_back(ByteOf(value, i));
     }
 }
 
 void AppendLittle(std::vector<uchar>& bytes, uint64_t value, int count) {
     for (int i = 0; i < count; ++i) {
-        bytes.push_back(static_cast<uchar>((value >> (8 * i)) & 0xFF));
+        bytes.push_back(ByteOf(value, i));
     }
 }
 

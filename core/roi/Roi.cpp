@@ -19,8 +19,12 @@ void RequireFinite(std::initializer_list<double> values, const char* shape) {
     }
 }
 
-// Clamps a (possibly huge) floating-point index to [0, size] before converting it to int
+// Clamps a (possibly huge) floating-point index to [0, size] before converting it to int. The callers never pass NaN;
+// if one did, it maps to 0 instead of an undefined conversion.
 int ClampIndex(double index, int size) {
+    if (std::isnan(index)) {
+        return 0;
+    }
     return static_cast<int>(std::clamp(index, 0.0, static_cast<double>(size)));
 }
 
@@ -60,9 +64,10 @@ void Fill(const EllipseRoi& ellipse, cv::Mat& mask) {
     const double rx2 = ellipse.rx * ellipse.rx;
     const double ry2 = ellipse.ry * ellipse.ry;
 
-    // Half extents of the rotated ellipse's bounding box, used only to limit the pixels tested
-    const double half_width = std::sqrt(rx2 * cos_theta * cos_theta + ry2 * sin_theta * sin_theta);
-    const double half_height = std::sqrt(rx2 * sin_theta * sin_theta + ry2 * cos_theta * cos_theta);
+    // Half extents of the rotated ellipse's bounding box, used only to limit the pixels tested. std::hypot avoids squaring
+    // the radii: for a huge radius the square overflows, and sqrt(inf * 0) would be NaN when the angle is 0 or 90 degrees.
+    const double half_width = std::hypot(ellipse.rx * cos_theta, ellipse.ry * sin_theta);
+    const double half_height = std::hypot(ellipse.rx * sin_theta, ellipse.ry * cos_theta);
     const int first_col = ClampIndex(std::floor(ellipse.cx - half_width), mask.cols);
     const int end_col = ClampIndex(std::ceil(ellipse.cx + half_width) + 1.0, mask.cols);
     const int first_row = ClampIndex(std::floor(ellipse.cy - half_height), mask.rows);
@@ -111,7 +116,14 @@ void Fill(const PolygonRoi& polygon, cv::Mat& mask) {
             const auto& a = polygon.points[i];
             const auto& b = polygon.points[(i + 1) % count];
             if ((a[1] <= y && y < b[1]) || (b[1] <= y && y < a[1])) {
-                crossings.push_back(a[0] + (y - a[1]) * (b[0] - a[0]) / (b[1] - a[1]));
+                double x = a[0] + (y - a[1]) * (b[0] - a[0]) / (b[1] - a[1]);
+                if (!std::isfinite(x)) {
+                    // Vertices far outside the image, where b[0] - a[0] overflows (0 * inf is NaN). Interpolate without
+                    // that difference: t is in [0, 1], so the crossing is finite or +-inf, which ClampIndex handles.
+                    const double t = (y - a[1]) / (b[1] - a[1]);
+                    x = a[0] * (1.0 - t) + b[0] * t;
+                }
+                crossings.push_back(x);
             }
         }
         std::sort(crossings.begin(), crossings.end());
