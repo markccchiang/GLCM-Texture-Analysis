@@ -277,6 +277,25 @@ describe('job limits and fairness', () => {
     expect(manager.results(small).results.map((result) => result.status)).toEqual(['ok', 'ok']);
   });
 
+  it('lets flush() wait for the results of finished analyses to be stored', async () => {
+    let stored = false;
+    const manager = new JobManager({
+      concurrency: 1,
+      maxPendingJobs: 10,
+      retainFinished: 10,
+      onFinished: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        stored = true;
+      },
+    });
+    const state = manager.start(request(1), image, pixels);
+    await finished(state);
+    expect(stored).toBe(false);
+    await manager.flush();
+    expect(stored).toBe(true);
+    await manager.flush();
+  });
+
   it('refuses an analysis with more jobs than the server allows', async () => {
     const limited = await createTestApp({ maxPendingJobs: 2 });
     try {

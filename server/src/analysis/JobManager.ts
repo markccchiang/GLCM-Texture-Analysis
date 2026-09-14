@@ -103,6 +103,8 @@ export class JobManager {
   private readonly queues = new Map<InternalState, Job[]>();
   private queued = 0;
   private running = 0;
+  /** onFinished calls that have not settled yet */
+  private readonly pendingFinishes = new Set<Promise<unknown>>();
 
   constructor(private readonly options: JobManagerOptions) {}
 
@@ -270,9 +272,16 @@ export class JobManager {
       event: 'finished',
       data: { status, completed: state.info.completed, total: state.info.total, error },
     });
-    Promise.resolve()
+    const storing: Promise<unknown> = Promise.resolve()
       .then(() => this.options.onFinished?.(state))
-      .catch((failure: unknown) => console.error(`Could not store analysis ${state.info.analysisId}`, failure));
+      .catch((failure: unknown) => console.error(`Could not store analysis ${state.info.analysisId}`, failure))
+      .finally(() => this.pendingFinishes.delete(storing));
+    this.pendingFinishes.add(storing);
+  }
+
+  /** Resolves once the onFinished calls of finished analyses have settled, e.g. before the server closes */
+  async flush(): Promise<void> {
+    await Promise.all([...this.pendingFinishes]);
   }
 
   /** Forgets finished analyses that finished before a time (milliseconds since the epoch) */

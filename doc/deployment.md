@@ -39,7 +39,7 @@ node scripts/smoke-test.mjs http://127.0.0.1:8080   # uses GLCM_API_TOKEN from t
 
 The image is built in two stages. The first compiles `glcm_core`, the Node-API addon and the web app. The runtime stage is `node:24-bookworm-slim` with only the OpenCV runtime libraries, and runs as the unprivileged `node` user. It stores everything in the `/data` volume:
 - `images/` holds uploads and decoded pixels;
-- `results/` holds finished analyses, so they survive restarts;
+- `results/` holds finished analyses, so they survive restarts (on `SIGTERM` the server finishes writing them before it exits);
 - `cache/` holds rendered display images.
 
 Back up the volume to keep images and results. A health check calls `GET /api/v1/health`.

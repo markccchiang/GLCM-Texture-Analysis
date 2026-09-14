@@ -149,7 +149,7 @@ refused (``422 TooManyJobs``), and while the queue is full new analyses get ``50
 addon's ``runAnalysis`` with one ROI and one distance; results are stored by position (ROI order, then distance order). The manager emits ``result``, ``progress``
 and ``finished`` events, which ``GET /analyses/{id}/events`` streams as Server-Sent Events. Cancelling drops queued
 jobs; running jobs finish. Finished analyses stay in memory (up to 100) and are written to ``results/`` so that they
-survive restarts.
+survive restarts; closing the server waits for these writes (``JobManager.flush``).
 
 .. rubric:: Storage
 

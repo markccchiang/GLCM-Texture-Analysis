@@ -51,6 +51,8 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
     retainFinished: RETAINED_ANALYSES,
     onFinished: (state) => results.save({ info: state.info, results: jobs.results(state) }),
   });
+  // Results are written just after an analysis finishes; closing waits for the writes, so none are lost on shutdown
+  app.addHook('onClose', async () => jobs.flush());
 
   await app.register(swagger, {
     openapi: {
