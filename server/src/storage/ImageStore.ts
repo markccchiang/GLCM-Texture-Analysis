@@ -116,6 +116,26 @@ export class ImageStore {
     return pending;
   }
 
+  /** Path of the uploaded file */
+  originalPath(id: string): string {
+    return path.join(this.folder(id), 'original');
+  }
+
+  /** Every stored image, newest first */
+  async list(): Promise<ImageInfo[]> {
+    let names: string[];
+    try {
+      names = await fs.readdir(this.imagesDir);
+    } catch (error) {
+      if (isNotFound(error)) {
+        return [];
+      }
+      throw error;
+    }
+    const infos = await Promise.all(names.filter((name) => ID_PATTERN.test(name)).map((name) => this.info(name)));
+    return infos.filter((info): info is ImageInfo => info !== undefined).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
   /** Removes an image; false if it did not exist */
   async remove(id: string): Promise<boolean> {
     const folder = this.folder(id);

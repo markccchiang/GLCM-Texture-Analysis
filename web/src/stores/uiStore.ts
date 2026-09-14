@@ -1,14 +1,17 @@
 import { create } from 'zustand';
 
-export type ModalName = 'imageInfo' | 'preferences' | 'shortcuts' | 'about' | 'samples';
+export type ModalName = 'imageInfo' | 'preferences' | 'shortcuts' | 'about' | 'samples' | 'saveProject' | 'exportRoiImages';
+
+/** What a file chosen in the file dialog is used for */
+export type FileKind = 'image' | 'project' | 'roiSet' | 'projectImage';
 
 export interface UiState {
   modal: ModalName | null;
   windowPanelOpen: boolean;
   /** Incremented by View ▸ Reset Layout to remount the panel groups */
   layoutVersion: number;
-  /** Incremented to ask the app to show the file dialog */
-  openFileRequest: number;
+  /** Asks the app to show the file dialog; the counter makes repeated requests distinct */
+  fileRequest: { kind: FileKind; counter: number } | null;
   /** View ▸ Show ROI Labels */
   showRoiLabels: boolean;
   /** ROI whose name the ROI Manager is editing */
@@ -16,6 +19,7 @@ export interface UiState {
   setModal(modal: ModalName | null): void;
   setWindowPanelOpen(open: boolean): void;
   resetLayout(): void;
+  requestFile(kind: FileKind): void;
   requestOpenFile(): void;
   toggleRoiLabels(): void;
   setRenamingRoiId(id: string | null): void;
@@ -25,13 +29,14 @@ export const useUi = create<UiState>()((set, get) => ({
   modal: null,
   windowPanelOpen: false,
   layoutVersion: 0,
-  openFileRequest: 0,
+  fileRequest: null,
   showRoiLabels: false,
   renamingRoiId: null,
   setModal: (modal) => set({ modal }),
   setWindowPanelOpen: (windowPanelOpen) => set({ windowPanelOpen }),
   resetLayout: () => set({ layoutVersion: get().layoutVersion + 1 }),
-  requestOpenFile: () => set({ openFileRequest: get().openFileRequest + 1 }),
+  requestFile: (kind) => set({ fileRequest: { kind, counter: (get().fileRequest?.counter ?? 0) + 1 } }),
+  requestOpenFile: () => get().requestFile('image'),
   toggleRoiLabels: () => set({ showRoiLabels: !get().showRoiLabels }),
   setRenamingRoiId: (renamingRoiId) => set({ renamingRoiId }),
 }));

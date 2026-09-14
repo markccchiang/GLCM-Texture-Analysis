@@ -30,6 +30,7 @@
     "@types/node": "26.5.1",
     "@types/pngjs": "6.0.5",
     "cmake-js": "8.0.0",
+    "fflate": "0.8.3",
     "node-addon-api": "8.9.2",
     "pngjs": "7.0.0",
     "tsx": "4.23.13",

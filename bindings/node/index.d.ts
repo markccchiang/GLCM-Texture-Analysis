@@ -108,6 +108,32 @@ export function runAnalysis(
   settingsJson: string,
 ): Promise<string>;
 
+/**
+ * Reads a "glcm-results" document and writes it again with glcm_core: "csv" (glcm::ResultsToCsv) or canonical "json"
+ * (glcm::ResultsToJson). Throws an Error with code INVALID_ARGUMENT for invalid documents.
+ */
+export function formatResults(resultsJson: string, format: 'csv' | 'json'): string;
+
+export interface ExportedFile {
+  name: string;
+  data: Buffer;
+}
+
+/**
+ * ROI crops, masks, optional quantized images and manifest.json (glcm::ExportRoiImages).
+ * @param settingsJson analysis settings, or "" when includeQuantized is false
+ */
+export function exportRoiImages(
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+  bitDepth: 8 | 16,
+  roisJson: string,
+  settingsJson: string,
+  transparentOutside: boolean,
+  includeQuantized: boolean,
+): Promise<ExportedFile[]>;
+
 /** glcm::WindowLevel: the 8-bit display value of one intensity. */
 export function windowLevel(value: number, windowMin: number, windowMax: number): number;
 
@@ -119,6 +145,8 @@ declare const native: {
   roiStats: typeof roiStats;
   validateAnalysis: typeof validateAnalysis;
   runAnalysis: typeof runAnalysis;
+  formatResults: typeof formatResults;
+  exportRoiImages: typeof exportRoiImages;
   windowLevel: typeof windowLevel;
 };
 export default native;

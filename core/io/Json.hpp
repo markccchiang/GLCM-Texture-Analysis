@@ -32,6 +32,13 @@ struct ExportContext {
     std::string timestamp; // ISO 8601, supplied by the caller
 };
 
+// A "glcm-results" document read back by ResultsFromJson
+struct ResultsDocument {
+    AnalysisSettings settings;
+    ExportContext context;
+    std::vector<MeasurementResult> results;
+};
+
 std::string RoiSetToJson(const RoiSetDocument& document);
 
 // Throws std::invalid_argument ("Invalid ROI set: <path> <problem>") for malformed JSON, another format, an unsupported
@@ -49,6 +56,11 @@ AnalysisSettings SettingsFromJson(const std::string& text);
 // {"format": "glcm-results", "version": 1, "coreVersion", "timestamp", "image", "settings", "results": [...]}.
 // Feature values are objects {"0", "45", "90", "135", "mean", "range"}; NaN values are written as null.
 std::string ResultsToJson(const std::vector<MeasurementResult>& results, const AnalysisSettings& settings, const ExportContext& context);
+
+// Reads a "glcm-results" document, e.g. one kept by the web app, so it can be written again as JSON or CSV. Only
+// "settings" and "results" are required; per-direction values are read and mean/range are recomputed from them.
+// Throws std::invalid_argument ("Invalid results: <path> <problem>").
+ResultsDocument ResultsFromJson(const std::string& text);
 
 } // namespace glcm
 

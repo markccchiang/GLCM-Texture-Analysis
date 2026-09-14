@@ -7,16 +7,48 @@ import { AppModals } from './components/Modals';
 import { PanelSection } from './components/PanelSection';
 import { StatusBar } from './components/StatusBar';
 import { Toolbar } from './components/Toolbar';
+import { continueProjectWithImage, importRoiSetFile, openProjectFile } from './files/actions';
 import { layoutStorage } from './layout/layoutStorage';
 import { ResultsPanel } from './results/ResultsPanel';
 import { RoiManager } from './rois/RoiManager';
 import { useRois } from './rois/roiStore';
 import { openImageFile } from './stores/imageLoader';
-import { useUi } from './stores/uiStore';
+import { useUi, type FileKind } from './stores/uiStore';
 import { useViewer } from './stores/viewerStore';
 import { CanvasArea } from './viewer/CanvasArea';
 
-const ACCEPTED_TYPES = '.png,.jpg,.jpeg,.bmp,.tif,.tiff,image/png,image/jpeg,image/bmp,image/tiff';
+const IMAGE_TYPES = '.png,.jpg,.jpeg,.bmp,.tif,.tiff,image/png,image/jpeg,image/bmp,image/tiff';
+
+const ACCEPTED_TYPES: Record<FileKind, string> = {
+  image: IMAGE_TYPES,
+  projectImage: IMAGE_TYPES,
+  project: '.glcmproj,.json,application/json',
+  roiSet: '.json,application/json',
+};
+
+function openChosenFile(file: File, kind: FileKind): void {
+  switch (kind) {
+    case 'project':
+      void openProjectFile(file);
+      break;
+    case 'roiSet':
+      void importRoiSetFile(file);
+      break;
+    case 'projectImage':
+      void continueProjectWithImage(file);
+      break;
+    default:
+      void openImageFile(file);
+  }
+}
+
+/** Dropped files: projects and ROI sets by extension, anything else as an image */
+function kindOfDroppedFile(file: File): FileKind {
+  if (/\.glcmproj$/i.test(file.name)) {
+    return 'project';
+  }
+  return /\.json$/i.test(file.name) ? 'roiSet' : 'image';
+}
 
 function hasFiles(event: DragEvent): boolean {
   return Array.from(event.dataTransfer.types).includes('Files');
@@ -60,16 +92,20 @@ function Workspace() {
 
 export function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileKindRef = useRef<FileKind>('image');
   const [dragging, setDragging] = useState(false);
   const dragDepth = useRef(0);
   const layoutVersion = useUi((state) => state.layoutVersion);
-  const openFileRequest = useUi((state) => state.openFileRequest);
+  const fileRequest = useUi((state) => state.fileRequest);
 
   useEffect(() => {
-    if (openFileRequest > 0) {
-      fileInputRef.current?.click();
+    const input = fileInputRef.current;
+    if (fileRequest && input) {
+      fileKindRef.current = fileRequest.kind;
+      input.accept = ACCEPTED_TYPES[fileRequest.kind];
+      input.click();
     }
-  }, [openFileRequest]);
+  }, [fileRequest]);
 
   const withImage = (action: () => void) => () => {
     if (useViewer.getState().image) {
@@ -78,7 +114,8 @@ export function App() {
   };
 
   useHotkeys([
-    ['mod+O', () => useUi.getState().requestOpenFile()],
+    ['mod+O', () => useUi.getState().requestFile('image')],
+    ['mod+S', withImage(() => useUi.getState().setModal('saveProject'))],
     ['mod+comma', () => useUi.getState().setModal('preferences')],
     ['mod+Z', withImage(() => useRois.getState().undo())],
     ['mod+shift+Z', withImage(() => useRois.getState().redo())],
@@ -112,7 +149,7 @@ export function App() {
     setDragging(false);
     const file = event.dataTransfer.files[0];
     if (file) {
-      void openImageFile(file);
+      openChosenFile(file, kindOfDroppedFile(file));
     }
   };
 
@@ -127,21 +164,21 @@ export function App() {
       <input
         ref={fileInputRef}
         type="file"
-        accept={ACCEPTED_TYPES}
+        accept={IMAGE_TYPES}
         hidden
-        data-testid="open-image-input"
+        data-testid="file-input"
         onChange={(event) => {
           const file = event.currentTarget.files?.[0];
           event.currentTarget.value = '';
           if (file) {
-            void openImageFile(file);
+            openChosenFile(file, fileKindRef.current);
           }
         }}
       />
       <AppModals />
       {dragging && (
         <div className="drop-overlay">
-          <div>Drop the image to open it</div>
+          <div>Drop an image, a project (.glcmproj) or an ROI set (.roi.json)</div>
         </div>
       )}
     </div>

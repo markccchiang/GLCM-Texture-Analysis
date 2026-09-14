@@ -10,6 +10,7 @@ import type { ServerConfig } from './config.js';
 import { ApiError } from './errors.js';
 import { analysisRoutes } from './routes/analyses.js';
 import { catalogRoutes } from './routes/catalog.js';
+import { exportRoutes } from './routes/exports.js';
 import { healthRoutes } from './routes/health.js';
 import { imageRoutes } from './routes/images.js';
 import { sampleRoutes } from './routes/samples.js';
@@ -51,6 +52,7 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
         { name: 'images', description: 'Upload, display and pixel data' },
         { name: 'rois', description: 'ROI pixel counts and statistics' },
         { name: 'analyses', description: 'Texture measurements' },
+        { name: 'exports', description: 'Results files and ROI images' },
         { name: 'samples', description: 'Sample images for the start screen' },
       ],
     },
@@ -96,6 +98,7 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
       await api.register(catalogRoutes, { config });
       await api.register(imageRoutes, { config, store, displayCache });
       await api.register(analysisRoutes, { store, jobs });
+      await api.register(exportRoutes, { store });
       await api.register(sampleRoutes, { samplesDir: config.samplesDir });
     },
     { prefix: API_PREFIX },

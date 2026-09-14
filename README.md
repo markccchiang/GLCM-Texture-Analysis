@@ -114,6 +114,12 @@ A typical session:
 3. **Choose settings:** in *Analysis Settings*, choose a preset or features, gray levels, quantization, distances, directions and aggregation. The age-based score is under *Advanced*. Non-standard features are marked ⚠.
 4. **Measure:** press `M` to measure the selected ROIs, or `⇧M` to measure all of them. Each ROI × distance pair is a job on the server; progress appears in the status bar, where the measurement can be cancelled.
 5. **Review results:** rows are appended to the Results table and keep the settings they were computed with (hover a row to see them). You can sort, choose columns, and copy the table as tab-separated text.
+6. **Save and export:**
+   - *File ▸ Export Results as CSV / JSON* writes the table with the core's exporter. CSV files repeat the settings as `# key=value` lines, and non-standard columns end with ` [non-standard]`. Results with different settings are exported as a ZIP with one file per settings group.
+   - *ROI ▸ Export ROI Set* writes `<image>.roi.json`. *Import ROI Set* adds its ROIs (undoable), warns when they were drawn on a different image, and clips ROIs to the image.
+   - *ROI ▸ Export ROI Images* writes a ZIP. Each ROI gets its bounding-box crop (PNG, or TIFF for 16-bit images), a mask and, optionally, the quantized gray levels; `manifest.json` describes the geometry.
+   - *File ▸ Save Project* (⌘/Ctrl+S) writes `<image>.glcmproj` with the ROIs, settings and results. The image is referenced by SHA-256 and can be embedded. *Open Project* finds the image on the server or re-uploads the embedded copy; otherwise it asks for the image file.
+   - Projects and ROI sets can also be dropped onto the window.
 
 For web development, run `npm start` and `npm run dev:web` side by side, then open http://127.0.0.1:5173/. The Vite dev server reloads on changes and forwards `/api` to port 8080.
 
@@ -159,6 +165,11 @@ Endpoints (full details in `packages/api/openapi.json`):
 | `GET`, `DELETE /api/v1/analyses/{id}` | Status; cancel (queued jobs are dropped) |
 | `GET /api/v1/analyses/{id}/events` | Server-Sent Events: `result`, `progress`, `finished` |
 | `GET /api/v1/analyses/{id}/results` | Results of the finished jobs (`glcm-results` JSON) |
+| `GET /api/v1/analyses/{id}/results.csv`, `results.json` | The same results as a downloadable file written by the core |
+| `POST /api/v1/exports/results` | CSV or JSON for a list of results documents (e.g. the current table); a ZIP when their settings differ |
+| `POST /api/v1/exports/roi-images` | ZIP of ROI crops, masks, optional quantized images and `manifest.json` |
+| `GET /api/v1/images?sha256` | Stored images, optionally by SHA-256 of the uploaded file (used when opening projects) |
+| `GET /api/v1/images/{id}/original` | The uploaded file (used to embed images in projects) |
 | `GET /api/v1/samples`, `GET /api/v1/samples/file?path` | Sample images |
 
 ## Documentation

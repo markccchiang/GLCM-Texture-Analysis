@@ -3,6 +3,7 @@ import { IconCheck } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import { measure } from '../analysis/measure';
 import { renameSelectedRoi } from '../app/actions';
+import { exportResultsFile, exportRoiSetFile } from '../files/actions';
 import { clearStoredLayouts } from '../layout/layoutStorage';
 import { useResults } from '../results/resultsStore';
 import { useRois } from '../rois/roiStore';
@@ -28,16 +29,6 @@ function TopMenu({ label, children }: { label: string; children: ReactNode }) {
       </Menu.Target>
       <Menu.Dropdown>{children}</Menu.Dropdown>
     </Menu>
-  );
-}
-
-const PHASE_4 = 'Arrives with save, import and export (phase 4)';
-
-function Later({ children }: { children: ReactNode }) {
-  return (
-    <Menu.Item disabled title={PHASE_4}>
-      {children}
-    </Menu.Item>
   );
 }
 
@@ -71,14 +62,22 @@ export function MenuBar() {
       </Text>
 
       <TopMenu label="File">
-        <Menu.Item rightSection={<Shortcut>{MOD_KEY}O</Shortcut>} onClick={() => ui().requestOpenFile()}>
+        <Menu.Item rightSection={<Shortcut>{MOD_KEY}O</Shortcut>} onClick={() => ui().requestFile('image')}>
           Open Image…
         </Menu.Item>
         <Menu.Item onClick={() => ui().setModal('samples')}>Open Sample Image…</Menu.Item>
-        <Later>Open Project…</Later>
-        <Later>Save Project</Later>
         <Menu.Divider />
-        <Later>Export Results</Later>
+        <Menu.Item onClick={() => ui().requestFile('project')}>Open Project…</Menu.Item>
+        <Menu.Item disabled={!hasImage} rightSection={<Shortcut>{MOD_KEY}S</Shortcut>} onClick={() => ui().setModal('saveProject')}>
+          Save Project…
+        </Menu.Item>
+        <Menu.Divider />
+        <Menu.Item disabled={!hasResults} onClick={() => void exportResultsFile('csv')}>
+          Export Results as CSV
+        </Menu.Item>
+        <Menu.Item disabled={!hasResults} onClick={() => void exportResultsFile('json')}>
+          Export Results as JSON
+        </Menu.Item>
         <Menu.Divider />
         <Menu.Item
           disabled={!hasImage}
@@ -167,9 +166,15 @@ export function MenuBar() {
           Rename
         </Menu.Item>
         <Menu.Divider />
-        <Later>Import ROI Set…</Later>
-        <Later>Export ROI Set…</Later>
-        <Later>Export ROI Images…</Later>
+        <Menu.Item disabled={!hasImage} onClick={() => ui().requestFile('roiSet')}>
+          Import ROI Set…
+        </Menu.Item>
+        <Menu.Item disabled={!hasRois} onClick={exportRoiSetFile}>
+          Export ROI Set…
+        </Menu.Item>
+        <Menu.Item disabled={!hasRois} onClick={() => ui().setModal('exportRoiImages')}>
+          Export ROI Images…
+        </Menu.Item>
       </TopMenu>
 
       <TopMenu label="Analyze">

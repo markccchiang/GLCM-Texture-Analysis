@@ -3,6 +3,7 @@
 #include <climits>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <stdexcept>
 
 #include "io/Identifiers.hpp"
@@ -339,7 +340,89 @@ Json FeaturesToJson(const Features& features) {
     return result;
 }
 
+Features FeaturesFromJson(const Json& value, const std::string& path) {
+    if (!value.is_object()) {
+        Fail(path, "must be an object");
+    }
+    auto direction = [&](const char* key) {
+        const auto it = value.find(key);
+        return (it == value.end() || it->is_null()) ? std::numeric_limits<double>::quiet_NaN() : Number(*it, Child(path, key));
+    };
+    // Features are ordered H, V, LD, RD = 0, 90, 135, 45 degrees
+    return Features{direction("0"), direction("90"), direction("135"), direction("45")};
+}
+
 } // namespace json_detail
+
+namespace {
+
+MeasurementResult MeasurementFromJson(const Json& value, const std::string& path) {
+    if (!value.is_object()) {
+        Fail(path, "must be an object");
+    }
+    auto text = [&](const char* key) { return Text(Field(value, key, path), Child(path, key)); };
+    auto integer = [&](const char* key) { return Integer(Field(value, key, path), Child(path, key)); };
+
+    MeasurementResult result;
+    result.roi_id = text("roiId");
+    result.roi_name = text("roiName");
+    result.distance = integer("distance");
+    result.pixel_count = integer("pixelCount");
+
+    const auto status = MeasurementStatusFromId(text("status"));
+    if (!status) {
+        Fail(Child(path, "status"), "must be \"ok\", \"skipped\" or \"failed\"");
+    }
+    result.status = *status;
+    if (value.contains("error")) {
+        result.error = Text(value.at("error"), Child(path, "error"));
+    }
+
+    if (value.contains("pairCounts")) {
+        const std::string pairs_path = Child(path, "pairCounts");
+        const Json& pairs = value.at("pairCounts");
+        // pair_counts are ordered H, V, LD, RD
+        const char* const keys[] = {"0", "90", "135", "45"};
+        for (int i = 0; i < 4; ++i) {
+            result.pair_counts[i] = Integer(Field(pairs, keys[i], pairs_path), Child(pairs_path, keys[i]));
+        }
+    }
+    if (value.contains("quantization")) {
+        const std::string quantization_path = Child(path, "quantization");
+        const Json& quantization = value.at("quantization");
+        result.quantization_lower = Integer(Field(quantization, "lower", quantization_path), Child(quantization_path, "lower"));
+        result.quantization_upper = Integer(Field(quantization, "upper", quantization_path), Child(quantization_path, "upper"));
+    }
+
+    if (value.contains("values")) {
+        const std::string values_path = Child(path, "values");
+        const Json& values = value.at("values");
+        if (!values.is_object()) {
+            Fail(values_path, "must be an object");
+        }
+        for (auto it = values.begin(); it != values.end(); ++it) {
+            const std::string feature_path = Child(values_path, it.key());
+            const auto type = FeatureTypeFromId(it.key());
+            if (!type) {
+                Fail(feature_path, "is not a known feature");
+            }
+            result.values[*type] = json_detail::FeaturesFromJson(it.value(), feature_path);
+        }
+    }
+    if (value.contains("score") && !value.at("score").is_null()) {
+        result.score = json_detail::FeaturesFromJson(value.at("score"), Child(path, "score"));
+    }
+    if (value.contains("warnings")) {
+        const std::string warnings_path = Child(path, "warnings");
+        const Json& warnings = Array(value.at("warnings"), warnings_path);
+        for (size_t i = 0; i < warnings.size(); ++i) {
+            result.warnings.push_back(Text(warnings[i], Index(warnings_path, i)));
+        }
+    }
+    return result;
+}
+
+} // namespace
 
 std::string RoiSetToJson(const RoiSetDocument& document) {
     Json rois = Json::array();
@@ -454,6 +537,43 @@ std::string ResultsToJson(const std::vector<MeasurementResult>& results, const A
     document["settings"] = json_detail::SettingsToJsonValue(settings);
     document["results"] = items;
     return document.dump(2);
+}
+
+ResultsDocument ResultsFromJson(const std::string& text) {
+    try {
+        const Json document = Json::parse(text);
+        CheckFormat(document, "glcm-results");
+
+        ResultsDocument result;
+        const std::string root_path;
+        result.settings = json_detail::SettingsFromJsonValue(Field(document, "settings", root_path), "settings");
+        if (document.contains("timestamp")) {
+            result.context.timestamp = Text(document.at("timestamp"), "timestamp");
+        }
+        if (document.contains("image")) {
+            const Json& image = document.at("image");
+            if (!image.is_object()) {
+                Fail("image", "must be an object");
+            }
+            if (image.contains("name")) {
+                result.context.image_name = Text(image.at("name"), "image.name");
+            }
+            if (image.contains("sha256")) {
+                result.context.image_sha256 = Text(image.at("sha256"), "image.sha256");
+            }
+        }
+
+        const std::string results_path = "results";
+        const Json& items = Array(Field(document, "results", root_path), results_path);
+        for (size_t i = 0; i < items.size(); ++i) {
+            result.results.push_back(MeasurementFromJson(items[i], Index(results_path, i)));
+        }
+        return result;
+    } catch (const nlohmann::json::exception& error) {
+        throw std::invalid_argument(std::string("Invalid results: ") + error.what());
+    } catch (const std::invalid_argument& error) {
+        throw std::invalid_argument(std::string("Invalid results: ") + error.what());
+    }
 }
 
 } // namespace glcm

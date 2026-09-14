@@ -16,6 +16,8 @@ import * as native from '@glcm/native';
 import { Type } from 'typebox';
 import { isFinished, type AnalysisState, type JobManager } from '../analysis/JobManager.js';
 import { ApiError } from '../errors.js';
+import { attachment, fileStem } from '../files.js';
+import { formatResultsDocument } from './exports.js';
 import type { ImageStore } from '../storage/ImageStore.js';
 
 export interface AnalysisRoutesOptions {
@@ -149,6 +151,36 @@ export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = 
     },
     async (request) => jobs.results(requireAnalysis(request.params.id)),
   );
+
+  for (const format of ['csv', 'json'] as const) {
+    app.get(
+      `/analyses/:id/results.${format}`,
+      {
+        schema: {
+          summary: `Results of finished jobs as a ${format.toUpperCase()} file`,
+          description: 'Written by glcm_core; the same content as POST /exports/results for this analysis.',
+          tags: ['analyses'],
+          params: AnalysisIdParams,
+          response: {
+            200: {
+              description: `${format.toUpperCase()} file`,
+              content: { [format === 'csv' ? 'text/csv' : 'application/json']: { schema: Type.Unsafe<Buffer>({ type: 'string', format: 'binary' }) } },
+            },
+            400: ErrorResponse,
+            404: ErrorResponse,
+          },
+        },
+      },
+      async (request, reply) => {
+        const { timestamp, image, settings, results } = jobs.results(requireAnalysis(request.params.id));
+        const text = formatResultsDocument({ timestamp, image: { name: image.name, sha256: image.sha256 }, settings, results }, format);
+        return reply
+          .header('Content-Disposition', attachment(`${fileStem(image.name)}-results.${format}`))
+          .type(format === 'csv' ? 'text/csv; charset=utf-8' : 'application/json; charset=utf-8')
+          .send(Buffer.from(text));
+      },
+    );
+  }
 
   app.get(
     '/analyses/:id/events',

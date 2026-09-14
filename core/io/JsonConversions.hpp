@@ -27,6 +27,9 @@ AnalysisSettings SettingsFromJsonValue(const Json& value, const std::string& pat
 // {"0": H, "45": RD, "90": V, "135": LD, "mean": Avg(), "range": Range()}; NaN becomes null
 Json FeaturesToJson(const Features& features);
 
+// Reads the directions of FeaturesToJson; null or missing directions become NaN, "mean" and "range" are ignored
+Features FeaturesFromJson(const Json& value, const std::string& path);
+
 } // namespace glcm::json_detail
 
 #endif // GLCM_JSON_CONVERSIONS_HPP_

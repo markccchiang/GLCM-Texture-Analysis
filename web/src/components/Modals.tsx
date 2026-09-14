@@ -1,9 +1,12 @@
-import { Badge, Kbd, List, Modal, NavLink, ScrollArea, SegmentedControl, Stack, Switch, Table, Text } from '@mantine/core';
+import { Badge, Button, Checkbox, Group, Kbd, List, Modal, NavLink, ScrollArea, SegmentedControl, Stack, Switch, Table, Text } from '@mantine/core';
 import type { HealthResponse, SampleInfo } from '@glcm/api';
 import { API_PREFIX } from '@glcm/api';
 import { useQuery } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { getSamples } from '../api/client';
+import { useAnalysisSettings } from '../analysis/settingsStore';
+import { exportRoiImagesFile, saveProjectFile } from '../files/actions';
+import { useRois } from '../rois/roiStore';
 import { openSample } from '../stores/imageLoader';
 import { usePreferences } from '../stores/preferences';
 import { MOD_KEY, useUi, type ModalName } from '../stores/uiStore';
@@ -117,6 +120,13 @@ function PreferencesContent() {
 
 const SHORTCUTS: [string, string][] = [
   [`${MOD_KEY}O`, 'Open image'],
+  [`${MOD_KEY}S`, 'Save project'],
+  ['R / E / P / F', 'Rectangle, ellipse, polygon, freehand tool'],
+  ['T', 'Add the drawn ROI to the ROI Manager'],
+  ['M / ⇧M', 'Measure selected / all ROIs'],
+  [`${MOD_KEY}Z / ${MOD_KEY}⇧Z`, 'Undo / redo ROI edits'],
+  ['Z', 'Zoom to the selected ROIs'],
+  ['⌫', 'Delete the selected ROIs'],
   [`${MOD_KEY},`, 'Preferences'],
   ['+ / −', 'Zoom in / out around the view centre'],
   ['1', 'Zoom to 100 %'],
@@ -210,12 +220,117 @@ function SamplesContent({ onClose }: { onClose(): void }) {
   );
 }
 
+function SaveProjectContent({ onClose }: { onClose(): void }) {
+  const image = useViewer((state) => state.image);
+  const [embed, setEmbed] = useState(false);
+  const [saving, setSaving] = useState(false);
+  if (!image) {
+    return <Text c="dimmed">Open an image first.</Text>;
+  }
+  return (
+    <Stack gap="md">
+      <Text size="sm">
+        The project file keeps the ROIs, the analysis settings and the results. It refers to the image by name and SHA-256; when the server does not
+        have that image, opening the project asks for the file.
+      </Text>
+      <Checkbox
+        checked={embed}
+        onChange={(event) => setEmbed(event.currentTarget.checked)}
+        label="Embed the image"
+        description={`Makes the project portable; adds about ${formatBytes(Math.ceil((image.info.sizeBytes * 4) / 3))}.`}
+      />
+      <Group justify="flex-end">
+        <Button variant="default" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button
+          loading={saving}
+          onClick={async () => {
+            setSaving(true);
+            const saved = await saveProjectFile({ embedImage: embed });
+            setSaving(false);
+            if (saved) {
+              onClose();
+            }
+          }}
+        >
+          Save
+        </Button>
+      </Group>
+    </Stack>
+  );
+}
+
+function ExportRoiImagesContent({ onClose }: { onClose(): void }) {
+  const image = useViewer((state) => state.image);
+  const roiCount = useRois((state) => state.rois.length);
+  const selectedCount = useRois((state) => state.selectedIds.length);
+  const grayLevels = useAnalysisSettings((state) => state.settings?.grayLevels);
+  // All ROIs by default: a newly added ROI is selected, so defaulting to the selection would usually export just that one
+  const [scope, setScope] = useState<'selected' | 'all'>('all');
+  const [transparentOutside, setTransparentOutside] = useState(false);
+  const [includeQuantized, setIncludeQuantized] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const sixteenBit = image?.info.bitDepth === 16;
+
+  return (
+    <Stack gap="md">
+      <SegmentedControl
+        value={scope}
+        onChange={(value) => setScope(value as 'selected' | 'all')}
+        data={[
+          { value: 'selected', label: `Selected ROIs (${selectedCount})`, disabled: selectedCount === 0 },
+          { value: 'all', label: `All ROIs (${roiCount})` },
+        ]}
+      />
+      <Text size="sm">
+        Each ROI is exported as the crop of its bounding box ({sixteenBit ? '16-bit TIFF' : 'PNG'}) with the pixels outside the ROI set to 0, a mask
+        and a manifest.json with the geometry, in one ZIP file.
+      </Text>
+      <Checkbox
+        checked={transparentOutside && !sixteenBit}
+        disabled={sixteenBit}
+        onChange={(event) => setTransparentOutside(event.currentTarget.checked)}
+        label="Transparent outside the ROI"
+        description={sixteenBit ? 'Only for 8-bit images' : 'PNG alpha channel instead of 0'}
+      />
+      <Checkbox
+        checked={includeQuantized}
+        onChange={(event) => setIncludeQuantized(event.currentTarget.checked)}
+        label="Include quantized gray levels"
+        description={`<name>_q${grayLevels ?? 'Ng'}.png, quantized with the current analysis settings`}
+      />
+      <Group justify="flex-end">
+        <Button variant="default" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button
+          loading={exporting}
+          disabled={roiCount === 0}
+          onClick={async () => {
+            setExporting(true);
+            const exported = await exportRoiImagesFile({ scope, transparentOutside, includeQuantized });
+            setExporting(false);
+            if (exported) {
+              onClose();
+            }
+          }}
+        >
+          Export
+        </Button>
+      </Group>
+    </Stack>
+  );
+}
+
 const TITLES: Record<ModalName, string> = {
   imageInfo: 'Image Info',
   preferences: 'Preferences',
   shortcuts: 'Keyboard Shortcuts',
   about: 'About GLCM Texture Analysis',
   samples: 'Open Sample Image',
+  saveProject: 'Save Project',
+  exportRoiImages: 'Export ROI Images',
 };
 
 export function AppModals() {
@@ -228,6 +343,8 @@ export function AppModals() {
       {modal === 'shortcuts' && <ShortcutsContent />}
       {modal === 'about' && <AboutContent />}
       {modal === 'samples' && <SamplesContent onClose={close} />}
+      {modal === 'saveProject' && <SaveProjectContent onClose={close} />}
+      {modal === 'exportRoiImages' && <ExportRoiImagesContent onClose={close} />}
     </Modal>
   );
 }

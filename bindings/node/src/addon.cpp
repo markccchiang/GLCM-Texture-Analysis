@@ -20,6 +20,8 @@
 #include "imaging/ImageLoader.hpp"
 #include "io/Identifiers.hpp"
 #include "io/Json.hpp"
+#include "io/ResultsCsv.hpp"
+#include "io/RoiImageExport.hpp"
 #include "pipeline/AnalysisRunner.hpp"
 #include "pipeline/AnalysisSettings.hpp"
 #include "pipeline/FeatureCatalog.hpp"
@@ -101,6 +103,13 @@ std::string StringArgument(const Napi::CallbackInfo& info, size_t index, const c
         throw Napi::TypeError::New(info.Env(), std::string(name) + " must be a string");
     }
     return info[index].As<Napi::String>().Utf8Value();
+}
+
+bool BooleanArgument(const Napi::CallbackInfo& info, size_t index, const char* name) {
+    if (info.Length() <= index || !info[index].IsBoolean()) {
+        throw Napi::TypeError::New(info.Env(), std::string(name) + " must be a boolean");
+    }
+    return info[index].As<Napi::Boolean>().Value();
 }
 
 Napi::Array StringArray(Napi::Env env, const std::vector<std::string>& values) {
@@ -395,6 +404,55 @@ private:
     std::string _json;
 };
 
+class ExportRoiImagesWorker : public PixelWorker {
+public:
+    ExportRoiImagesWorker(Napi::Env env, const PixelArguments& arguments, std::string rois_json, std::string settings_json,
+        const glcm::RoiImageExportOptions& options)
+        : PixelWorker(env, arguments), _rois_json(std::move(rois_json)), _settings_json(std::move(settings_json)), _options(options) {}
+
+    void Execute() override {
+        std::vector<glcm::Roi> rois;
+        glcm::AnalysisSettings settings;
+        try {
+            rois = ParseRois(_rois_json);
+            if (!_settings_json.empty()) {
+                settings = glcm::SettingsFromJson(_settings_json);
+                glcm::ValidateSettings(settings);
+            } else if (_options.include_quantized) {
+                throw std::invalid_argument("Quantized ROI images need analysis settings");
+            }
+        } catch (const std::invalid_argument& error) {
+            Fail(CODE_INVALID_ARGUMENT, error.what());
+            return;
+        }
+        try {
+            _files = glcm::ExportRoiImages(Gray(), rois, settings, _options);
+        } catch (const std::invalid_argument& error) {
+            Fail(CODE_INVALID_ARGUMENT, error.what());
+        } catch (const std::exception& error) {
+            Fail(CODE_INTERNAL, error.what());
+        }
+    }
+
+    void OnOK() override {
+        Napi::Env env = Env();
+        Napi::Array array = Napi::Array::New(env, _files.size());
+        for (size_t i = 0; i < _files.size(); ++i) {
+            Napi::Object file = Napi::Object::New(env);
+            file.Set("name", _files[i].name);
+            file.Set("data", Napi::Buffer<uint8_t>::Copy(env, _files[i].bytes.data(), _files[i].bytes.size()));
+            array.Set(static_cast<uint32_t>(i), file);
+        }
+        Resolve(array);
+    }
+
+private:
+    std::string _rois_json;
+    std::string _settings_json;
+    glcm::RoiImageExportOptions _options;
+    std::vector<glcm::ExportedFile> _files;
+};
+
 Napi::Value CoreVersion(const Napi::CallbackInfo& info) {
     return Napi::String::New(info.Env(), glcm::CORE_VERSION);
 }
@@ -524,6 +582,37 @@ Napi::Value RunAnalysis(const Napi::CallbackInfo& info) {
     return promise;
 }
 
+// formatResults(resultsJson, format): string; a "glcm-results" document written again by glcm_core as "csv" or "json"
+Napi::Value FormatResults(const Napi::CallbackInfo& info) {
+    const std::string text = StringArgument(info, 0, "resultsJson");
+    const std::string format = StringArgument(info, 1, "format");
+    if (format != "csv" && format != "json") {
+        throw Napi::TypeError::New(info.Env(), "format must be \"csv\" or \"json\"");
+    }
+    try {
+        const glcm::ResultsDocument document = glcm::ResultsFromJson(text);
+        const std::string output = format == "csv" ? glcm::ResultsToCsv(document.results, document.settings, document.context)
+                                                   : glcm::ResultsToJson(document.results, document.settings, document.context);
+        return Napi::String::New(info.Env(), output);
+    } catch (const std::invalid_argument& error) {
+        throw ErrorWithCode(info.Env(), CODE_INVALID_ARGUMENT, error.what());
+    }
+}
+
+// exportRoiImages(pixels, width, height, bitDepth, roisJson, settingsJson, transparentOutside, includeQuantized):
+// Promise<{name, data}[]>; settingsJson may be empty unless includeQuantized
+Napi::Value ExportRoiImages(const Napi::CallbackInfo& info) {
+    const PixelArguments pixels = ReadPixelArguments(info, 0);
+    glcm::RoiImageExportOptions options;
+    options.transparent_outside = BooleanArgument(info, 6, "transparentOutside");
+    options.include_quantized = BooleanArgument(info, 7, "includeQuantized");
+    auto* worker = new ExportRoiImagesWorker(
+        info.Env(), pixels, StringArgument(info, 4, "roisJson"), StringArgument(info, 5, "settingsJson"), options);
+    const Napi::Promise promise = worker->Promise();
+    worker->Queue();
+    return promise;
+}
+
 // windowLevel(value, windowMin, windowMax): number
 Napi::Value WindowLevel(const Napi::CallbackInfo& info) {
     const int value = IntegerArgument(info, 0, "value");
@@ -540,6 +629,8 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set("roiStats", Napi::Function::New(env, RoiStats, "roiStats"));
     exports.Set("validateAnalysis", Napi::Function::New(env, ValidateAnalysis, "validateAnalysis"));
     exports.Set("runAnalysis", Napi::Function::New(env, RunAnalysis, "runAnalysis"));
+    exports.Set("formatResults", Napi::Function::New(env, FormatResults, "formatResults"));
+    exports.Set("exportRoiImages", Napi::Function::New(env, ExportRoiImages, "exportRoiImages"));
     exports.Set("windowLevel", Napi::Function::New(env, WindowLevel, "windowLevel"));
     return exports;
 }

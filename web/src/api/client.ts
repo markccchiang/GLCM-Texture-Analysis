@@ -8,11 +8,17 @@ import {
   type RoiStatsRequest,
   type RoiStatsResponse,
   type CatalogResponse,
+  type ExportFormat,
+  type HealthResponse,
+  type ImageListResponse,
+  type ResultsDocument,
+  type RoiImagesExportRequest,
   type ErrorResponse,
   type ImageInfo,
   type PixelResponse,
   type SamplesResponse,
 } from '@glcm/api';
+import { fileNameFromDisposition } from '../files/download';
 import { decodeRawSamples, rawFormatFromHeaders, type RawImage } from '../image/raw';
 
 export class ApiRequestError extends Error {
@@ -198,4 +204,42 @@ export function cancelAnalysis(analysisId: string): Promise<void> {
 
 export function analysisEventsUrl(analysisId: string): string {
   return `${API_PREFIX}/analyses/${analysisId}/events`;
+}
+
+export interface DownloadedFile {
+  blob: Blob;
+  fileName: string;
+}
+
+async function postForFile(url: string, body: unknown, fallbackName: string): Promise<DownloadedFile> {
+  const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  if (!response.ok) {
+    throw await errorFromResponse(response);
+  }
+  return { blob: await response.blob(), fileName: fileNameFromDisposition(response.headers.get('content-disposition'), fallbackName) };
+}
+
+export function exportResults(format: ExportFormat, documents: ResultsDocument[]): Promise<DownloadedFile> {
+  return postForFile(`${API_PREFIX}/exports/results`, { format, documents }, `results.${format}`);
+}
+
+export function exportRoiImages(request: RoiImagesExportRequest): Promise<DownloadedFile> {
+  return postForFile(`${API_PREFIX}/exports/roi-images`, request, 'rois.zip');
+}
+
+export async function findImagesBySha256(sha256: string, signal?: AbortSignal): Promise<ImageInfo[]> {
+  return (await getJson<ImageListResponse>(`${API_PREFIX}/images?sha256=${sha256}`, signal)).images;
+}
+
+/** The uploaded file of an image */
+export async function downloadOriginal(imageId: string): Promise<Uint8Array> {
+  const response = await fetch(`${API_PREFIX}/images/${imageId}/original`);
+  if (!response.ok) {
+    throw await errorFromResponse(response);
+  }
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+export async function getCoreVersion(): Promise<string> {
+  return (await getJson<HealthResponse>(`${API_PREFIX}/health`)).coreVersion;
 }

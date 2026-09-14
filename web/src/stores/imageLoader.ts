@@ -1,5 +1,6 @@
 // Opening images: upload, then download the raw samples when the server offers them (doc/ui-design-plan.md, 6.1).
 
+import type { ImageInfo } from '@glcm/api';
 import { notifications } from '@mantine/notifications';
 import { ApiRequestError, downloadSample, fetchRawImage, uploadImage } from '../api/client';
 import type { RawImage } from '../image/raw';
@@ -40,17 +41,18 @@ export function cancelImageLoad(): void {
   }
 }
 
-async function loadFile(file: File, controller: AbortController): Promise<void> {
-  const { signal } = controller;
-  const setLoading = (phase: 'uploading' | 'downloading', progress: number | null) => {
+function progressReporter(controller: AbortController, name: string) {
+  return (phase: 'uploading' | 'downloading', progress: number | null) => {
     if (currentLoad === controller) {
-      useViewer.getState().setLoading({ name: file.name, phase, progress });
+      useViewer.getState().setLoading({ name, phase, progress });
     }
   };
+}
 
-  setLoading('uploading', 0);
-  const info = await uploadImage(file, (loaded, total) => setLoading('uploading', loaded / total), signal);
-
+/** Downloads the raw samples if offered, then shows the image; null if the load was cancelled */
+async function showImage(info: ImageInfo, controller: AbortController): Promise<ImageInfo | null> {
+  const { signal } = controller;
+  const setLoading = progressReporter(controller, info.name);
   let raw: RawImage | null = null;
   if (info.transfer === 'raw') {
     setLoading('downloading', 0);
@@ -67,39 +69,51 @@ async function loadFile(file: File, controller: AbortController): Promise<void> 
   }
 
   if (signal.aborted) {
-    return;
+    return null;
   }
   useViewer.getState().openImage({ info, raw });
   for (const warning of info.warnings) {
     notifications.show({ color: 'yellow', title: info.name, message: warning, autoClose: 8000 });
   }
+  return info;
 }
 
-export async function openImageFile(file: File): Promise<void> {
-  const controller = startLoad();
-  try {
-    await loadFile(file, controller);
-  } catch (error) {
-    if (!isAbort(error)) {
-      notifications.show({ color: 'red', title: `Could not open ${file.name}`, message: errorMessage(error), autoClose: 10000 });
-    }
-  } finally {
-    finishLoad(controller);
-  }
+async function uploadAndShow(file: File, controller: AbortController): Promise<ImageInfo | null> {
+  const setLoading = progressReporter(controller, file.name);
+  setLoading('uploading', 0);
+  const info = await uploadImage(file, (loaded, total) => setLoading('uploading', loaded / total), controller.signal);
+  return showImage(info, controller);
 }
 
-export async function openSample(samplePath: string): Promise<void> {
+async function run(name: string, load: (controller: AbortController) => Promise<ImageInfo | null>): Promise<ImageInfo | null> {
   const controller = startLoad();
-  const name = samplePath.split('/').pop() ?? samplePath;
   try {
-    useViewer.getState().setLoading({ name, phase: 'downloadingSample', progress: null });
-    const file = await downloadSample(samplePath, controller.signal);
-    await loadFile(file, controller);
+    return await load(controller);
   } catch (error) {
     if (!isAbort(error)) {
       notifications.show({ color: 'red', title: `Could not open ${name}`, message: errorMessage(error), autoClose: 10000 });
     }
+    return null;
   } finally {
     finishLoad(controller);
   }
+}
+
+/** Uploads and opens a file; resolves to its info, or null if it failed or was cancelled */
+export function openImageFile(file: File): Promise<ImageInfo | null> {
+  return run(file.name, (controller) => uploadAndShow(file, controller));
+}
+
+/** Opens an image the server already has */
+export function openStoredImage(info: ImageInfo): Promise<ImageInfo | null> {
+  return run(info.name, (controller) => showImage(info, controller));
+}
+
+export function openSample(samplePath: string): Promise<ImageInfo | null> {
+  const name = samplePath.split('/').pop() ?? samplePath;
+  return run(name, async (controller) => {
+    useViewer.getState().setLoading({ name, phase: 'downloadingSample', progress: null });
+    const file = await downloadSample(samplePath, controller.signal);
+    return uploadAndShow(file, controller);
+  });
 }

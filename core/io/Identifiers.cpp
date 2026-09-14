@@ -112,4 +112,8 @@ std::string MeasurementStatusId(MeasurementStatus status) {
     return IdOf(status, MEASUREMENT_STATUSES);
 }
 
+std::optional<MeasurementStatus> MeasurementStatusFromId(const std::string& id) {
+    return ValueOf(id, MEASUREMENT_STATUSES);
+}
+
 } // namespace glcm

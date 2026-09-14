@@ -254,6 +254,57 @@ describe('analysis', () => {
   });
 });
 
+describe('exports', () => {
+  const settings = { features: ['Contrast'], grayLevels: 4, quantization: { method: 'none' } };
+
+  async function haralickDocument() {
+    const document = JSON.parse(
+      await native.runAnalysis(HARALICK_PIXELS, HARALICK_WIDTH, HARALICK_HEIGHT, 8, JSON.stringify([FULL_IMAGE_ROI]), JSON.stringify(settings)),
+    );
+    return { ...document, timestamp: '2026-09-14T12:00:00Z', image: { name: 'haralick.tif', sha256: 'abc' } };
+  }
+
+  it('writes results documents again as canonical JSON and CSV', async () => {
+    const document = await haralickDocument();
+    const json = native.formatResults(JSON.stringify(document), 'json');
+    expect(JSON.parse(json)).toEqual(document);
+    expect(native.formatResults(json, 'json')).toBe(json);
+
+    const lines = native.formatResults(json, 'csv').trimEnd().split('\n');
+    expect(lines).toContain('# format=glcm-results-csv');
+    expect(lines).toContain('# image=haralick.tif');
+    const rows = lines.filter((line) => !line.startsWith('#')).map((line) => line.split(','));
+    const header = rows[0];
+    expect(rows.slice(1).map((row) => row[header.indexOf('direction')])).toEqual(['0', '45', '90', '135', 'mean']);
+    expect(Number(rows[1][header.indexOf('Contrast')])).toBeCloseTo(14 / 24, 12);
+  });
+
+  it('rejects invalid documents and formats', () => {
+    expect(() => native.formatResults('{"format": "glcm-results", "version": 1, "results": []}', 'csv')).toThrow(/settings is missing/);
+    try {
+      native.formatResults('{', 'json');
+    } catch (error) {
+      expect((error as { code?: string }).code).toBe('INVALID_ARGUMENT');
+    }
+    expect(() => native.formatResults('{}', 'xml' as 'csv')).toThrow(TypeError);
+  });
+
+  it('exports ROI crops, masks, quantized images and a manifest', async () => {
+    const rois = JSON.stringify([{ id: 'a', name: 'Top/left', shape: { type: 'rectangle', x: 0, y: 0, width: 2, height: 2 } }]);
+    const files = await native.exportRoiImages(HARALICK_PIXELS, 4, 4, 8, rois, '', false, false);
+    expect(files.map((file) => file.name)).toEqual(['Top_left.png', 'Top_left_mask.png', 'manifest.json']);
+    const crop = PNG.sync.read(files[0].data);
+    expect([crop.width, crop.height]).toEqual([2, 2]);
+    const manifest = JSON.parse(files[2].data.toString('utf8'));
+    expect(manifest).toMatchObject({ format: 'glcm-roi-images', version: 1, entries: [{ pixelCount: 4, image: 'Top_left.png', mask: 'Top_left_mask.png' }] });
+
+    const quantized = await native.exportRoiImages(HARALICK_PIXELS, 4, 4, 8, rois, JSON.stringify(settings), true, true);
+    expect(quantized.map((file) => file.name)).toEqual(['Top_left.png', 'Top_left_mask.png', 'Top_left_q4.png', 'manifest.json']);
+    expect(await rejectionCode(native.exportRoiImages(HARALICK_PIXELS, 4, 4, 8, rois, '', false, true))).toBe('INVALID_ARGUMENT');
+    expect(() => native.exportRoiImages(HARALICK_PIXELS, 4, 4, 8, rois, '', 1 as unknown as boolean, false)).toThrow(TypeError);
+  });
+});
+
 describe('renderDisplay', () => {
   const width = 40;
   const height = 20;

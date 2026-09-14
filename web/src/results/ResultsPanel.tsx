@@ -2,12 +2,13 @@
 
 import { ActionIcon, Button, Checkbox, Group, Menu, Table, Text, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconClipboard, IconColumns, IconTrash } from '@tabler/icons-react';
+import { IconClipboard, IconColumns, IconDownload, IconTrash } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { CATALOG_QUERY } from '../api/queryClient';
 import { NON_STANDARD_NOTE } from '../analysis/SettingsPanel';
 import { PanelSection } from '../components/PanelSection';
+import { exportResultsFile } from '../files/actions';
 import { useRois } from '../rois/roiStore';
 import { useResults } from './resultsStore';
 import { cellText, columnsForRows, rowsToTsv, sortRows, type ResultRow, type SortDirection } from './rows';
@@ -95,11 +96,17 @@ export function ResultsPanel() {
           <Button size="compact-xs" variant="subtle" color="gray" leftSection={<IconClipboard size={12} />} disabled={rows.length === 0} onClick={copy}>
             Copy
           </Button>
-          <Tooltip label="Export arrives with save/import/export (phase 4)">
-            <Button size="compact-xs" variant="subtle" color="gray" disabled>
-              Export
-            </Button>
-          </Tooltip>
+          <Menu position="bottom-end">
+            <Menu.Target>
+              <Button size="compact-xs" variant="subtle" color="gray" leftSection={<IconDownload size={12} />} disabled={rows.length === 0}>
+                Export
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item onClick={() => void exportResultsFile('csv')}>CSV (settings in # lines)</Menu.Item>
+              <Menu.Item onClick={() => void exportResultsFile('json')}>JSON (glcm-results)</Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
           <ActionIcon size="sm" variant="subtle" color="gray" aria-label="Clear results" disabled={rows.length === 0} onClick={() => useResults.getState().clear()}>
             <IconTrash size={14} />
           </ActionIcon>

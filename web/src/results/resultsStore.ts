@@ -8,8 +8,11 @@ import { rowsForResult, type ResultRow } from './rows';
 export interface AnalysisRun {
   analysisId: string;
   imageName: string;
+  imageSha256: string;
   settings: AnalysisSettings;
   status: AnalysisStatus;
+  /** When the analysis finished (or started, while it runs) */
+  timestamp: string;
   completed: number;
   total: number;
   /** Finished jobs by index */
@@ -24,7 +27,9 @@ export interface ResultsState {
   addResult(analysisId: string, index: number, result: MeasurementResult): void;
   setProgress(analysisId: string, completed: number, total: number): void;
   /** Marks a run finished; `results` (ordered, from GET /results) replaces the streamed ones when given */
-  finishRun(analysisId: string, status: AnalysisStatus, results?: MeasurementResult[]): void;
+  finishRun(analysisId: string, status: AnalysisStatus, results?: MeasurementResult[], timestamp?: string): void;
+  /** Replaces the table with stored runs (an opened project) */
+  loadRuns(runs: AnalysisRun[]): void;
   clear(): void;
   toggleColumn(columnId: string): void;
 }
@@ -56,8 +61,10 @@ export const useResults = create<ResultsState>()((set, get) => {
       const run: AnalysisRun = {
         analysisId: info.analysisId,
         imageName: info.imageName,
+        imageSha256: info.imageSha256,
         settings: info.settings,
         status: info.status,
+        timestamp: info.createdAt,
         completed: info.completed,
         total: info.total,
         results: new Array<MeasurementResult | undefined>(info.total),
@@ -75,8 +82,10 @@ export const useResults = create<ResultsState>()((set, get) => {
     setProgress: (analysisId, completed, total) =>
       set({ runs: get().runs.map((run) => (run.analysisId === analysisId ? { ...run, completed, total, status: 'running' } : run)) }),
 
-    finishRun: (analysisId, status, results) =>
-      updateRun(analysisId, (run) => ({ ...run, status, results: results ?? run.results })),
+    finishRun: (analysisId, status, results, timestamp) =>
+      updateRun(analysisId, (run) => ({ ...run, status, results: results ?? run.results, timestamp: timestamp ?? run.timestamp })),
+
+    loadRuns: (runs) => set({ runs, rows: buildRows(runs) }),
 
     // Running analyses keep their entry so their remaining results still arrive
     clear: () => {

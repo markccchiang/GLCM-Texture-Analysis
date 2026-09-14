@@ -98,7 +98,7 @@ export async function measure(scope: 'selected' | 'all'): Promise<void> {
 
   try {
     const final = await getAnalysisResults(analysisId);
-    useResults.getState().finishRun(analysisId, final.status, final.results);
+    useResults.getState().finishRun(analysisId, final.status, final.results, final.timestamp);
     const failedCount = final.results.filter((result) => result.status !== 'ok').length;
     if (final.status === 'cancelled') {
       notifications.show({ color: 'gray', title: 'Measurement cancelled', message: `${final.results.length} of ${info.total} jobs finished.` });

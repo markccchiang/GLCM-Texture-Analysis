@@ -473,6 +473,68 @@ TEST(ResultsCsvTest, AggregationChoosesRows) {
     EXPECT_EQ(ParseCsv(ResultsToCsv(output.results, settings, CONTEXT)).rows.size(), 5u);
 }
 
+TEST(ResultsJsonTest, ReadsBackWhatItWrites) {
+    AnalysisSettings settings = DefaultSettings(8);
+    settings.features = {Type::Mean, Type::Contrast, Type::CorrelationIII, Type::MaximalCorrelationCoefficient};
+    settings.directions = {Direction::H, Direction::V, Direction::RD};
+    settings.distances = {1, 3};
+    settings.aggregation = Aggregation::MeanAndRange;
+    settings.score.enabled = true;
+
+    const AnalysisOutput output = RunAnalysis(Pattern8(30, 30),
+        {MakeRoi("r1", "A, \"quoted\"", RectangleRoi{2, 2, 20, 20}), MakeRoi("r2", "tiny", RectangleRoi{0, 0, 1, 1})}, settings);
+    const std::string text = ResultsToJson(output.results, settings, CONTEXT);
+    const ResultsDocument document = ResultsFromJson(text);
+
+    // Writing the parsed document again gives the same JSON and CSV: nothing is lost
+    EXPECT_EQ(ResultsToJson(document.results, document.settings, document.context), text);
+    EXPECT_EQ(ResultsToCsv(document.results, document.settings, document.context), ResultsToCsv(output.results, settings, CONTEXT));
+
+    ASSERT_EQ(document.results.size(), 4u);
+    const MeasurementResult& original = output.results[0];
+    const MeasurementResult& parsed = document.results[0];
+    EXPECT_EQ(parsed.roi_name, original.roi_name);
+    EXPECT_EQ(parsed.values.at(Type::Contrast).H, original.values.at(Type::Contrast).H);
+    EXPECT_EQ(parsed.values.at(Type::Contrast).RD, original.values.at(Type::Contrast).RD);
+    EXPECT_TRUE(std::isnan(parsed.values.at(Type::Contrast).LD));
+    EXPECT_EQ(parsed.pair_counts, original.pair_counts);
+    EXPECT_EQ(parsed.quantization_upper, original.quantization_upper);
+    ASSERT_TRUE(parsed.score.has_value());
+    EXPECT_EQ(parsed.score->Avg(), original.score->Avg());
+    EXPECT_EQ(document.results[2].status, MeasurementStatus::Skipped);
+    EXPECT_EQ(document.results[2].error, output.results[2].error);
+    EXPECT_EQ(document.context.image_name, CONTEXT.image_name);
+    EXPECT_EQ(document.settings.distances, settings.distances);
+}
+
+TEST(ResultsJsonTest, ReportsWhereResultsAreInvalid) {
+    auto message = [](const std::string& text) {
+        try {
+            ResultsFromJson(text);
+        } catch (const std::invalid_argument& error) {
+            return std::string(error.what());
+        }
+        return std::string("no error");
+    };
+    const std::string prefix = R"({"format": "glcm-results", "version": 1, "settings": {"features": ["Contrast"]}, "results": [)";
+
+    EXPECT_NE(message("{").find("Invalid results"), std::string::npos);
+    EXPECT_NE(message(R"({"format": "glcm-roi-set", "version": 1})").find("format"), std::string::npos);
+    EXPECT_NE(message(R"({"format": "glcm-results", "version": 1, "results": []})").find("settings is missing"), std::string::npos);
+    EXPECT_NE(
+        message(prefix + R"({"roiId": "a", "roiName": "A", "distance": 1, "status": "done", "pixelCount": 4}]})").find("results[0].status"),
+        std::string::npos);
+    EXPECT_NE(
+        message(prefix + R"({"roiId": "a", "roiName": "A", "distance": 1, "status": "ok", "pixelCount": 4, "values": {"Nope": {}}}]})")
+            .find("results[0].values.Nope"),
+        std::string::npos);
+    EXPECT_NE(message(prefix + R"({"roiId": "a", "status": "ok"}]})").find("results[0].roiName is missing"), std::string::npos);
+
+    const ResultsDocument minimal = ResultsFromJson(prefix + "]}");
+    EXPECT_TRUE(minimal.results.empty());
+    EXPECT_EQ(minimal.settings.features, std::set<Type>{Type::Contrast});
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // ROI image export
 // ---------------------------------------------------------------------------------------------------------------------

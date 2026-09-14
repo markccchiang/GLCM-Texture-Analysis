@@ -34,6 +34,7 @@ std::string ScoreProfileId(ScoreProfile profile); // "calibration", "currentSett
 std::optional<ScoreProfile> ScoreProfileFromId(const std::string& id);
 
 std::string MeasurementStatusId(MeasurementStatus status); // "ok", "skipped", "failed"
+std::optional<MeasurementStatus> MeasurementStatusFromId(const std::string& id);
 
 } // namespace glcm
 
