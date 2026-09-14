@@ -13,6 +13,8 @@ The server decides its mode from `GLCM_HOST`:
 | Data directory | `~/.glcm-texture-analysis` | `/data` |
 | Largest upload | 200 MiB, 20 000 × 20 000 px | 100 MiB, 10 000 × 10 000 px |
 | Rate limit | off | 600 requests per minute per token |
+| Analysis queue | 100 000 jobs | 20 000 jobs (ROI × distance) |
+| Pixel cache | 2 GiB | 1 GiB |
 | Retention | keep everything | images and results older than 7 days are deleted |
 
 Every default can be changed with the `GLCM_*` variables listed in the README.
@@ -90,7 +92,8 @@ These are the requirements of `doc/ui-design-plan.md`, section 8.2, and how each
 | CORS allow-list, empty by default | `registerCors()` only when `GLCM_CORS_ORIGINS` is set; origins are validated | `security.test.ts` › CORS |
 | Per-token rate limits | `registerRateLimit()`: key is the token's SHA-256 (or the client address), `429 TooManyRequests` with `Retry-After` | `security.test.ts` › limits |
 | No client-supplied file paths; random ids; sanitized export names | Image and analysis ids are random UUIDs checked against patterns; samples are served only from their listing; `fileStem()`, `SanitizeFileName()` | `web.test.ts` (sample traversal), `exports.test.ts`, core `RoiImageExportTest.SanitizesFileNames` |
-| Input validation: image size, `Ng` ≤ 256, distances ≤ 64, ≤ 10 000 vertices per ROI, ≤ 1 000 ROIs per request, every body schema-validated | TypeBox schemas in `packages/api`; `maxUploadBytes`, `maxImagePixels`; `glcm::ValidateSettings` | `security.test.ts` › limits; `analyses.test.ts`; `images.test.ts` |
+| Input validation: image size, `Ng` ≤ 256, distances ≤ 64, ≤ 10 000 vertices per ROI, ≤ 1 000 ROIs per request, every body schema-validated | TypeBox schemas in `packages/api`; `maxUploadBytes`; `maxImagePixels`, checked from the file header before decoding (`glcm::ReadImageSize`, so a small file declaring a huge image is refused without allocating memory); `glcm::ValidateSettings` | `security.test.ts` › limits; `analyses.test.ts`; `images.test.ts`; core `ImageHeaderTest`, `ImageLoaderTest` |
+| Analyses cannot exhaust the server | `JobManager`: at most `GLCM_MAX_PENDING_JOBS` jobs queued or running (`422 TooManyJobs` for larger analyses, `503 ServerBusy` with `Retry-After` while full); analyses take turns, one job each; pixel buffers are shared through a byte-limited cache (`GLCM_PIXEL_CACHE_BYTES`) | `analyses.test.ts` › job limits and fairness; `images.test.ts` › pixel cache |
 | Uploaded images and results expire | `startRetention()` in `server/src/storage/retention.ts`, at startup and periodically | `security.test.ts` › storage |
 | Storage under the data directory with random names | `ImageStore` (`images/`), `ResultStore` (`results/`), `DisplayCache` (`cache/`); exports are generated per request and not stored | `security.test.ts` › storage |
 | The token is not logged | Fastify logger redacts `req.headers.authorization` | Code review (`server/src/app.ts`) |

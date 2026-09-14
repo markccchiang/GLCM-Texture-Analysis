@@ -12,6 +12,7 @@ add_library(glcm_core STATIC
         analysis/Score.cpp
         analysis/TextureAnalysis.cpp
         imaging/DisplayRenderer.cpp
+        imaging/ImageHeader.cpp
         imaging/ImageLoader.cpp
         imaging/Quantizer.cpp
         io/Identifiers.cpp

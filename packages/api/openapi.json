@@ -1760,7 +1760,7 @@
         "tags": [
           "analyses"
         ],
-        "description": "Measures every ROI at every distance. Progress and results are streamed by GET /analyses/{id}/events.",
+        "description": "Measures every ROI at every distance. Progress and results are streamed by GET /analyses/{id}/events. An analysis with more ROI × distance jobs than the server allows is refused (422 TooManyJobs); while the queue is full, new analyses get 503 ServerBusy with Retry-After.",
         "requestBody": {
           "required": true,
           "content": {
@@ -2523,6 +2523,56 @@
             }
           },
           "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "503": {
             "description": "Error returned by every endpoint for 4xx and 5xx responses",
             "content": {
               "application/json": {

@@ -15,7 +15,7 @@ import {
 } from '@glcm/api';
 import * as native from '@glcm/native';
 import { Type } from 'typebox';
-import { isFinished, type AnalysisState, type JobManager } from '../analysis/JobManager.js';
+import { isFinished, JobLimitError, type AnalysisState, type JobManager } from '../analysis/JobManager.js';
 import { ApiError } from '../errors.js';
 import { attachment, fileStem } from '../files.js';
 import type { ImageStore } from '../storage/ImageStore.js';
@@ -31,6 +31,9 @@ export interface AnalysisRoutesOptions {
 }
 
 const NoBody = (description: string) => Type.Unsafe<undefined>({ type: 'null', description });
+
+/** Retry-After of 503 ServerBusy, when the job queue is full */
+const BUSY_RETRY_SECONDS = 30;
 
 function nativeError(error: unknown): never {
   if ((error as { code?: string }).code === 'INVALID_ARGUMENT') {
@@ -96,10 +99,11 @@ export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = 
     {
       schema: {
         summary: 'Start an analysis',
-        description: 'Measures every ROI at every distance. Progress and results are streamed by GET /analyses/{id}/events.',
+        description:
+          'Measures every ROI at every distance. Progress and results are streamed by GET /analyses/{id}/events. An analysis with more ROI × distance jobs than the server allows is refused (422 TooManyJobs); while the queue is full, new analyses get 503 ServerBusy with Retry-After.',
         tags: ['analyses'],
         body: AnalysisRequest,
-        response: { 202: AnalysisInfo, 400: ErrorResponse, 404: ErrorResponse },
+        response: { 202: AnalysisInfo, 400: ErrorResponse, 404: ErrorResponse, 422: ErrorResponse, 503: ErrorResponse },
       },
     },
     async (request, reply) => {
@@ -110,8 +114,19 @@ export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = 
       } catch (error) {
         nativeError(error);
       }
-      const state = jobs.start(request.body, image, await store.pixels(imageId));
-      return reply.code(202).send(state.info);
+      const pixels = await store.pixels(imageId);
+      try {
+        return reply.code(202).send(jobs.start(request.body, image, pixels).info);
+      } catch (error) {
+        if (!(error instanceof JobLimitError)) {
+          throw error;
+        }
+        if (error.reason === 'tooLarge') {
+          throw new ApiError(422, 'TooManyJobs', `The analysis has ${error.jobs} jobs (ROIs × distances), more than the limit of ${error.limit}`);
+        }
+        reply.header('Retry-After', String(BUSY_RETRY_SECONDS));
+        throw new ApiError(503, 'ServerBusy', `The server is busy with ${error.pending} analysis jobs; try again later`);
+      }
     },
   );
 

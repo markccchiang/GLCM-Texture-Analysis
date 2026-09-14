@@ -293,7 +293,7 @@ describe('storage', () => {
     const results = new ResultStore(directory);
     await images.init();
     await results.init();
-    const jobs = new JobManager({ concurrency: 1, retainFinished: 10 });
+    const jobs = new JobManager({ concurrency: 1, maxPendingJobs: 100, retainFinished: 10 });
     expect(await purgeExpired({ images, results, jobs }, 60_000)).toEqual({ images: 0, analyses: 0 });
   });
 });

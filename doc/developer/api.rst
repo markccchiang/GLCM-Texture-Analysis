@@ -70,7 +70,9 @@ Endpoints
    * - ``POST /images/{id}/roi-stats``
      - ``{rois: [{id, shape}]}`` → ``{stats: [{roiId, pixelCount, boundingBox, min, max, mean, std, error}]}``
    * - ``POST /analyses``
-     - ``{imageId, rois, settings}`` → ``202`` with ``AnalysisInfo``; ``400`` for invalid settings or ROIs
+     - ``{imageId, rois, settings}`` → ``202`` with ``AnalysisInfo``; ``400`` for invalid settings or ROIs; ``422``
+       ``TooManyJobs`` when ROIs × distances exceed ``GLCM_MAX_PENDING_JOBS``; ``503`` ``ServerBusy`` (with
+       ``Retry-After``) while the job queue is full
    * - ``GET /analyses/{id}``
      - ``AnalysisInfo``: status (``queued``, ``running``, ``completed``, ``cancelled``, ``failed``), completed and total
        jobs, settings
@@ -216,11 +218,15 @@ Error codes
      - ``UnsupportedMediaType``
      - Upload not sent as ``multipart/form-data``
    * - 422
-     - ``InvalidImage``, ``UnsupportedImage``, ``ImageTooLarge``
-     - The file cannot be decoded, has an unsupported format (e.g. 32-bit float), or has too many pixels
+     - ``InvalidImage``, ``UnsupportedImage``, ``ImageTooLarge``, ``TooManyJobs``
+     - The file cannot be decoded, has an unsupported format (e.g. 32-bit float), or has too many pixels (checked from
+       the file header before decoding); an analysis has more jobs than the server allows
    * - 429
      - ``TooManyRequests``
      - Rate limit exceeded (with ``Retry-After``)
+   * - 503
+     - ``ServerBusy``
+     - The analysis job queue is full (with ``Retry-After``)
    * - 500
      - ``InternalError``
      - Unexpected server error (details only in the server log)
@@ -258,8 +264,8 @@ Node.js addon
 
 ``@glcm/native`` (``bindings/node/index.d.ts``) is used by the server; it can also be used by other Node.js programs.
 Pixel buffers are row-major grayscale samples with 16-bit samples little-endian. Promises reject, and synchronous
-functions throw, with an ``Error`` whose ``code`` is ``INVALID_ARGUMENT``, ``UNSUPPORTED_IMAGE``, ``DECODE_FAILED`` or
-``INTERNAL_ERROR``; wrong argument types throw a ``TypeError``.
+functions throw, with an ``Error`` whose ``code`` is ``INVALID_ARGUMENT``, ``UNSUPPORTED_IMAGE``, ``IMAGE_TOO_LARGE``,
+``DECODE_FAILED`` or ``INTERNAL_ERROR``; wrong argument types throw a ``TypeError``.
 
 .. list-table::
    :header-rows: 1
@@ -271,8 +277,10 @@ functions throw, with an ``Error`` whose ``code`` is ``INVALID_ARGUMENT``, ``UNS
      - Version of ``glcm_core``
    * - ``catalog(): NativeCatalog``
      - Features, presets and limits
-   * - ``decodeImageFile(path): Promise<DecodedImage>``
-     - Size, bit depth, channels, warnings, default window, histogram and pixels of an image file
+   * - ``decodeImageFile(path, {maxPixels}?): Promise<DecodedImage>``
+     - Size, bit depth, channels, warnings, default window, histogram and pixels of an image file. With ``maxPixels``,
+       the size is read from the header first: larger images reject with ``IMAGE_TOO_LARGE`` before decoding, and
+       files that are not PNG, JPEG, BMP or TIFF with ``DECODE_FAILED``
    * - ``renderDisplay(pixels, width, height, bitDepth, min, max, maxSize): Promise<Buffer>``
      - PNG with window/level, downscaled to ``maxSize``
    * - ``roiStats(pixels, width, height, bitDepth, roisJson): Promise<NativeRoiStatistics[]>``

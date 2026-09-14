@@ -1,7 +1,9 @@
 #ifndef GLCM_IMAGE_LOADER_HPP_
 #define GLCM_IMAGE_LOADER_HPP_
 
+#include <cstdint>
 #include <opencv2/core.hpp>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -21,14 +23,24 @@ struct LoadedImage {
     std::vector<std::string> warnings; // e.g. "Color image converted to grayscale"
 };
 
+// Thrown when an image has more pixels than allowed. When the limit is checked from the header (see LoadImageFile), the
+// pixels have not been decoded.
+class ImageTooLargeError : public std::runtime_error {
+public:
+    ImageTooLargeError(int64_t width, int64_t height, int64_t max_pixels);
+};
+
 // Reads an image file (PNG, JPEG, BMP, 8/16-bit TIFF, ...). The bit depth is kept, color images are converted to
 // grayscale, an alpha channel is ignored and the EXIF orientation is applied.
 // Throws std::runtime_error if the file cannot be read or decoded, and std::invalid_argument for bit depths other than
 // 8 and 16.
-LoadedImage LoadImageFile(const std::string& path);
+// With max_pixels > 0, the size is first read from the header (imaging/ImageHeader.hpp), so an image above the limit
+// throws ImageTooLargeError before the decoder allocates memory for it; files that are not PNG, JPEG, BMP or TIFF then
+// throw std::runtime_error, because their size cannot be checked in advance.
+LoadedImage LoadImageFile(const std::string& path, int64_t max_pixels = 0);
 
 // Same as LoadImageFile, for an encoded image held in memory (e.g. an upload)
-LoadedImage LoadImageBytes(const std::vector<uchar>& bytes);
+LoadedImage LoadImageBytes(const std::vector<uchar>& bytes, int64_t max_pixels = 0);
 
 } // namespace glcm
 

@@ -1,10 +1,12 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { windowLevel, type ImageInfo } from '@glcm/api';
 import { PNG } from 'pngjs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { ImageStore, newImageId } from '../src/storage/ImageStore.js';
 import { createTestApp, encodeTiff, sixteenBitPattern, uploadImage, type TestApp } from './helpers.js';
 
 const WIDTH = 50;
@@ -114,6 +116,21 @@ describe('POST /images', () => {
     } finally {
       await limited.close();
     }
+  });
+
+  it('rejects a huge image from its header without decoding it', async () => {
+    // PNG signature and IHDR declaring 30000 × 30000 pixels, without image data: a decoder would need gigabytes
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(30000, 0);
+    ihdr.writeUInt32BE(30000, 4);
+    ihdr[8] = 16;
+    const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]), Buffer.from('IHDR'), ihdr, Buffer.alloc(4)]);
+
+    const response = await uploadImage(t.app, 'bomb.png', png);
+    expect(response.statusCode).toBe(422);
+    expect(response.json()).toMatchObject({ error: 'ImageTooLarge' });
+    expect(response.json<{ message: string }>().message).toContain('30000 x 30000');
+    expect(await fs.readdir(path.join(t.dataDir, 'uploads'))).toEqual([]);
   });
 });
 
@@ -278,5 +295,71 @@ describe('image resources', () => {
       expect((await t.app.inject({ method: 'GET', url: url('/pixel?x=-1&y=0') })).statusCode).toBe(400);
       expect((await t.app.inject({ method: 'GET', url: url('/pixel?x=1') })).statusCode).toBe(400);
     });
+  });
+});
+
+describe('pixel cache', () => {
+  let dataDir: string;
+
+  beforeEach(async () => {
+    dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'glcm-pixel-cache-'));
+  });
+
+  afterEach(async () => {
+    await fs.rm(dataDir, { recursive: true, force: true });
+  });
+
+  /** A store with images whose 60 pixel bytes all have the value 1, 2, ... */
+  async function storeWith(cacheBytes: number, count: number): Promise<{ store: ImageStore; ids: string[] }> {
+    const store = new ImageStore(dataDir, cacheBytes);
+    await store.init();
+    const ids: string[] = [];
+    for (let i = 0; i < count; i += 1) {
+      const upload = store.temporaryUploadPath();
+      await fs.writeFile(upload, 'original');
+      const imageId = newImageId();
+      await store.save({ imageId } as ImageInfo, Buffer.alloc(60, i + 1), upload);
+      ids.push(imageId);
+    }
+    return { store, ids };
+  }
+
+  it('shares pixel buffers between requests and evicts the least recently used', async () => {
+    const {
+      store,
+      ids: [first, second],
+    } = await storeWith(100, 2);
+    const [a, b] = await Promise.all([store.pixels(first), store.pixels(first)]);
+    expect(a).toBe(b);
+    expect(a[0]).toBe(1);
+    expect(store.pixelCacheSize).toBe(60);
+    expect(await store.pixels(first)).toBe(a);
+
+    expect((await store.pixels(second))[0]).toBe(2);
+    // 120 bytes do not fit into 100: the first image was evicted
+    expect(store.pixelCacheSize).toBe(60);
+    const reread = await store.pixels(first);
+    expect(reread).not.toBe(a);
+    expect(reread).toEqual(a);
+  });
+
+  it('forgets removed images and can be disabled', async () => {
+    const {
+      store,
+      ids: [id],
+    } = await storeWith(1000, 1);
+    await store.pixels(id);
+    expect(store.pixelCacheSize).toBe(60);
+    expect(await store.remove(id)).toBe(true);
+    expect(store.pixelCacheSize).toBe(0);
+    await expect(store.pixels(id)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(store.pixelCacheSize).toBe(0);
+
+    const {
+      store: uncached,
+      ids: [other],
+    } = await storeWith(0, 1);
+    expect(await uncached.pixels(other)).not.toBe(await uncached.pixels(other));
+    expect(uncached.pixelCacheSize).toBe(0);
   });
 });

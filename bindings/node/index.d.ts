@@ -1,6 +1,6 @@
 // Types of the glcm_native addon (bindings/node/src/addon.cpp).
-// Rejected promises and thrown errors carry `code`: INVALID_ARGUMENT, UNSUPPORTED_IMAGE, DECODE_FAILED or
-// INTERNAL_ERROR. Invalid argument types throw a TypeError synchronously.
+// Rejected promises and thrown errors carry `code`: INVALID_ARGUMENT, UNSUPPORTED_IMAGE, IMAGE_TOO_LARGE,
+// DECODE_FAILED or INTERNAL_ERROR. Invalid argument types throw a TypeError synchronously.
 
 export type FeatureGroupId = 'regionStatistics' | 'haralick' | 'other';
 
@@ -72,8 +72,17 @@ export function coreVersion(): string;
 
 export function catalog(): NativeCatalog;
 
+export interface DecodeOptions {
+  /**
+   * Largest width × height. The size is read from the file header before decoding, so larger images reject with
+   * IMAGE_TOO_LARGE without allocating memory for their pixels; files that are not PNG, JPEG, BMP or TIFF then reject
+   * with DECODE_FAILED. 0 or absent: no limit.
+   */
+  maxPixels?: number;
+}
+
 /** Decodes an image file (PNG, JPEG, BMP, 8/16-bit TIFF, ...); color is converted to grayscale. */
-export function decodeImageFile(path: string): Promise<DecodedImage>;
+export function decodeImageFile(path: string, options?: DecodeOptions): Promise<DecodedImage>;
 
 /** 8-bit PNG of the pixels with the window/level mapping, downscaled so the long side is at most maxSize (0 = no limit). */
 export function renderDisplay(

@@ -127,6 +127,42 @@ describe('decodeImageFile', () => {
   });
 });
 
+describe('decodeImageFile pixel limit', () => {
+  async function rejection(promise: Promise<unknown>): Promise<{ code?: string; message: string }> {
+    try {
+      await promise;
+    } catch (error) {
+      return error as { code?: string; message: string };
+    }
+    throw new Error('expected a rejection');
+  }
+
+  it('checks the size from the header before decoding', async () => {
+    // PNG signature and IHDR declaring 30000 × 30000 pixels, without image data
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(30000, 0);
+    ihdr.writeUInt32BE(30000, 4);
+    ihdr[8] = 16;
+    const bomb = await writeFile(
+      'bomb.png',
+      Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]), Buffer.from('IHDR'), ihdr, Buffer.alloc(4)]),
+    );
+    const tooLarge = await rejection(native.decodeImageFile(bomb, { maxPixels: 100_000_000 }));
+    expect(tooLarge.code).toBe('IMAGE_TOO_LARGE');
+    expect(tooLarge.message).toContain('30000 x 30000');
+    // Without a limit the decoder is reached, and it cannot decode the missing image data
+    expect((await rejection(native.decodeImageFile(bomb))).code).toBe('DECODE_FAILED');
+
+    const small = await writeFile('limit.tif', encodeTiff({ width: 4, height: 4, bitsPerSample: 8, samplesPerPixel: 1, data: new Array(16).fill(3) }));
+    expect((await native.decodeImageFile(small, { maxPixels: 16 })).width).toBe(4);
+    expect((await native.decodeImageFile(small, {})).width).toBe(4);
+    expect((await rejection(native.decodeImageFile(small, { maxPixels: 15 }))).code).toBe('IMAGE_TOO_LARGE');
+    expect(() => native.decodeImageFile(small, { maxPixels: -1 })).toThrow(TypeError);
+    expect(() => native.decodeImageFile(small, { maxPixels: 1.5 })).toThrow(TypeError);
+    expect(() => native.decodeImageFile(small, 5 as never)).toThrow(TypeError);
+  });
+});
+
 describe('window/level', () => {
   it('matches the TypeScript implementation used by the browser', () => {
     const windows: Array<[number, number]> = [

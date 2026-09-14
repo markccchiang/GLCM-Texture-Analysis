@@ -2,7 +2,7 @@
 //
 // Long-running work (decoding, rendering, ROI statistics, analyses) runs in Napi::AsyncWorker threads and returns
 // promises. Rejected promises and errors thrown by synchronous validation carry an error `code`: INVALID_ARGUMENT,
-// UNSUPPORTED_IMAGE, DECODE_FAILED or INTERNAL_ERROR.
+// UNSUPPORTED_IMAGE, IMAGE_TOO_LARGE, DECODE_FAILED or INTERNAL_ERROR.
 
 #include <napi.h>
 
@@ -33,6 +33,7 @@ namespace {
 const char CODE_INVALID_ARGUMENT[] = "INVALID_ARGUMENT";
 const char CODE_UNSUPPORTED_IMAGE[] = "UNSUPPORTED_IMAGE";
 const char CODE_DECODE_FAILED[] = "DECODE_FAILED";
+const char CODE_IMAGE_TOO_LARGE[] = "IMAGE_TOO_LARGE";
 const char CODE_INTERNAL[] = "INTERNAL_ERROR";
 
 bool HostIsLittleEndian() {
@@ -223,15 +224,18 @@ private:
 
 class DecodeImageWorker : public PromiseWorker {
 public:
-    DecodeImageWorker(Napi::Env env, std::string path) : PromiseWorker(env), _path(std::move(path)) {}
+    DecodeImageWorker(Napi::Env env, std::string path, int64_t max_pixels)
+        : PromiseWorker(env), _path(std::move(path)), _max_pixels(max_pixels) {}
 
     void Execute() override {
         try {
-            glcm::LoadedImage image = glcm::LoadImageFile(_path);
+            glcm::LoadedImage image = glcm::LoadImageFile(_path, _max_pixels);
             _info = image.info;
             _warnings = image.warnings;
             _statistics = glcm::ComputeDisplayStatistics(image.gray);
             _pixels = ToLittleEndianBytes(image.gray);
+        } catch (const glcm::ImageTooLargeError& error) {
+            Fail(CODE_IMAGE_TOO_LARGE, error.what());
         } catch (const std::invalid_argument& error) {
             Fail(CODE_UNSUPPORTED_IMAGE, error.what());
         } catch (const std::exception& error) {
@@ -261,6 +265,7 @@ public:
 
 private:
     std::string _path;
+    int64_t _max_pixels;
     glcm::ImageInfo _info;
     std::vector<std::string> _warnings;
     glcm::DisplayStatistics _statistics;
@@ -530,9 +535,28 @@ Napi::Value Catalog(const Napi::CallbackInfo& info) {
     return result;
 }
 
-// decodeImageFile(path: string): Promise<DecodedImage>
+// maxPixels of an optional options object at `index`; 0 (no limit) when absent
+int64_t MaxPixelsOption(const Napi::CallbackInfo& info, size_t index) {
+    if (info.Length() <= index || info[index].IsUndefined()) {
+        return 0;
+    }
+    if (!info[index].IsObject()) {
+        throw Napi::TypeError::New(info.Env(), "options must be an object");
+    }
+    const Napi::Value value = info[index].As<Napi::Object>().Get("maxPixels");
+    if (value.IsUndefined()) {
+        return 0;
+    }
+    const double number = value.IsNumber() ? value.As<Napi::Number>().DoubleValue() : -1.0;
+    if (!std::isfinite(number) || std::floor(number) != number || number < 0 || number > 9007199254740991.0) {
+        throw Napi::TypeError::New(info.Env(), "options.maxPixels must be a non-negative integer");
+    }
+    return static_cast<int64_t>(number);
+}
+
+// decodeImageFile(path: string, options?: {maxPixels?: number}): Promise<DecodedImage>
 Napi::Value DecodeImageFile(const Napi::CallbackInfo& info) {
-    auto* worker = new DecodeImageWorker(info.Env(), StringArgument(info, 0, "path"));
+    auto* worker = new DecodeImageWorker(info.Env(), StringArgument(info, 0, "path"), MaxPixelsOption(info, 1));
     const Napi::Promise promise = worker->Promise();
     worker->Queue();
     return promise;
@@ -569,6 +593,9 @@ Napi::Value ValidateAnalysis(const Napi::CallbackInfo& info) {
         glcm::ValidateSettings(glcm::SettingsFromJson(settings_json));
     } catch (const std::invalid_argument& error) {
         throw ErrorWithCode(info.Env(), CODE_INVALID_ARGUMENT, error.what());
+    } catch (const std::exception& error) {
+        // Without this, e.g. std::bad_alloc would cross the Node-API boundary and terminate the process
+        throw ErrorWithCode(info.Env(), CODE_INTERNAL, error.what());
     }
     return info.Env().Undefined();
 }
@@ -596,6 +623,9 @@ Napi::Value FormatResults(const Napi::CallbackInfo& info) {
         return Napi::String::New(info.Env(), output);
     } catch (const std::invalid_argument& error) {
         throw ErrorWithCode(info.Env(), CODE_INVALID_ARGUMENT, error.what());
+    } catch (const std::exception& error) {
+        // Without this, e.g. std::bad_alloc for a huge document would cross the Node-API boundary and terminate the process
+        throw ErrorWithCode(info.Env(), CODE_INTERNAL, error.what());
     }
 }
 

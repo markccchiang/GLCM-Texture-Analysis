@@ -1,5 +1,6 @@
-import type { AnalysisInfo, AnalysisRequest, AnalysisResults, AnalysisSettings, ImageInfo, RoiStatsResponse } from '@glcm/api';
+import type { AnalysisEvent, AnalysisInfo, AnalysisRequest, AnalysisResults, AnalysisSettings, ImageInfo, RoiStatsResponse } from '@glcm/api';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { JobLimitError, JobManager, type AnalysisState } from '../src/analysis/JobManager.js';
 import { createTestApp, encodeTiff, uploadImage, type TestApp } from './helpers.js';
 
 // Haralick, Shanmugam and Dinstein (1973), figure 2
@@ -200,6 +201,91 @@ describe('cancellation', () => {
       expect(again.statusCode).toBe(204);
     } finally {
       await t.close();
+    }
+  });
+});
+
+describe('job limits and fairness', () => {
+  let t: TestApp;
+  let image: ImageInfo;
+  const pixels = Buffer.from(HARALICK);
+
+  const request = (count: number, prefix = 'roi', imageId = image.imageId): AnalysisRequest => ({
+    imageId,
+    rois: Array.from({ length: count }, (_, i) => ({ ...WHOLE, id: `${prefix}-${i}`, name: `${prefix} ${i}` })),
+    settings: SETTINGS,
+  });
+
+  function startError(manager: JobManager, body: AnalysisRequest): unknown {
+    try {
+      manager.start(body, image, pixels);
+    } catch (error) {
+      return error;
+    }
+    return undefined;
+  }
+
+  function finished(state: AnalysisState): Promise<void> {
+    return new Promise((resolve) => {
+      state.events.on('event', (event: AnalysisEvent) => {
+        if (event.event === 'finished') {
+          resolve();
+        }
+      });
+    });
+  }
+
+  beforeAll(async () => {
+    ({ t, image } = await setup(1));
+  });
+
+  afterAll(async () => {
+    await t.close();
+  });
+
+  it('refuses analyses that do not fit into the job limit', async () => {
+    const manager = new JobManager({ concurrency: 1, maxPendingJobs: 3, retainFinished: 10 });
+    const first = manager.start(request(3), image, pixels);
+    expect(manager.pendingJobs).toBe(3);
+
+    const busy = startError(manager, request(1));
+    expect(busy).toBeInstanceOf(JobLimitError);
+    expect(busy).toMatchObject({ reason: 'busy', jobs: 1, pending: 3, limit: 3 });
+    expect(startError(manager, request(4))).toMatchObject({ reason: 'tooLarge', jobs: 4, limit: 3 });
+
+    await finished(first);
+    expect(manager.pendingJobs).toBe(0);
+    const again = manager.start(request(3), image, pixels);
+    await finished(again);
+  });
+
+  it('lets analyses take turns', async () => {
+    const manager = new JobManager({ concurrency: 1, maxPendingJobs: 100, retainFinished: 10 });
+    const large = manager.start(request(6, 'large'), image, pixels);
+    const small = manager.start(request(2, 'small'), image, pixels);
+    const order: string[] = [];
+    for (const [label, state] of [['L', large], ['S', small]] as const) {
+      state.events.on('event', (event: AnalysisEvent) => {
+        if (event.event === 'result') {
+          order.push(label);
+        }
+      });
+    }
+    await Promise.all([finished(large), finished(small)]);
+    // The first two jobs of the large analysis were started before the small one arrived; then they alternate
+    expect(order.join('')).toBe('LLSLSLLL');
+    expect(manager.results(small).results.map((result) => result.status)).toEqual(['ok', 'ok']);
+  });
+
+  it('refuses an analysis with more jobs than the server allows', async () => {
+    const limited = await createTestApp({ maxPendingJobs: 2 });
+    try {
+      const upload = await uploadImage(limited.app, 'haralick.tif', encodeTiff({ width: 4, height: 4, bitsPerSample: 8, samplesPerPixel: 1, data: HARALICK }));
+      const response = await limited.app.inject({ method: 'POST', url: '/api/v1/analyses', payload: request(3, 'roi', upload.json<ImageInfo>().imageId) });
+      expect(response.statusCode).toBe(422);
+      expect(response.json()).toMatchObject({ error: 'TooManyJobs' });
+    } finally {
+      await limited.close();
     }
   });
 });

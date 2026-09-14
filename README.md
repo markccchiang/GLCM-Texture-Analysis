@@ -163,11 +163,13 @@ The server is configured with environment variables:
 | `GLCM_PORT` | `8080` | Port |
 | `GLCM_DATA_DIR` | `~/.glcm-texture-analysis`; `/data` in server mode | Uploaded images, results and caches |
 | `GLCM_MAX_UPLOAD_BYTES` | 209,857,600 (200 MiB); 100 MiB in server mode | Largest upload |
-| `GLCM_MAX_IMAGE_PIXELS` | 400,000,000; 100,000,000 in server mode | Largest decoded image |
+| `GLCM_MAX_IMAGE_PIXELS` | 400,000,000; 100,000,000 in server mode | Largest image; checked from the file header before decoding |
 | `GLCM_RAW_TRANSFER_MAX_PIXELS` | 16,777,216 (4096²) | Images up to this size are sent to the browser as raw data |
 | `GLCM_DISPLAY_MAX_SIZE` | `4096` | Largest long side of `display.png` |
 | `GLCM_DISPLAY_CACHE_BYTES` | 536,870,912 (512 MiB) | Disk space for cached `display.png` renderings |
 | `GLCM_ANALYSIS_CONCURRENCY` | number of CPU cores | Analysis jobs (ROI × distance) running at the same time |
+| `GLCM_MAX_PENDING_JOBS` | 100,000; 20,000 in server mode | Analysis jobs queued or running over all analyses; larger analyses get `422 TooManyJobs`, others `503 ServerBusy` while the queue is full |
+| `GLCM_PIXEL_CACHE_BYTES` | 2,147,483,648 (2 GiB); 1 GiB in server mode | Memory for pixel buffers of recently used images (0 = read the file for every request) |
 | `GLCM_WEB_DIR` | `web/dist` | Built web app |
 | `GLCM_SAMPLES_DIR` | `samples/` | Sample images offered on the start screen |
 | `GLCM_LOG_LEVEL` | `info` | Fastify log level |

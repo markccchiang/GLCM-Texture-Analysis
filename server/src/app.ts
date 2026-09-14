@@ -39,7 +39,7 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
     trustProxy: config.trustProxy,
   }).withTypeProvider<TypeBoxTypeProvider>();
 
-  const store = new ImageStore(config.dataDir);
+  const store = new ImageStore(config.dataDir, config.pixelCacheBytes);
   await store.init();
   const results = new ResultStore(config.dataDir);
   await results.init();
@@ -47,6 +47,7 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
   await displayCache.init();
   const jobs: JobManager = new JobManager({
     concurrency: config.analysisConcurrency,
+    maxPendingJobs: config.maxPendingJobs,
     retainFinished: RETAINED_ANALYSES,
     onFinished: (state) => results.save({ info: state.info, results: jobs.results(state) }),
   });

@@ -1,5 +1,6 @@
 // Analysis jobs (doc/ui-design-plan.md, section 6.3.3). Each ROI × distance pair is one job, run with the addon's
-// AsyncWorker. Jobs of all analyses share one queue, so at most `concurrency` of them run at a time.
+// AsyncWorker. At most `concurrency` jobs of all analyses run at a time. Analyses take turns, one job each, so a large
+// analysis does not hold up the ones started after it, and at most `maxPendingJobs` jobs are queued or running.
 
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
@@ -46,10 +47,32 @@ interface InternalState extends AnalysisState {
 export interface JobManagerOptions {
   /** Jobs running at the same time */
   concurrency: number;
+  /** Jobs queued or running over all analyses; start() refuses analyses that do not fit */
+  maxPendingJobs: number;
   /** Finished analyses kept in memory; the oldest are forgotten first */
   retainFinished: number;
   /** Called once an analysis has finished, e.g. to store its results */
   onFinished?: (state: AnalysisState) => Promise<void> | void;
+}
+
+/**
+ * Thrown by JobManager.start() when an analysis does not fit into maxPendingJobs: "tooLarge" if it could never fit,
+ * "busy" if it fits once other analyses have progressed
+ */
+export class JobLimitError extends Error {
+  constructor(
+    readonly reason: 'tooLarge' | 'busy',
+    readonly jobs: number,
+    readonly pending: number,
+    readonly limit: number,
+  ) {
+    super(
+      reason === 'tooLarge'
+        ? `The analysis has ${jobs} jobs, more than the limit of ${limit}`
+        : `${pending} jobs are pending; ${jobs} more would exceed the limit of ${limit}`,
+    );
+    this.name = 'JobLimitError';
+  }
 }
 
 const FINISHED: ReadonlySet<AnalysisStatus> = new Set(['completed', 'cancelled', 'failed']);
@@ -76,14 +99,27 @@ function failedResult(job: Job, message: string): MeasurementResult {
 
 export class JobManager {
   private readonly analyses = new Map<string, InternalState>();
-  private readonly queue: Array<{ state: InternalState; job: Job }> = [];
+  /** Queued jobs per analysis; Map order is the order in which analyses get their next job */
+  private readonly queues = new Map<InternalState, Job[]>();
+  private queued = 0;
   private running = 0;
 
   constructor(private readonly options: JobManagerOptions) {}
 
-  /** Queues the jobs of an analysis; the request must already be validated */
+  /**
+   * Queues the jobs of an analysis; the request must already be validated. Throws JobLimitError when the jobs do not
+   * fit into maxPendingJobs.
+   */
   start(request: AnalysisRequest, image: ImageInfo, pixels: Buffer): AnalysisState {
     const { distances } = request.settings;
+    const total = request.rois.length * distances.length;
+    if (total > this.options.maxPendingJobs) {
+      throw new JobLimitError('tooLarge', total, this.pendingJobs, this.options.maxPendingJobs);
+    }
+    if (this.pendingJobs + total > this.options.maxPendingJobs) {
+      throw new JobLimitError('busy', total, this.pendingJobs, this.options.maxPendingJobs);
+    }
+
     const jobs: Job[] = [];
     request.rois.forEach((roi, roiIndex) => {
       distances.forEach((distance, distanceIndex) => jobs.push({ index: roiIndex * distances.length + distanceIndex, roi, distance }));
@@ -117,9 +153,8 @@ export class JobManager {
     this.analyses.set(state.info.analysisId, state);
     this.forgetOldAnalyses();
 
-    for (const job of jobs) {
-      this.queue.push({ state, job });
-    }
+    this.queues.set(state, jobs);
+    this.queued += jobs.length;
     this.pump();
     return state;
   }
@@ -138,10 +173,10 @@ export class JobManager {
       return true;
     }
     state.cancelRequested = true;
-    for (let i = this.queue.length - 1; i >= 0; i -= 1) {
-      if (this.queue[i].state === state) {
-        this.queue.splice(i, 1);
-      }
+    const queued = this.queues.get(state);
+    if (queued) {
+      this.queued -= queued.length;
+      this.queues.delete(state);
     }
     if (state.running === 0) {
       this.finish(state, 'cancelled');
@@ -165,16 +200,24 @@ export class JobManager {
 
   /** Number of queued or running jobs */
   get pendingJobs(): number {
-    return this.queue.length + this.running;
+    return this.queued + this.running;
   }
 
   private emit(state: AnalysisState, event: AnalysisEvent): void {
     state.events.emit('event', event);
   }
 
+  /** Starts jobs while workers are free, taking one job from each analysis in turn */
   private pump(): void {
-    while (this.running < this.options.concurrency && this.queue.length > 0) {
-      const { state, job } = this.queue.shift()!;
+    while (this.running < this.options.concurrency && this.queues.size > 0) {
+      const [state, jobs] = this.queues.entries().next().value as [InternalState, Job[]];
+      const job = jobs.shift()!;
+      this.queued -= 1;
+      // The analysis goes to the back of the line, or leaves it when it has no more queued jobs
+      this.queues.delete(state);
+      if (jobs.length > 0) {
+        this.queues.set(state, jobs);
+      }
       void this.run(state, job);
     }
   }

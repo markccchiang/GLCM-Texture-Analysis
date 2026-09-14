@@ -14,19 +14,35 @@ function isNotFound(error: unknown): boolean {
   return (error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT';
 }
 
+interface CachedPixels {
+  pixels: Promise<Buffer>;
+  /** Size once read; 0 while reading */
+  bytes: number;
+}
+
 /**
  * Images on local disk (doc/ui-design-plan.md, section 8.2). Each image has a folder images/<id>/ with
  * - original: the uploaded file
  * - pixels.bin: row-major grayscale samples, 16-bit samples little-endian
  * - pixels.bin.<gzip|zstd>: compressed copies, created on first request
  * - info.json: ImageInfo
+ *
+ * Pixel buffers of recently used images are kept in memory, up to pixelCacheBytes, so ROI statistics requests sent
+ * while ROIs are edited do not read the whole file each time. Requests for the same image share one read.
  */
 export class ImageStore {
   readonly imagesDir: string;
   readonly uploadsDir: string;
   private readonly pendingCompressions = new Map<string, Promise<Buffer>>();
+  /** Least recently used first */
+  private readonly cachedPixels = new Map<string, CachedPixels>();
+  private cachedBytes = 0;
 
-  constructor(dataDir: string) {
+  /** pixelCacheBytes 0 disables the pixel cache */
+  constructor(
+    dataDir: string,
+    private readonly pixelCacheBytes = 0,
+  ) {
     this.imagesDir = path.join(dataDir, 'images');
     this.uploadsDir = path.join(dataDir, 'uploads');
   }
@@ -69,8 +85,63 @@ export class ImageStore {
     }
   }
 
+  /** pixels.bin, possibly shared with other requests: callers must not modify the buffer */
   pixels(id: string): Promise<Buffer> {
-    return fs.readFile(path.join(this.folder(id), 'pixels.bin'));
+    const file = path.join(this.folder(id), 'pixels.bin');
+    if (this.pixelCacheBytes === 0) {
+      return fs.readFile(file);
+    }
+
+    const cached = this.cachedPixels.get(id);
+    if (cached) {
+      this.cachedPixels.delete(id);
+      this.cachedPixels.set(id, cached);
+      return cached.pixels;
+    }
+
+    const entry: CachedPixels = { pixels: fs.readFile(file), bytes: 0 };
+    this.cachedPixels.set(id, entry);
+    entry.pixels.then(
+      (pixels) => {
+        // The image may have been removed while reading
+        if (this.cachedPixels.get(id) === entry) {
+          entry.bytes = pixels.length;
+          this.cachedBytes += pixels.length;
+          this.evictPixels();
+        }
+      },
+      () => {
+        if (this.cachedPixels.get(id) === entry) {
+          this.cachedPixels.delete(id);
+        }
+      },
+    );
+    return entry.pixels;
+  }
+
+  /** Bytes of pixel buffers held in memory */
+  get pixelCacheSize(): number {
+    return this.cachedBytes;
+  }
+
+  private evictPixels(): void {
+    for (const [id, entry] of this.cachedPixels) {
+      if (this.cachedBytes <= this.pixelCacheBytes) {
+        break;
+      }
+      // Reads still in progress are not counted yet
+      if (entry.bytes > 0) {
+        this.forgetPixels(id);
+      }
+    }
+  }
+
+  private forgetPixels(id: string): void {
+    const entry = this.cachedPixels.get(id);
+    if (entry) {
+      this.cachedBytes -= entry.bytes;
+      this.cachedPixels.delete(id);
+    }
   }
 
   /** One sample, read from pixels.bin without loading the whole image */
@@ -90,7 +161,7 @@ export class ImageStore {
   async encodedPixels(id: string, encoding: ContentEncoding): Promise<Buffer> {
     const source = path.join(this.folder(id), 'pixels.bin');
     if (encoding === 'identity') {
-      return fs.readFile(source);
+      return this.pixels(id);
     }
 
     const target = `${source}.${encoding}`;
@@ -105,7 +176,7 @@ export class ImageStore {
     let pending = this.pendingCompressions.get(target);
     if (!pending) {
       pending = (async () => {
-        const compressed = await compress(await fs.readFile(source), encoding);
+        const compressed = await compress(await this.pixels(id), encoding);
         const temporary = `${target}.${randomUUID()}.tmp`;
         await fs.writeFile(temporary, compressed);
         await fs.rename(temporary, target);
@@ -139,6 +210,7 @@ export class ImageStore {
   /** Removes an image; false if it did not exist */
   async remove(id: string): Promise<boolean> {
     const folder = this.folder(id);
+    this.forgetPixels(id);
     try {
       await fs.access(folder);
     } catch {

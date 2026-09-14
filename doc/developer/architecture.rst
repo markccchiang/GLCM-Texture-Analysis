@@ -114,7 +114,7 @@ Node.js addon
 
 ``bindings/node/src/addon.cpp`` uses node-addon-api with C++ exceptions. Each slow call is a ``Napi::AsyncWorker``
 that runs on the libuv thread pool and settles a promise; failures reject with an ``Error`` whose ``code`` is
-``INVALID_ARGUMENT``, ``UNSUPPORTED_IMAGE``, ``DECODE_FAILED`` or ``INTERNAL_ERROR``. Workers that read pixels keep
+``INVALID_ARGUMENT``, ``UNSUPPORTED_IMAGE``, ``IMAGE_TOO_LARGE``, ``DECODE_FAILED`` or ``INTERNAL_ERROR``. Workers that read pixels keep
 a reference to the JavaScript buffer and wrap it as a ``cv::Mat`` without copying when possible.
 
 ROIs, settings and results cross the boundary as **JSON text** in the formats of ``core/io/Json``, so the C++ parser
@@ -142,9 +142,11 @@ server mode, which has stricter defaults and refuses to start without a strong `
 
 .. rubric:: Analysis jobs
 
-``analysis/JobManager.ts`` splits an analysis into **one job per ROI × distance** and runs jobs of all analyses from one
-queue with ``GLCM_ANALYSIS_CONCURRENCY`` workers. Each job calls the addon's ``runAnalysis`` with one ROI and one
-distance; results are stored by position (ROI order, then distance order). The manager emits ``result``, ``progress``
+``analysis/JobManager.ts`` splits an analysis into **one job per ROI × distance** and runs the jobs of all analyses with
+``GLCM_ANALYSIS_CONCURRENCY`` workers. Analyses **take turns**, one job each, so a large analysis does not hold up
+smaller ones started after it. At most ``GLCM_MAX_PENDING_JOBS`` jobs are queued or running: a larger analysis is
+refused (``422 TooManyJobs``), and while the queue is full new analyses get ``503 ServerBusy``. Each job calls the
+addon's ``runAnalysis`` with one ROI and one distance; results are stored by position (ROI order, then distance order). The manager emits ``result``, ``progress``
 and ``finished`` events, which ``GET /analyses/{id}/events`` streams as Server-Sent Events. Cancelling drops queued
 jobs; running jobs finish. Finished analyses stay in memory (up to 100) and are written to ``results/`` so that they
 survive restarts.

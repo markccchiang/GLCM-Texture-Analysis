@@ -18,6 +18,10 @@ export interface ServerConfig {
   displayCacheBytes: number;
   /** Analysis jobs (ROI × distance) running at the same time */
   analysisConcurrency: number;
+  /** Analysis jobs queued or running at once over all analyses; larger analyses are refused, others wait (503) */
+  maxPendingJobs: number;
+  /** Memory for pixel buffers of recently used images, shared by ROI statistics, analyses and exports */
+  pixelCacheBytes: number;
   logLevel: string;
   /** Built web app (web/dist); not served when missing */
   webDir: string | null;
@@ -54,6 +58,8 @@ export const DEFAULT_CONFIG: Defaults = {
   displayMaxSize: 4096,
   displayCacheBytes: 512 * MIB,
   analysisConcurrency: Math.max(1, os.availableParallelism()),
+  maxPendingJobs: 100_000,
+  pixelCacheBytes: 2048 * MIB,
   logLevel: 'info',
   apiToken: null,
   corsOrigins: [],
@@ -66,6 +72,8 @@ export const DEFAULT_CONFIG: Defaults = {
 export const SERVER_MODE_DEFAULTS: Partial<Defaults> = {
   maxUploadBytes: 100 * MIB,
   maxImagePixels: 10_000 * 10_000,
+  maxPendingJobs: 20_000,
+  pixelCacheBytes: 1024 * MIB,
   rateLimitPerMinute: 600,
   retentionHours: 7 * 24,
 };
@@ -118,6 +126,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     displayMaxSize: integerSetting(env, 'GLCM_DISPLAY_MAX_SIZE', defaults.displayMaxSize, 1),
     displayCacheBytes: integerSetting(env, 'GLCM_DISPLAY_CACHE_BYTES', defaults.displayCacheBytes, 0),
     analysisConcurrency: integerSetting(env, 'GLCM_ANALYSIS_CONCURRENCY', defaults.analysisConcurrency, 1),
+    maxPendingJobs: integerSetting(env, 'GLCM_MAX_PENDING_JOBS', defaults.maxPendingJobs, 1),
+    pixelCacheBytes: integerSetting(env, 'GLCM_PIXEL_CACHE_BYTES', defaults.pixelCacheBytes, 0),
     logLevel: env.GLCM_LOG_LEVEL || defaults.logLevel,
     webDir: path.resolve(env.GLCM_WEB_DIR || path.join(REPOSITORY_ROOT, 'web', 'dist')),
     samplesDir: path.resolve(env.GLCM_SAMPLES_DIR || path.join(REPOSITORY_ROOT, 'samples')),
