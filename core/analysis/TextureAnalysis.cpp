@@ -11,6 +11,8 @@
 #include <iomanip>
 #include <stdexcept>
 
+#include "analysis/Score.hpp"
+
 using namespace glcm;
 
 namespace fs = std::filesystem;
@@ -18,6 +20,7 @@ namespace fs = std::filesystem;
 namespace {
 
 const int white_color = 255;
+const double NAN_VALUE = std::numeric_limits<double>::quiet_NaN();
 
 const Direction DIRECTIONS_WITH_AVG[] = {Direction::H, Direction::V, Direction::LD, Direction::RD, Direction::Avg};
 
@@ -36,7 +39,7 @@ std::array<std::array<Offset, 2>, 4> NeighborOffsets(int d) {
     }};
 }
 
-// Shannon entropy -sum v log(v) over the positive entries
+// Shannon entropy -sum v ln(v) over the positive entries
 double EntropyOf(const std::vector<double>& values) {
     double entropy = 0.0;
     for (double value : values) {
@@ -55,10 +58,20 @@ double CorrelationRatio(double numerator, double denominator) {
 
 } // namespace
 
-TextureAnalysis::TextureAnalysis(int Ng) : _Ng(Ng) {
+TextureAnalysis::TextureAnalysis(int Ng, const TextureOptions& options) : _Ng(Ng), _options(options) {
     if (Ng <= 0) {
         throw std::invalid_argument("Invalid Ng assignment (Ng <= 0)");
     }
+    if (options.directions.empty()) {
+        throw std::invalid_argument("At least one direction must be selected");
+    }
+    for (Direction direction : options.directions) {
+        if (direction == Direction::Avg) {
+            throw std::invalid_argument("Avg is not a direction that can be computed");
+        }
+        _enabled[static_cast<int>(direction)] = true;
+    }
+    _entropy_scale = (options.log_base == LogBase::Two) ? 1.0 / std::log(2.0) : 1.0;
 
     for (DirectionData& data : _directions) {
         data.p.assign(_Ng * _Ng, 0.0);
@@ -71,19 +84,40 @@ TextureAnalysis::TextureAnalysis(int Ng) : _Ng(Ng) {
 
 template <typename Fn>
 Features TextureAnalysis::ForEachDirection(Fn fn) const {
-    return {fn(_directions[0]), fn(_directions[1]), fn(_directions[2]), fn(_directions[3])};
+    auto value = [&](int direction) -> double { return _enabled[direction] ? fn(_directions[direction]) : NAN_VALUE; };
+    return {value(0), value(1), value(2), value(3)};
+}
+
+Features TextureAnalysis::Directional(double value) const {
+    return ForEachDirection([value](const DirectionData&) { return value; });
 }
 
 void TextureAnalysis::ProcessRectImage(const cv::Mat& image, int distance) {
     Process(image, nullptr, distance);
 }
 
+void TextureAnalysis::ProcessMaskedImage(const cv::Mat& image, const cv::Mat& mask, int distance) {
+    if (mask.type() != CV_8UC1 || mask.size() != image.size()) {
+        throw std::invalid_argument("The mask must be an 8-bit single-channel image of the same size as the image");
+    }
+    Process(image, &mask, distance);
+}
+
 void TextureAnalysis::ProcessPolygonImage(const cv::Mat& original_image, const cv::Mat& mask_image, int distance) {
-    Process(original_image, &mask_image, distance);
+    ProcessMaskedImage(original_image, mask_image, distance);
+}
+
+int TextureAnalysis::PairCount(Direction direction) const {
+    if (direction == Direction::Avg) {
+        throw std::invalid_argument("Avg has no pair count");
+    }
+    return _pair_counts[static_cast<int>(direction)];
 }
 
 void TextureAnalysis::Process(const cv::Mat& image, const cv::Mat* mask, int distance) {
-    CV_Assert(image.type() == CV_8UC1);
+    if (image.type() != CV_8UC1) {
+        throw std::invalid_argument("The image must be an 8-bit single-channel image (CV_8UC1)");
+    }
     if (distance < 1) {
         throw std::invalid_argument("The neighborhood distance must be at least 1");
     }
@@ -94,8 +128,10 @@ void TextureAnalysis::Process(const cv::Mat& image, const cv::Mat* mask, int dis
     const auto offsets = NeighborOffsets(distance);
     std::array<std::vector<int>, 4> counts;
     std::array<int, 4> totals{}; // normalization factor R of each direction
-    for (auto& direction_counts : counts) {
-        direction_counts.assign(_Ng * _Ng, 0);
+    for (int direction = 0; direction < 4; ++direction) {
+        if (_enabled[direction]) {
+            counts[direction].assign(_Ng * _Ng, 0);
+        }
     }
     std::vector<double> pixel_values;
 
@@ -114,6 +150,9 @@ void TextureAnalysis::Process(const cv::Mat& image, const cv::Mat* mask, int dis
             pixel_values.push_back(j);
 
             for (int direction = 0; direction < 4; ++direction) {
+                if (!_enabled[direction]) {
+                    continue;
+                }
                 for (const Offset& offset : offsets[direction]) {
                     int k = m + offset.row;
                     int l = n + offset.col;
@@ -131,8 +170,11 @@ void TextureAnalysis::Process(const cv::Mat& image, const cv::Mat* mask, int dis
         }
     }
 
+    _pair_counts = totals;
     for (int direction = 0; direction < 4; ++direction) {
-        Normalize(_directions[direction], counts[direction], totals[direction]);
+        if (_enabled[direction]) {
+            Normalize(_directions[direction], counts[direction], totals[direction]);
+        }
     }
     CalculatePixelStatistics(pixel_values);
 }
@@ -220,11 +262,11 @@ void TextureAnalysis::CalculatePixelStatistics(const std::vector<double>& pixel_
 //===============================================================================================================
 
 void TextureAnalysis::GetMean(Features& f) const {
-    f = {_pixel_values_mean, _pixel_values_mean, _pixel_values_mean, _pixel_values_mean};
+    f = Directional(_pixel_values_mean);
 }
 
 void TextureAnalysis::GetStd(Features& f) const {
-    f = {_pixel_values_STD, _pixel_values_STD, _pixel_values_STD, _pixel_values_STD};
+    f = Directional(_pixel_values_STD);
 }
 
 void TextureAnalysis::GetEnergy(Features& f) const {
@@ -395,11 +437,11 @@ void TextureAnalysis::GetSumVariance(Features& f) const {
 }
 
 void TextureAnalysis::GetSumEntropy(Features& f) const {
-    f = ForEachDirection([](const DirectionData& d) { return EntropyOf(d.p_xpy); });
+    f = ForEachDirection([this](const DirectionData& d) { return EntropyOf(d.p_xpy) * _entropy_scale; });
 }
 
 void TextureAnalysis::GetEntropy(Features& f) const {
-    f = ForEachDirection([](const DirectionData& d) { return EntropyOf(d.p); });
+    f = ForEachDirection([this](const DirectionData& d) { return EntropyOf(d.p) * _entropy_scale; });
 }
 
 void TextureAnalysis::GetDifferenceVariance(Features& f) const {
@@ -418,7 +460,7 @@ void TextureAnalysis::GetDifferenceVariance(Features& f) const {
 }
 
 void TextureAnalysis::GetDifferenceEntropy(Features& f) const {
-    f = ForEachDirection([](const DirectionData& d) { return EntropyOf(d.p_xny); });
+    f = ForEachDirection([this](const DirectionData& d) { return EntropyOf(d.p_xny) * _entropy_scale; });
 }
 
 void TextureAnalysis::GetInformationMeasuresOfCorrelation(Features& f1, Features& f2) const {
@@ -429,26 +471,6 @@ void TextureAnalysis::GetInformationMeasuresOfCorrelation(Features& f1, Features
         double HXY1;
         double HXY2;
     };
-
-    std::array<Entropies, 4> entropies;
-    for (int direction = 0; direction < 4; ++direction) {
-        const DirectionData& d = _directions[direction];
-        Entropies& e = entropies[direction];
-        e.HX = EntropyOf(d.px);
-        e.HY = EntropyOf(d.py);
-        e.HXY = EntropyOf(d.p);
-        e.HXY1 = 0.0;
-        e.HXY2 = 0.0;
-        for (int i = 0; i < _Ng; ++i) {
-            for (int j = 0; j < _Ng; ++j) {
-                double pxpy = d.px[i] * d.py[j];
-                if (pxpy > 0) {
-                    e.HXY1 -= P(d, i, j) * log(pxpy);
-                    e.HXY2 -= pxpy * log(pxpy);
-                }
-            }
-        }
-    }
 
     // Undefined cases return 0, as in PyRadiomics: a single gray level (HX = HY = 0) for IMC1, and a negative value under
     // the square root, which only comes from rounding, for IMC2
@@ -461,8 +483,40 @@ void TextureAnalysis::GetInformationMeasuresOfCorrelation(Features& f1, Features
         return (value < 0.0) ? 0.0 : sqrt(value);
     };
 
-    f1 = {first(entropies[0]), first(entropies[1]), first(entropies[2]), first(entropies[3])};
-    f2 = {second(entropies[0]), second(entropies[1]), second(entropies[2]), second(entropies[3])};
+    std::array<double, 4> imc1{};
+    std::array<double, 4> imc2{};
+    for (int direction = 0; direction < 4; ++direction) {
+        if (!_enabled[direction]) {
+            imc1[direction] = NAN_VALUE;
+            imc2[direction] = NAN_VALUE;
+            continue;
+        }
+
+        const DirectionData& d = _directions[direction];
+        Entropies e{EntropyOf(d.px), EntropyOf(d.py), EntropyOf(d.p), 0.0, 0.0};
+        for (int i = 0; i < _Ng; ++i) {
+            for (int j = 0; j < _Ng; ++j) {
+                double pxpy = d.px[i] * d.py[j];
+                if (pxpy > 0) {
+                    e.HXY1 -= P(d, i, j) * log(pxpy);
+                    e.HXY2 -= pxpy * log(pxpy);
+                }
+            }
+        }
+
+        // Entropies in the selected log base
+        e.HX *= _entropy_scale;
+        e.HY *= _entropy_scale;
+        e.HXY *= _entropy_scale;
+        e.HXY1 *= _entropy_scale;
+        e.HXY2 *= _entropy_scale;
+
+        imc1[direction] = first(e);
+        imc2[direction] = second(e);
+    }
+
+    f1 = {imc1[0], imc1[1], imc1[2], imc1[3]};
+    f2 = {imc2[0], imc2[1], imc2[2], imc2[3]};
 }
 
 void TextureAnalysis::GetMaximalCorrelationCoefficient(Features& f) const {
@@ -681,6 +735,9 @@ std::map<Type, Features> TextureAnalysis::Calculate(const std::set<Type>& types)
             case Type::InverseDifferenceMomentNormalized:
                 GetInverseDifferenceMomentNormalized(results[Type::InverseDifferenceMomentNormalized]);
                 break;
+            case Type::MaximalCorrelationCoefficient:
+                GetMaximalCorrelationCoefficient(results[Type::MaximalCorrelationCoefficient]);
+                break;
             default:
                 std::cerr << "Unknown feature type!\n";
                 break;
@@ -692,19 +749,9 @@ std::map<Type, Features> TextureAnalysis::Calculate(const std::set<Type>& types)
 
 void TextureAnalysis::CalculateScore(double age, std::map<Type, Features>& features_map) const {
     if ((age > 0) && features_map.count(Type::Mean) && features_map.count(Type::Entropy) && features_map.count(Type::Contrast)) {
-        const double params[] = {1.138, -1.814, 1.416, 1.714};
-        const Features& mean = features_map.at(Type::Mean);
-        const Features& entropy = features_map.at(Type::Entropy);
-        const Features& contrast = features_map.at(Type::Contrast);
-
-        auto score = [&](Direction direction) {
-            return params[0] * age + params[1] * mean.Get(direction) + params[2] * entropy.Get(direction) +
-                   params[3] * contrast.Get(direction);
-        };
-
-        Features result{score(Direction::H), score(Direction::V), score(Direction::LD), score(Direction::RD)};
-        features_map[Type::Score] = result;
-        features_map[Type::Age] = {age, age, age, age};
+        features_map[Type::Score] =
+            ComputeScore(age, features_map.at(Type::Mean), features_map.at(Type::Entropy), features_map.at(Type::Contrast));
+        features_map[Type::Age] = Directional(age);
     } else {
         std::cerr << "Can not calculate the Score!\n";
     }
@@ -772,6 +819,8 @@ std::string TextureAnalysis::TypeToString(Type type) {
             return "Inverse Difference Normalized";
         case Type::InverseDifferenceMomentNormalized:
             return "Inverse Difference Moment Normalized";
+        case Type::MaximalCorrelationCoefficient:
+            return "Maximal Correlation Coefficient";
         case Type::Score:
             return "Score";
         case Type::Age:

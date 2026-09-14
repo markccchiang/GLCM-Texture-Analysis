@@ -1,0 +1,179 @@
+#include <gtest/gtest.h>
+
+#include <array>
+#include <cmath>
+#include <limits>
+#include <opencv2/core.hpp>
+#include <stdexcept>
+#include <vector>
+
+#include "roi/Roi.hpp"
+
+using glcm::CountMaskPixels;
+using glcm::EllipseRoi;
+using glcm::MaskBoundingBox;
+using glcm::PolygonRoi;
+using glcm::RasterizeMask;
+using glcm::RectangleRoi;
+
+namespace {
+
+using Points = std::vector<std::array<double, 2>>;
+
+bool MasksEqual(const cv::Mat& a, const cv::Mat& b) {
+    if (a.size() != b.size() || a.type() != b.type()) {
+        return false;
+    }
+    cv::Mat difference = a != b;
+    return cv::countNonZero(difference) == 0;
+}
+
+PolygonRoi Polygon(const Points& points) {
+    PolygonRoi polygon;
+    polygon.points = points;
+    return polygon;
+}
+
+// Independent even-odd point-in-polygon test (ray casting, W. R. Franklin's pnpoly) at every pixel centre
+cv::Mat BruteForcePolygonMask(const Points& points, cv::Size size) {
+    cv::Mat mask = cv::Mat::zeros(size, CV_8UC1);
+    const size_t n = points.size();
+    for (int row = 0; row < size.height; ++row) {
+        for (int col = 0; col < size.width; ++col) {
+            const double x = col + 0.5;
+            const double y = row + 0.5;
+            bool inside = false;
+            for (size_t i = 0, j = n - 1; i < n; j = i++) {
+                const double xi = points[i][0];
+                const double yi = points[i][1];
+                const double xj = points[j][0];
+                const double yj = points[j][1];
+                if (((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+                    inside = !inside;
+                }
+            }
+            if (inside) {
+                mask.at<uchar>(row, col) = 255;
+            }
+        }
+    }
+    return mask;
+}
+
+double ShoelaceArea(const Points& points) {
+    double twice_area = 0.0;
+    for (size_t i = 0; i < points.size(); ++i) {
+        const auto& a = points[i];
+        const auto& b = points[(i + 1) % points.size()];
+        twice_area += a[0] * b[1] - b[0] * a[1];
+    }
+    return std::fabs(twice_area) / 2.0;
+}
+
+double Perimeter(const Points& points) {
+    double perimeter = 0.0;
+    for (size_t i = 0; i < points.size(); ++i) {
+        const auto& a = points[i];
+        const auto& b = points[(i + 1) % points.size()];
+        perimeter += std::hypot(b[0] - a[0], b[1] - a[1]);
+    }
+    return perimeter;
+}
+
+} // namespace
+
+TEST(RoiTest, RectangleCoversPixelCentres) {
+    const cv::Mat mask = RasterizeMask(RectangleRoi{2.0, 3.0, 4.0, 5.0}, cv::Size(20, 20));
+
+    EXPECT_EQ(mask.type(), CV_8UC1);
+    EXPECT_EQ(CountMaskPixels(mask), 20);
+    EXPECT_EQ(MaskBoundingBox(mask), cv::Rect(2, 3, 4, 5));
+    EXPECT_EQ(mask.at<uchar>(3, 2), 255);
+    EXPECT_EQ(mask.at<uchar>(8, 2), 0);
+}
+
+TEST(RoiTest, RectangleUsesHalfOpenPixelCentreRule) {
+    // Centre 3.5 lies in [2.6, 3.6); centre 2.5 does not
+    EXPECT_EQ(MaskBoundingBox(RasterizeMask(RectangleRoi{2.6, 0.0, 1.0, 1.0}, cv::Size(10, 3))), cv::Rect(3, 0, 1, 1));
+    // Centre 2.5 lies in [2.5, 3.5); centre 3.5 is on the open right edge
+    EXPECT_EQ(MaskBoundingBox(RasterizeMask(RectangleRoi{2.5, 0.0, 1.0, 1.0}, cv::Size(10, 3))), cv::Rect(2, 0, 1, 1));
+}
+
+TEST(RoiTest, RectangleWithNegativeSizeIsNormalized) {
+    const cv::Size size(20, 20);
+    EXPECT_TRUE(MasksEqual(RasterizeMask(RectangleRoi{6.0, 8.0, -4.0, -5.0}, size), RasterizeMask(RectangleRoi{2.0, 3.0, 4.0, 5.0}, size)));
+}
+
+TEST(RoiTest, ShapesAreClippedToTheImage) {
+    const cv::Size size(8, 8);
+    EXPECT_EQ(CountMaskPixels(RasterizeMask(RectangleRoi{-5.0, -5.0, 10.0, 10.0}, size)), 25);
+    EXPECT_EQ(CountMaskPixels(RasterizeMask(RectangleRoi{20.0, 20.0, 5.0, 5.0}, size)), 0);
+
+    const cv::Mat ellipse = RasterizeMask(EllipseRoi{0.0, 0.0, 6.0, 6.0, 0.0}, size);
+    EXPECT_GT(CountMaskPixels(ellipse), 0);
+    EXPECT_EQ(MaskBoundingBox(ellipse).tl(), cv::Point(0, 0));
+
+    const Points outside_left = {{-30.0, 1.0}, {4.0, 1.0}, {4.0, 5.0}, {-30.0, 5.0}};
+    EXPECT_TRUE(MasksEqual(RasterizeMask(Polygon(outside_left), size), BruteForcePolygonMask(outside_left, size)));
+}
+
+TEST(RoiTest, AxisAlignedSquarePolygonEqualsRectangle) {
+    const cv::Size size(20, 20);
+    const PolygonRoi square = Polygon({{2.0, 3.0}, {6.0, 3.0}, {6.0, 8.0}, {2.0, 8.0}});
+    EXPECT_TRUE(MasksEqual(RasterizeMask(square, size), RasterizeMask(RectangleRoi{2.0, 3.0, 4.0, 5.0}, size)));
+}
+
+TEST(RoiTest, PolygonsMatchBruteForceEvenOddTest) {
+    const cv::Size size(40, 40);
+    // Vertices are off the pixel-centre grid, so no centre lies exactly on an edge
+    const Points concave = {{3.3, 2.2}, {30.7, 4.1}, {18.2, 14.6}, {33.9, 31.3}, {5.1, 36.8}, {12.4, 19.9}};
+    const Points bow_tie = {{2.3, 2.1}, {37.6, 36.2}, {37.4, 2.7}, {2.9, 35.8}};
+
+    for (const Points& points : {concave, bow_tie}) {
+        const cv::Mat mask = RasterizeMask(Polygon(points), size);
+        EXPECT_TRUE(MasksEqual(mask, BruteForcePolygonMask(points, size)));
+    }
+
+    // The pixel count of a simple polygon is close to its area (the error is bounded by the boundary length)
+    const int count = CountMaskPixels(RasterizeMask(Polygon(concave), size));
+    EXPECT_NEAR(count, ShoelaceArea(concave), Perimeter(concave));
+}
+
+TEST(RoiTest, CircleAreaIsCloseToPiRSquared) {
+    const cv::Mat mask = RasterizeMask(EllipseRoi{50.0, 50.0, 20.0, 20.0, 0.0}, cv::Size(100, 100));
+    EXPECT_NEAR(CountMaskPixels(mask), CV_PI * 20.0 * 20.0, 40.0);
+    // Centres 30.5 ... 69.5 are within 20 of 50 on the middle row and column
+    EXPECT_EQ(MaskBoundingBox(mask), cv::Rect(30, 30, 40, 40));
+}
+
+TEST(RoiTest, EllipseRotationMatchesSwappedAxes) {
+    const cv::Size size(60, 60);
+    const cv::Mat wide = RasterizeMask(EllipseRoi{30.0, 30.0, 20.0, 8.0, 0.0}, size);
+    const cv::Mat tall = RasterizeMask(EllipseRoi{30.0, 30.0, 8.0, 20.0, 0.0}, size);
+
+    EXPECT_TRUE(MasksEqual(RasterizeMask(EllipseRoi{30.0, 30.0, 20.0, 8.0, 90.0}, size), tall));
+    EXPECT_TRUE(MasksEqual(RasterizeMask(EllipseRoi{30.0, 30.0, 20.0, 8.0, 180.0}, size), wide));
+    EXPECT_TRUE(MasksEqual(RasterizeMask(EllipseRoi{30.0, 30.0, 20.0, 8.0, -90.0}, size), tall));
+    EXPECT_FALSE(MasksEqual(RasterizeMask(EllipseRoi{30.0, 30.0, 20.0, 8.0, 30.0}, size), wide));
+}
+
+TEST(RoiTest, DegenerateShapesGiveEmptyMasks) {
+    const cv::Size size(10, 10);
+    EXPECT_EQ(CountMaskPixels(RasterizeMask(RectangleRoi{2.0, 2.0, 0.0, 5.0}, size)), 0);
+    EXPECT_EQ(CountMaskPixels(RasterizeMask(EllipseRoi{5.0, 5.0, 0.0, 3.0, 0.0}, size)), 0);
+    EXPECT_EQ(CountMaskPixels(RasterizeMask(Polygon({{1.0, 1.0}, {8.0, 8.0}}), size)), 0);
+    EXPECT_EQ(MaskBoundingBox(cv::Mat::zeros(5, 5, CV_8UC1)), cv::Rect());
+}
+
+TEST(RoiTest, InvalidInputsThrow) {
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double inf = std::numeric_limits<double>::infinity();
+    const cv::Size size(10, 10);
+
+    EXPECT_THROW(RasterizeMask(RectangleRoi{nan, 0.0, 1.0, 1.0}, size), std::invalid_argument);
+    EXPECT_THROW(RasterizeMask(EllipseRoi{5.0, 5.0, inf, 3.0, 0.0}, size), std::invalid_argument);
+    EXPECT_THROW(RasterizeMask(Polygon({{1.0, 1.0}, {8.0, nan}, {2.0, 7.0}}), size), std::invalid_argument);
+    EXPECT_THROW(RasterizeMask(RectangleRoi{0.0, 0.0, 1.0, 1.0}, cv::Size(0, 10)), std::invalid_argument);
+    EXPECT_THROW(MaskBoundingBox(cv::Mat::zeros(5, 5, CV_16UC1)), std::invalid_argument);
+    EXPECT_THROW(CountMaskPixels(cv::Mat::zeros(5, 5, CV_32FC1)), std::invalid_argument);
+}

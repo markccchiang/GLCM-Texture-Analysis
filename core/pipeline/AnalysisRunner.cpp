@@ -1,0 +1,274 @@
+#include "pipeline/AnalysisRunner.hpp"
+
+#include <climits>
+#include <cmath>
+#include <stdexcept>
+
+#include "analysis/Score.hpp"
+#include "imaging/Quantizer.hpp"
+
+namespace glcm {
+
+namespace {
+
+const double NAN_VALUE = std::numeric_limits<double>::quiet_NaN();
+const uchar INSIDE = 255;
+const Direction DIRECTIONS[] = {Direction::H, Direction::V, Direction::LD, Direction::RD};
+const std::set<Direction> ALL_DIRECTIONS{Direction::H, Direction::V, Direction::LD, Direction::RD};
+
+void RequireAnalysableImage(const cv::Mat& gray) {
+    if (gray.empty() || gray.channels() != 1 || (gray.depth() != CV_8U && gray.depth() != CV_16U)) {
+        throw std::invalid_argument("The image must be a non-empty 8- or 16-bit single-channel image");
+    }
+}
+
+std::string DirectionLabel(Direction direction) {
+    switch (direction) {
+        case Direction::H:
+            return "0°";
+        case Direction::V:
+            return "90°";
+        case Direction::LD:
+            return "135°";
+        case Direction::RD:
+            return "45°";
+        default:
+            return "average";
+    }
+}
+
+// The same value for the given directions, NaN for the others
+Features Uniform(double value, const std::set<Direction>& directions) {
+    Features features{NAN_VALUE, NAN_VALUE, NAN_VALUE, NAN_VALUE};
+    for (Direction direction : directions) {
+        switch (direction) {
+            case Direction::H:
+                features.H = value;
+                break;
+            case Direction::V:
+                features.V = value;
+                break;
+            case Direction::LD:
+                features.LD = value;
+                break;
+            case Direction::RD:
+                features.RD = value;
+                break;
+            default:
+                break;
+        }
+    }
+    return features;
+}
+
+struct ScoreOutcome {
+    Features score;
+    std::vector<std::string> warnings;
+};
+
+// Score with the settings the coefficients were fitted with: Ng = 256 over 0-255, d = 1, all directions, natural log
+ScoreOutcome CalibrationScore(const cv::Mat& gray, const cv::Mat& mask, const ScoreSettings& score) {
+    ScoreOutcome outcome;
+    cv::Mat mapped = gray;
+    if (gray.depth() == CV_16U) {
+        QuantizationSettings mapping;
+        mapping.method = QuantizationMethod::FixedRange;
+        mapping.range_min = score.intensity_min;
+        mapping.range_max = score.intensity_max;
+        mapped = Quantize(gray, mask, 256, mapping).image;
+        outcome.warnings.push_back("The score was calibrated on 8-bit images; intensities " + std::to_string(score.intensity_min) + "–" +
+                                   std::to_string(score.intensity_max) + " were mapped to 0–255 for it");
+    }
+
+    const RegionStatistics statistics = ComputeRegionStatistics(mapped, mask);
+    TextureAnalysis analysis(256);
+    analysis.ProcessMaskedImage(mapped, mask, 1);
+    const auto values = analysis.Calculate({Type::Entropy, Type::Contrast});
+    outcome.score = ComputeScore(
+        score.age, Uniform(statistics.mean, ALL_DIRECTIONS), values.at(Type::Entropy), values.at(Type::Contrast), score.coefficients);
+    return outcome;
+}
+
+bool MatchesScoreCalibration(const AnalysisSettings& settings, int distance, int bit_depth) {
+    return bit_depth == 8 && settings.gray_levels == 256 && distance == 1 &&
+           settings.quantization.method == QuantizationMethod::FixedRange && settings.quantization.range_min == 0 &&
+           settings.quantization.range_max == 255 && settings.log_base == LogBase::Natural && settings.directions == ALL_DIRECTIONS;
+}
+
+void Measure(const cv::Mat& gray, const cv::Mat& mask, int distance, const AnalysisSettings& settings, MeasurementResult& result) {
+    const RegionStatistics statistics = ComputeRegionStatistics(gray, mask);
+    const QuantizationResult quantized = Quantize(gray, mask, settings.gray_levels, settings.quantization);
+    result.quantization_lower = quantized.lower;
+    result.quantization_upper = quantized.upper;
+
+    TextureOptions options;
+    options.directions = settings.directions;
+    options.log_base = settings.log_base;
+    TextureAnalysis analysis(settings.gray_levels, options);
+    analysis.ProcessMaskedImage(quantized.image, mask, distance);
+
+    for (int index = 0; index < 4; ++index) {
+        result.pair_counts[index] = analysis.PairCount(DIRECTIONS[index]);
+    }
+    for (Direction direction : settings.directions) {
+        if (analysis.PairCount(direction) == 0) {
+            result.warnings.push_back("No pixel pairs at distance " + std::to_string(distance) + " in the " + DirectionLabel(direction) +
+                                      " direction; its values come from an empty co-occurrence matrix");
+        }
+    }
+
+    std::set<Type> texture_types;
+    for (Type type : settings.features) {
+        if (type != Type::Mean && type != Type::Std) {
+            texture_types.insert(type);
+        }
+    }
+    const bool current_settings_score = settings.score.enabled && settings.score.profile == ScoreProfile::CurrentSettings;
+    std::set<Type> computed = texture_types;
+    if (current_settings_score) {
+        computed.insert(Type::Entropy);
+        computed.insert(Type::Contrast);
+    }
+    const auto values = analysis.Calculate(computed);
+
+    // Region statistics use the original intensities, not the gray levels
+    if (settings.features.count(Type::Mean) > 0) {
+        result.values[Type::Mean] = Uniform(statistics.mean, settings.directions);
+    }
+    if (settings.features.count(Type::Std) > 0) {
+        result.values[Type::Std] = Uniform(statistics.std, settings.directions);
+    }
+    for (Type type : texture_types) {
+        result.values[type] = values.at(type);
+    }
+
+    if (current_settings_score) {
+        const ScoreSettings& score = settings.score;
+        result.score = ComputeScore(score.age, Uniform(statistics.mean, settings.directions), values.at(Type::Entropy),
+            values.at(Type::Contrast), score.coefficients);
+        const int bit_depth = (gray.depth() == CV_16U) ? 16 : 8;
+        if (!MatchesScoreCalibration(settings, distance, bit_depth)) {
+            result.warnings.push_back(
+                "The score coefficients were calibrated with Ng = 256, d = 1, all four directions and 8-bit images; "
+                "they may not apply to the current settings");
+        }
+    }
+}
+
+} // namespace
+
+RegionStatistics ComputeRegionStatistics(const cv::Mat& gray, const cv::Mat& mask) {
+    RequireAnalysableImage(gray);
+    if (mask.type() != CV_8UC1 || mask.size() != gray.size()) {
+        throw std::invalid_argument("The mask must be an 8-bit single-channel image of the same size as the image");
+    }
+
+    const bool sixteen_bit = gray.depth() == CV_16U;
+    auto value_at = [&](int row, int col) -> int { return sixteen_bit ? gray.at<uint16_t>(row, col) : gray.at<uchar>(row, col); };
+
+    RegionStatistics statistics;
+    double sum = 0.0;
+    int min_value = INT_MAX;
+    int max_value = INT_MIN;
+    for (int row = 0; row < gray.rows; ++row) {
+        const uchar* mask_line = mask.ptr<uchar>(row);
+        for (int col = 0; col < gray.cols; ++col) {
+            if (mask_line[col] == INSIDE) {
+                const int value = value_at(row, col);
+                sum += value;
+                min_value = std::min(min_value, value);
+                max_value = std::max(max_value, value);
+                ++statistics.pixel_count;
+            }
+        }
+    }
+    if (statistics.pixel_count == 0) {
+        return statistics;
+    }
+
+    statistics.min = min_value;
+    statistics.max = max_value;
+    statistics.mean = sum / statistics.pixel_count;
+    if (statistics.pixel_count < 2) {
+        statistics.std = 0.0;
+        return statistics;
+    }
+
+    double squared_deviations = 0.0;
+    for (int row = 0; row < gray.rows; ++row) {
+        const uchar* mask_line = mask.ptr<uchar>(row);
+        for (int col = 0; col < gray.cols; ++col) {
+            if (mask_line[col] == INSIDE) {
+                const double deviation = value_at(row, col) - statistics.mean;
+                squared_deviations += deviation * deviation;
+            }
+        }
+    }
+    statistics.std = std::sqrt(squared_deviations / (statistics.pixel_count - 1.0));
+    return statistics;
+}
+
+AnalysisOutput RunAnalysis(
+    const cv::Mat& gray, const std::vector<Roi>& rois, const AnalysisSettings& settings, const ProgressCallback& progress) {
+    RequireAnalysableImage(gray);
+    ValidateSettings(settings);
+
+    AnalysisOutput output;
+    const int total = static_cast<int>(rois.size() * settings.distances.size());
+    int completed = 0;
+
+    for (const Roi& roi : rois) {
+        cv::Mat mask;
+        std::string roi_error;
+        try {
+            mask = RasterizeMask(roi.shape, gray.size());
+        } catch (const std::exception& error) {
+            roi_error = error.what();
+        }
+        const int pixel_count = mask.empty() ? 0 : CountMaskPixels(mask);
+        std::optional<ScoreOutcome> calibration_score; // computed once per ROI, shared by every distance
+
+        for (int distance : settings.distances) {
+            MeasurementResult result;
+            result.roi_id = roi.id;
+            result.roi_name = roi.name;
+            result.distance = distance;
+            result.pixel_count = pixel_count;
+
+            if (!roi_error.empty()) {
+                result.status = MeasurementStatus::Failed;
+                result.error = roi_error;
+            } else if (pixel_count < 2) {
+                result.status = MeasurementStatus::Skipped;
+                result.error = "The ROI contains fewer than 2 pixels";
+            } else {
+                try {
+                    Measure(gray, mask, distance, settings, result);
+                    if (settings.score.enabled && settings.score.profile == ScoreProfile::Calibration) {
+                        if (!calibration_score) {
+                            calibration_score = CalibrationScore(gray, mask, settings.score);
+                        }
+                        result.score = calibration_score->score;
+                        result.warnings.insert(
+                            result.warnings.end(), calibration_score->warnings.begin(), calibration_score->warnings.end());
+                    }
+                } catch (const std::exception& error) {
+                    result.status = MeasurementStatus::Failed;
+                    result.error = error.what();
+                    result.values.clear();
+                    result.score.reset();
+                }
+            }
+
+            output.results.push_back(std::move(result));
+            ++completed;
+            if (progress && !progress(completed, total)) {
+                output.cancelled = completed < total;
+                return output;
+            }
+        }
+    }
+    return output;
+}
+
+} // namespace glcm

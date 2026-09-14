@@ -1,54 +1,34 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(GLCM-Texture-Analysis LANGUAGES CXX)
+project(GLCM-Texture-Analysis VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
-
-set(CMAKE_OSX_ARCHITECTURES "arm64")
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     add_compile_options(-Wall -Wextra)
 endif ()
 
-find_package(OpenCV REQUIRED)
+enable_testing()
 
-# No version pin: Eigen 3.3+ and 5.x both work, but Eigen's config only accepts the same major version
-find_package(Eigen3 REQUIRED NO_MODULE)
-message(STATUS "Eigen3 found: ${Eigen3_VERSION}")
+# Texture analysis library and its unit tests
+add_subdirectory(core)
 
-include_directories(${CMAKE_SOURCE_DIR})
+# Legacy OpenCV/cvui desktop application, removed in phase 3 of doc/ui-design-plan.md. It needs OpenCV's highgui and
+# the contrib tracking module (for selectROI), so it can be switched off where those are not installed.
+option(GLCM_BUILD_LEGACY_APP "Build the legacy OpenCV/cvui application" ON)
 
-set(LIBS
-        ${LIBS}
-        ${OpenCV_LIBS}
-        Eigen3::Eigen)
+if (GLCM_BUILD_LEGACY_APP)
+    find_package(OpenCV REQUIRED)
 
-set(SOURCES
-        ${SOURCES}
-        analysis/TextureAnalysis.cpp
-        controller/PolygonController.cpp
-        controller/RectController.cpp
-        viewer/Viewer.cpp)
+    add_executable(glcm-analysis
+            glcm-analysis.cpp
+            controller/PolygonController.cpp
+            controller/RectController.cpp
+            viewer/Viewer.cpp)
+    target_include_directories(glcm-analysis PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(glcm-analysis PRIVATE glcm_core ${OpenCV_LIBS})
 
-set(MAIN_FILES
-        ${MAIN_FILES}
-        glcm-analysis)
-
-foreach (MAIN_FILE IN LISTS MAIN_FILES)
-    add_executable(${MAIN_FILE} ${MAIN_FILE}.cpp ${SOURCES})
-    target_link_libraries(${MAIN_FILE} ${LIBS})
-endforeach ()
-
-add_executable(canvas-example canvas-example.cpp)
-target_link_libraries(canvas-example ${LIBS})
-
-# Unit tests for the GLCM math (built only when GoogleTest is installed)
-find_package(GTest)
-
-if (GTest_FOUND)
-    enable_testing()
-    add_executable(glcm-tests tests/TextureAnalysisTest.cpp analysis/TextureAnalysis.cpp)
-    target_link_libraries(glcm-tests ${LIBS} GTest::gtest_main)
-    include(GoogleTest)
-    gtest_discover_tests(glcm-tests DISCOVERY_MODE PRE_TEST)
+    add_executable(canvas-example canvas-example.cpp)
+    target_include_directories(canvas-example PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(canvas-example PRIVATE ${OpenCV_LIBS})
 endif ()

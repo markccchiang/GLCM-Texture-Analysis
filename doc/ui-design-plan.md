@@ -1,6 +1,6 @@
 # Texture Analysis Web UI — Design Plan
 
-Status: **Draft v3** — all open questions are resolved; nothing in this plan is implemented yet.
+Status: **Draft v3** — all open questions are resolved. **Phase 0 (core preparation) is implemented** in `core/`; later phases are not.
 Scope: an ImageJ-style texture analysis application with a **TypeScript web frontend** and the existing C++ GLCM core behind a server API. It runs locally on macOS or Linux and can later be deployed to Linux servers for large-scale analysis.
 
 Decisions taken (reviews of drafts v1 and v2):
@@ -354,7 +354,9 @@ sequenceDiagram
 
 - **Window/level mapping:** one definition, used by both the browser renderer and the server's `display.png`, so the two always agree:
 
-  `out = clamp(round((v − min) × 255 / (max − min)), 0, 255)`; when `max = min`, `out = 255` for `v ≥ min` and `0` otherwise.
+  `out = clamp(floor(((v − min) × 510 + (max − min)) / (2 × (max − min))), 0, 255)` for integers `min < max`; when `max = min`, `out = 255` for `v ≥ min` and `0` otherwise.
+
+  This is `round((v − min) × 255 / (max − min))` with halves rounded up, written in integer arithmetic. C++, a JavaScript lookup table and a WebGL2 shader using unsigned-integer textures (`usampler2D`) therefore agree exactly; 32-bit float shader math could not guarantee that. Implemented as `glcm::WindowLevel` in `core/imaging/DisplayRenderer`.
 
   - **Browser renderer:** a WebGL2 fragment shader. The raw data is uploaded once as an `R8UI` / `R16UI` texture (nearest-neighbour sampling), with `min`/`max` as uniforms. The output canvas is the source of the Konva image layer and is redrawn when the slider moves, at most once per animation frame.
   - **Fallback:** used when WebGL2 is unavailable or `MAX_TEXTURE_SIZE` is smaller than the image. A lookup table (256 or 65 536 entries) is applied to `ImageData` on a canvas; slower, but still local. If that fails too (e.g. out of memory), the image is handled as large.
@@ -416,10 +418,13 @@ sequenceDiagram
   *View ▸ Show ROI Labels* instead shows every ROI's name permanently next to its shape. Labels keep a constant screen size at any zoom.
 - **Zoom to ROI:** the ROI Manager's row menu (⋯) has *Zoom to ROI*, with the same behaviour as **Z** on the canvas.
 - **Mask rule:** a pixel belongs to the ROI if its **centre** lies inside the shape. Rasterization happens only in `glcm_core`:
-  - polygons use `cv::fillPoly`;
-  - ellipses use `cv::ellipse2Poly` then `cv::fillPoly`.
+  - rectangles: half-open test of the centre;
+  - ellipses: exact test after rotating the centre into the ellipse's own axes;
+  - polygons: scanline even-odd fill along the pixel-centre rows.
 
-  Both are present in the installed OpenCV 5. The pixel count shown in the manager comes from the server, so the numbers match the analysis exactly.
+  This is `glcm::RasterizeMask` in `core/roi/Roi`. `cv::fillPoly` is not used, because its edge handling does not follow the pixel-centre rule.
+
+  The pixel count shown in the manager comes from the server, so the numbers match the analysis exactly.
 - **Validation:** ROIs are clipped to the image. The manager flags an ROI (⚠, with a tooltip) and Measure skips it with a warning when it has fewer than 2 pixels, or has no pixel pairs for a selected direction at a selected distance.
 
 ### 6.3 R3 — Analysis settings and measurement
@@ -618,7 +623,7 @@ The OpenAPI document is generated from the TypeBox schemas and published at `/ap
 
 | Phase | Scope | Exit criteria |
 |---|---|---|
-| **0. Core preparation** | §7 items 1–11, repository layout, CMake changes | All existing and new GoogleTest tests pass on macOS and Linux. |
+| **0. Core preparation** — implemented | §7 items 1–11, repository layout, CMake changes | All existing and new GoogleTest tests pass on macOS and Linux. **Met:** 80 tests, 0 warnings on macOS (Apple Clang, OpenCV 5) and on Ubuntu 24.04 arm64 and x86_64 (GCC 13, OpenCV 4.6). |
 | **1. Addon + API skeleton** | N-API addon, Fastify server, `packages/api` schemas, `/health`, `/catalog`, `/images` (upload, display, raw, pixel) | Vitest server/addon tests pass; OpenAPI generated. |
 | **2. Web shell + image viewer** | Vite/React app, layout, menus, open image, zoom/pan, window/level, pixel readout | **R1 met** in local mode. |
 | **3. ROI tools + measurement** | ROI tools and manager, undo/redo, roi-stats, settings panel, presets, analyses + SSE, results table; **remove `controller/`, `viewer/`, `cvui.h`, `glcm-analysis`, `canvas-example`** | **R2, R3 met**; Playwright test values equal core test values. |

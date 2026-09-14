@@ -1,11 +1,13 @@
 GLCM Texture Equations
 ======================
 
-This page lists the equations exactly as they are implemented in ``analysis/TextureAnalysis.cpp``. Where the
+This page lists the equations exactly as they are implemented in ``core/analysis/TextureAnalysis.cpp``. Where the
 implementation differs from the usual literature definition, the difference is noted.
 
-Every feature is computed separately for each of the four directions and returned as a ``glcm::Features`` value
-with the fields ``H``, ``V``, ``LD`` and ``RD``. ``Features::Avg()`` is the mean of the four directions.
+Every feature is computed separately for each direction and returned as a ``glcm::Features`` value with the fields
+``H``, ``V``, ``LD`` and ``RD``. ``glcm::TextureOptions`` can restrict the directions; the others then hold NaN.
+``Features::Avg()`` and ``Features::Range()`` are the mean and the range (maximum − minimum) over the computed
+directions.
 
 .. contents:: On this page
    :local:
@@ -47,6 +49,43 @@ Gray levels are **zero-based**: :math:`i, j \in \{0, 1, \dots, N_g - 1\}`, where
 levels (256 in the application). Haralick's paper [Haralick1973]_ numbers gray levels from 1, so features that
 depend on the gray level values themselves (means, correlations, sum average, cluster shade and prominence,
 auto correlation) are shifted compared with a one-based implementation.
+
+ROI masks
+~~~~~~~~~
+
+Pixel :math:`(c, r)` (column, row) covers the square :math:`[c, c + 1) \times [r, r + 1)` in image coordinates, so its
+centre is :math:`(c + 0.5, r + 0.5)`. A pixel belongs to an ROI when its centre lies inside the shape
+(``glcm::RasterizeMask``):
+
+- **Rectangle** :math:`(x, y, w, h)`: :math:`x \le c + 0.5 < x + w` and :math:`y \le r + 0.5 < y + h`.
+- **Ellipse** with centre :math:`(c_x, c_y)`, semi-axes :math:`r_x, r_y` and rotation :math:`\theta` (clockwise on
+  screen): with :math:`d_x = c + 0.5 - c_x` and :math:`d_y = r + 0.5 - c_y`,
+
+  .. math::
+
+     u = d_x \cos\theta + d_y \sin\theta, \quad v = -d_x \sin\theta + d_y \cos\theta, \qquad
+     \frac{u^2}{r_x^2} + \frac{v^2}{r_y^2} \le 1
+
+- **Polygon**: even-odd rule along the horizontal line through the pixel centres of each row. An edge from
+  :math:`(x_a, y_a)` to :math:`(x_b, y_b)` crosses that line when :math:`\min(y_a, y_b) \le r + 0.5 < \max(y_a, y_b)`.
+
+Shapes are clipped to the image.
+
+Gray-level quantization
+~~~~~~~~~~~~~~~~~~~~~~~
+
+In the analysis pipeline (``glcm::RunAnalysis``), the intensities :math:`v` inside the ROI are first mapped to gray
+levels :math:`i \in \{0, \dots, N_g - 1\}` (``glcm::Quantize``):
+
+- **Fixed range** :math:`[a, b]`: :math:`i = \min\left(N_g - 1, \left\lfloor \dfrac{(v - a)\, N_g}{b - a + 1} \right\rfloor\right)`
+  for :math:`v > a`, and :math:`i = 0` otherwise.
+- **ROI min–max**: a fixed range whose :math:`a` and :math:`b` are the minimum and maximum inside the ROI.
+- **Fixed bin width** :math:`w`: :math:`i = \lfloor (v - a) / w \rfloor` with :math:`a` the ROI minimum. The ROI must not
+  need more than :math:`N_g` levels.
+- **None**: :math:`i = v`; every value must be below :math:`N_g`.
+
+The default for 8-bit images is a fixed range :math:`[0, 255]`, so :math:`N_g = 256` keeps the values unchanged and
+:math:`N_g = 32` gives :math:`i = \lfloor v / 8 \rfloor`. For 16-bit images the default range is :math:`[0, 65535]`.
 
 Counting pixel pairs
 ~~~~~~~~~~~~~~~~~~~~
@@ -139,8 +178,9 @@ only by the "another way" cross-check features:
    \sigma_i = \sqrt{\sum_{i,j} (i - \mu_i)^2 \, p(i, j)}, \quad
    \sigma_j = \sqrt{\sum_{i,j} (j - \mu_j)^2 \, p(i, j)}
 
-Entropies are computed with the natural logarithm, and terms whose probability is zero are skipped
-(:math:`0 \log 0 = 0`).
+Entropies use the natural logarithm by default (``TextureOptions::log_base`` can select :math:`\log_2`, which scales
+Entropy, Sum Entropy, Difference Entropy and the entropies inside IMC1 and IMC2), and terms whose probability is zero
+are skipped (:math:`0 \log 0 = 0`).
 
 Features
 --------
@@ -150,8 +190,9 @@ The first column is the ``glcm::Type`` value passed to ``TextureAnalysis::Calcul
 Region statistics
 ~~~~~~~~~~~~~~~~~
 
-These do not use the co-occurrence matrix. The same value is reported for all four directions. Let
-:math:`v_1, \dots, v_N` be the gray levels of the :math:`N` pixels in :math:`\Omega`.
+These do not use the co-occurrence matrix. The same value is reported for every computed direction. Let
+:math:`v_1, \dots, v_N` be the values of the :math:`N` pixels in :math:`\Omega`. The analysis pipeline uses the original
+intensities (before quantization); ``TextureAnalysis`` on its own uses the gray levels it is given.
 
 ``Mean``
    .. math:: \bar{v} = \frac{1}{N} \sum_{t=1}^{N} v_t
@@ -250,8 +291,8 @@ Features F1–F14 of [Haralick1973]_ (see also [Haralick1979]_).
 
    Requesting either type calculates both.
 
-Maximal Correlation Coefficient
-   Available through ``TextureAnalysis::GetMaximalCorrelationCoefficient()`` only; it is not a ``glcm::Type``.
+``MaximalCorrelationCoefficient``
+   The slowest feature: it needs an eigen-decomposition of an :math:`N_g \times N_g` matrix for every direction.
 
    .. math:: Q(i, j) = \sum_{k=0}^{N_g-1} \frac{p(i, k) \, p(j, k)}{p_x(i) \, p_y(k)}
 
@@ -315,15 +356,21 @@ Auto Correlation, Dissimilarity and Maximum Probability are often cited from [So
 Score
 ~~~~~
 
-``TextureAnalysis::CalculateScore(age, features)`` adds ``Score`` and ``Age`` when ``Mean``, ``Entropy`` and
-``Contrast`` are present and :math:`\text{age} > 0`. For each direction:
+``glcm::ComputeScore`` (used by ``TextureAnalysis::CalculateScore`` and by the analysis pipeline) computes, for each
+direction:
 
 .. math::
 
    \text{Score} = 1.138 \cdot \text{age} - 1.814 \cdot \text{Mean} + 1.416 \cdot \text{Entropy}
                   + 1.714 \cdot \text{Contrast}
 
-``Age`` stores the age value in all four directions.
+The coefficients are configurable (``glcm::ScoreCoefficients``). The defaults above are those of the original
+application, fitted with :math:`N_g = 256`, :math:`d = 1`, the mean of the four directions, rectangle/polygon ROIs on
+8-bit images and the age in years.
+
+The analysis pipeline therefore computes the score's inputs with those settings by default (*calibration* profile),
+whatever the analysis settings are; 16-bit intensities are first mapped to 0–255 with a fixed range. The *current
+settings* profile uses the analysis settings instead and adds a warning that the coefficients may not apply.
 
 Choosing features and gray levels
 ---------------------------------

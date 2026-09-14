@@ -2,6 +2,7 @@
 #define GLCM_TEXTURE_FEATURE_ANALYSIS_HPP_
 
 #include <array>
+#include <cmath>
 #include <iostream>
 #include <limits>
 #include <map>
@@ -43,21 +44,47 @@ enum class Type {
     InformationMeasuresOfCorrelationII,
     InverseDifferenceNormalized,
     InverseDifferenceMomentNormalized,
+    MaximalCorrelationCoefficient,
+    // Not texture features: added by CalculateScore
     Score,
     Age
 };
 
 enum class Direction { H, V, LD, RD, Avg };
 
-// One feature value per direction
+enum class LogBase { Natural, Two };
+
+// One feature value per direction. A direction that was not computed (see TextureOptions::directions) holds NaN.
 struct Features {
     double H = 0.0;
     double V = 0.0;
     double LD = 0.0;
     double RD = 0.0;
 
+    // Mean over the computed (non-NaN) directions; NaN if there are none
     double Avg() const {
-        return ((H + V + LD + RD) / 4.0);
+        double sum = 0.0;
+        int count = 0;
+        for (double value : {H, V, LD, RD}) {
+            if (!std::isnan(value)) {
+                sum += value;
+                ++count;
+            }
+        }
+        return (count > 0) ? sum / count : std::numeric_limits<double>::quiet_NaN();
+    }
+
+    // Maximum minus minimum over the computed (non-NaN) directions; NaN if there are none
+    double Range() const {
+        double low = std::numeric_limits<double>::infinity();
+        double high = -std::numeric_limits<double>::infinity();
+        for (double value : {H, V, LD, RD}) {
+            if (!std::isnan(value)) {
+                low = std::min(low, value);
+                high = std::max(high, value);
+            }
+        }
+        return (low <= high) ? high - low : std::numeric_limits<double>::quiet_NaN();
     }
 
     double Get(Direction direction) const {
@@ -76,13 +103,36 @@ struct Features {
     }
 };
 
+// Options that change which values TextureAnalysis computes
+struct TextureOptions {
+    // Directions to compute; every feature holds NaN for the others
+    std::set<Direction> directions{Direction::H, Direction::V, Direction::LD, Direction::RD};
+    // Logarithm of the entropy-based features (Entropy, Sum Entropy, Difference Entropy, IMC1, IMC2)
+    LogBase log_base = LogBase::Natural;
+};
+
 class TextureAnalysis {
 public:
-    explicit TextureAnalysis(int Ng);
+    explicit TextureAnalysis(int Ng, const TextureOptions& options = TextureOptions());
     ~TextureAnalysis() = default;
 
+    int GrayLevels() const {
+        return _Ng;
+    }
+
+    const TextureOptions& Options() const {
+        return _options;
+    }
+
+    // The image must be CV_8UC1 with every value below Ng
     void ProcessRectImage(const cv::Mat& image, int distance);
+    // Pixels with mask value 255 form the region; a pair counts only if both pixels are inside it
+    void ProcessMaskedImage(const cv::Mat& image, const cv::Mat& mask, int distance);
+    // Same as ProcessMaskedImage; kept for the legacy polygon controller
     void ProcessPolygonImage(const cv::Mat& original_image, const cv::Mat& mask_image, int distance);
+
+    // Number of pixel pairs counted for a direction by the last Process call (0 for directions not computed)
+    int PairCount(Direction direction) const;
 
     void GetMean(Features& f) const;                                            // Mean of selected region pixels
     void GetStd(Features& f) const;                                             // STD of selected region pixels
@@ -121,6 +171,9 @@ public:
     void Print(const std::map<Type, Features>& features) const;
     void SaveAsCSV(const std::string& image_name, const std::map<Type, Features>& features, const std::string& csv_name) const;
 
+    static std::string TypeToString(Type type);
+    static std::string DirectionToString(Direction direction);
+
 private:
     // Probabilities of one direction (H = 0, V = 90, LD = 135, RD = 45 degrees), filled by Process()
     struct DirectionData {
@@ -147,19 +200,24 @@ private:
     void Normalize(DirectionData& data, const std::vector<int>& counts, int total) const;
     void CalculatePixelStatistics(const std::vector<double>& pixel_values);
 
-    // Evaluates fn(DirectionData) for H, V, LD and RD
+    // Evaluates fn(DirectionData) for H, V, LD and RD; directions not computed get NaN
     template <typename Fn>
     Features ForEachDirection(Fn fn) const;
+
+    // The same value for every computed direction, NaN for the others
+    Features Directional(double value) const;
 
     double P(const DirectionData& data, int i, int j) const {
         return data.p[i * _Ng + j];
     }
 
-    static std::string TypeToString(Type type);
-    static std::string DirectionToString(Direction direction);
     static std::string GetCurrentTime();
 
     int _Ng; // grey scale number, 256 (0 ~ 255) for example
+    TextureOptions _options;
+    std::array<bool, 4> _enabled{}; // indexed in the order H, V, LD, RD
+    double _entropy_scale = 1.0;    // 1 for natural log, 1 / ln(2) for log base 2
+    std::array<int, 4> _pair_counts{};
 
     std::array<DirectionData, 4> _directions; // indexed in the order H, V, LD, RD
 

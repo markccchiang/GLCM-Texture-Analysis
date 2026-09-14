@@ -1,0 +1,57 @@
+# glcm_core: GLCM texture analysis library with no UI dependencies. It is used by the web server's Node-API addon and
+# can be built on its own or through the top-level CMakeLists.txt.
+cmake_minimum_required(VERSION 3.22)
+
+project(glcm_core VERSION 0.1.0 LANGUAGES CXX)
+
+find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs)
+find_package(Eigen3 REQUIRED NO_MODULE)
+find_package(nlohmann_json 3.11 REQUIRED)
+
+add_library(glcm_core STATIC
+        analysis/Score.cpp
+        analysis/TextureAnalysis.cpp
+        imaging/DisplayRenderer.cpp
+        imaging/ImageLoader.cpp
+        imaging/Quantizer.cpp
+        io/Identifiers.cpp
+        io/Json.cpp
+        io/ResultsCsv.cpp
+        io/RoiImageExport.cpp
+        pipeline/AnalysisRunner.cpp
+        pipeline/AnalysisSettings.cpp
+        pipeline/FeatureCatalog.cpp
+        roi/Roi.cpp)
+
+target_include_directories(glcm_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(glcm_core PUBLIC ${OpenCV_LIBS} Eigen3::Eigen PRIVATE nlohmann_json::nlohmann_json)
+target_compile_features(glcm_core PUBLIC cxx_std_17)
+# Position-independent code so the static library can be linked into the Node-API addon (a shared library)
+set_target_properties(glcm_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(glcm_core PRIVATE -Wall -Wextra)
+endif ()
+
+# Unit tests (built only when GoogleTest is installed)
+option(GLCM_BUILD_TESTS "Build the glcm_core unit tests" ON)
+
+if (GLCM_BUILD_TESTS)
+    find_package(GTest)
+
+    if (GTest_FOUND)
+        enable_testing()
+        add_executable(glcm-tests
+                tests/TextureAnalysisTest.cpp
+                tests/ImagingTest.cpp
+                tests/IoTest.cpp
+                tests/PipelineTest.cpp
+                tests/RoiTest.cpp
+                tests/TextureOptionsTest.cpp)
+        target_link_libraries(glcm-tests PRIVATE glcm_core GTest::gtest_main nlohmann_json::nlohmann_json)
+        # Keep the test binary at the top of the build tree (./build/glcm-tests)
+        set_target_properties(glcm-tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+        include(GoogleTest)
+        gtest_discover_tests(glcm-tests DISCOVERY_MODE PRE_TEST)
+    endif ()
+endif ()

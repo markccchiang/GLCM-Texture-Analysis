@@ -10,15 +10,16 @@ Select a rectangle or draw a polygon on the image. The tool computes the feature
 - A C++17 compiler
 - [OpenCV](https://opencv.org/) with the contrib modules (for `selectROI`). OpenCV 4 and 5 both work.
 - [Eigen](https://eigen.tuxfamily.org/) 3.3 or newer (5.x works)
+- [nlohmann/json](https://github.com/nlohmann/json) 3.11 or newer
 - [GoogleTest](https://github.com/google/googletest) (optional, for the unit tests)
 
 On macOS with Homebrew:
 
 ```bash
-brew install cmake opencv eigen googletest
+brew install cmake opencv eigen nlohmann-json googletest
 ```
 
-> `CMakeLists.txt` sets `CMAKE_OSX_ARCHITECTURES` to `arm64`. Change or remove that line to build on other architectures.
+> OpenCV's contrib modules and HighGUI are only needed for the legacy desktop application. Configure with `-DGLCM_BUILD_LEGACY_APP=OFF` to build just the library and its tests.
 
 ## Build
 
@@ -31,7 +32,8 @@ This builds:
 
 | Target | Description |
 | --- | --- |
-| `glcm-analysis` | The texture analysis application |
+| `glcm_core` | Texture analysis library (`core/`): features, ROI masks, image loading, quantization, analysis pipeline, exports |
+| `glcm-analysis` | The (legacy) texture analysis desktop application |
 | `glcm-tests` | Unit tests (only if GoogleTest is found) |
 | `canvas-example` | A small [cvui](https://github.com/Dovyski/cvui) demo |
 
@@ -86,20 +88,28 @@ Only pixel pairs whose two pixels are both inside the polygon are counted.
 
 "Another way" variants of Contrast and Correlation compute the same value with a different formula and are useful as cross-checks.
 
-Using the library directly:
+Using the library directly (include paths are relative to `core/`):
 
 ```cpp
-#include "analysis/TextureAnalysis.hpp"
+#include "imaging/ImageLoader.hpp"
+#include "io/ResultsCsv.hpp"
+#include "pipeline/AnalysisRunner.hpp"
 
-cv::Mat image = cv::imread("samples/lena.jpg", cv::IMREAD_GRAYSCALE);
+glcm::LoadedImage image = glcm::LoadImageFile("samples/lena.jpg");
 
-glcm::TextureAnalysis analysis(256);          // number of gray levels
-analysis.ProcessRectImage(image, 1);          // or ProcessPolygonImage(image, mask, 1)
-auto results = analysis.Calculate({glcm::Type::Contrast, glcm::Type::Entropy});
+glcm::AnalysisSettings settings = glcm::DefaultSettings(image.info.bit_depth); // Haralick F1–F14, Ng = 32
+settings.distances = {1, 2};
 
-double contrast_0_deg = results.at(glcm::Type::Contrast).H;
-double contrast_avg = results.at(glcm::Type::Contrast).Avg();
+glcm::Roi roi;
+roi.name = "ROI 1";
+roi.shape = glcm::EllipseRoi{256.0, 256.0, 40.0, 25.0, 30.0}; // cx, cy, rx, ry, angle in degrees
+
+glcm::AnalysisOutput output = glcm::RunAnalysis(image.gray, {roi}, settings);
+double contrast_0_deg = output.results[0].values.at(glcm::Type::Contrast).H;
+std::string csv = glcm::ResultsToCsv(output.results, settings, {"lena.jpg", "", "2026-09-14T12:00:00Z"});
 ```
+
+Link against `glcm_core` (for example `target_link_libraries(my_app PRIVATE glcm_core)` after `add_subdirectory(core)`).
 
 ## Tests
 
@@ -108,11 +118,11 @@ ctest --test-dir build
 ./build/glcm-tests --gtest_filter='TextureAnalysisTest.ConstantImage'   # a single test
 ```
 
-The tests check the features against Haralick's worked example and against a simple, independent GLCM implementation.
+The tests (`core/tests/`) check the features against Haralick's worked example and against a simple, independent GLCM implementation, and cover ROI masks, image loading, quantization, display rendering, the analysis pipeline and the exporters.
 
 ## Documentation
 
-The `doc/` folder contains a [Sphinx](https://www.sphinx-doc.org/) site (theme: [sphinx_rtd_theme](https://sphinx-rtd-theme.readthedocs.io/)) with every GLCM equation as implemented in `analysis/TextureAnalysis.cpp` and a list of references.
+The `doc/` folder contains a [Sphinx](https://www.sphinx-doc.org/) site (theme: [sphinx_rtd_theme](https://sphinx-rtd-theme.readthedocs.io/)) with every GLCM equation as implemented in `core/analysis/TextureAnalysis.cpp` and a list of references.
 
 Build it in a Python virtual environment (requires Python 3):
 
@@ -137,10 +147,8 @@ To rebuild later, activate the environment again with `source .venv/bin/activate
 
 | Path | Contents |
 | --- | --- |
-| `analysis/` | GLCM computation and texture features |
-| `controller/` | Rectangle and polygon selection loops |
-| `viewer/` | Score panel, built on the vendored `cvui.h` |
-| `tests/` | GoogleTest unit tests |
+| `core/` | `glcm_core` library: `analysis/` (GLCM features), `roi/` (ROI masks), `imaging/` (loading, quantization, display), `pipeline/` (settings, analysis runner), `io/` (JSON, CSV, ROI image export), `tests/` |
+| `controller/`, `viewer/` | Legacy desktop application: selection loops and the cvui score panel (removed in phase 3 of `doc/ui-design-plan.md`) |
 | `doc/` | Sphinx documentation: GLCM equations and references |
 | `samples/` | Sample image |
 
