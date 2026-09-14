@@ -23,7 +23,8 @@
     "dev": "npm run dev -w @glcm/server",
     "openapi": "npm run openapi -w @glcm/server",
     "samples": "tsx scripts/generate-samples.ts",
-    "test:e2e": "npm run build:web && playwright test"
+    "test:e2e": "npm run build:web && playwright test",
+    "docs:screenshots": "tsx scripts/docs-screenshots.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

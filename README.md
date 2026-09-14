@@ -4,10 +4,22 @@ Computes Haralick texture features from the Gray Level Co-occurrence Matrix (GLC
 
 Open an 8- or 16-bit image in the browser, draw rectangle, ellipse, polygon or freehand ROIs, choose the features and GLCM settings (gray levels, quantization, distances, directions), and measure. Results appear in a table, per direction and aggregated, optionally with an age-based score.
 
+<p align="center">
+  <img src="doc/user/images/app-window.png" alt="The GLCM Texture Analysis web app: the sample image with four ROIs (Hat, Face, Hair, Background) on the canvas, the ROI Manager with their pixel counts, the Analysis Settings panel, and the Results table with texture features per direction." width="900">
+</p>
+
+The User guide of the documentation (`doc/user/`) explains every part of the window.
+
 The application has three parts:
 - a C++ library (`core/`);
 - a Node.js server that uses the library through a Node-API addon;
 - a TypeScript web app (see [Web application](#web-application)).
+
+<p align="center">
+  <img src="doc/developer/images/architecture-overview.svg" alt="Architecture: the web app in the browser calls the API server over HTTP (JSON, pixels, PNG, Server-Sent Events); the server calls the Node-API addon, which calls the glcm_core C++ library, and stores images, results and caches in the data directory; shared TypeBox schemas provide request validation, TypeScript types and the OpenAPI document." width="900">
+</p>
+
+The Developer guide of the documentation (`doc/developer/`) describes the architecture, the APIs and the technologies in detail.
 
 ## Requirements
 
@@ -187,7 +199,10 @@ Endpoints (full details in `packages/api/openapi.json`):
 
 ## Documentation
 
-The `doc/` folder contains a [Sphinx](https://www.sphinx-doc.org/) site (theme: [sphinx_rtd_theme](https://sphinx-rtd-theme.readthedocs.io/)) with every GLCM equation as implemented in `core/analysis/TextureAnalysis.cpp` and a list of references.
+The `doc/` folder contains a [Sphinx](https://www.sphinx-doc.org/) site (theme: [sphinx_rtd_theme](https://sphinx-rtd-theme.readthedocs.io/)) with three parts:
+- **User guide:** opening and viewing images, drawing ROIs, measuring, and saving, importing and exporting, with screenshots and a keyboard, mouse and menu reference.
+- **Texture features:** every GLCM equation as implemented in `core/analysis/TextureAnalysis.cpp`, and a list of references.
+- **Developer guide:** the architecture, the HTTP, Node.js addon and C++ APIs, the file formats, and the technologies and packages used.
 
 Build it in a Python virtual environment (requires Python 3):
 
@@ -206,6 +221,8 @@ open _build/html/index.html        # macOS
 xdg-open _build/html/index.html    # Linux
 ```
 
+The screenshots of the user guide (`doc/user/images/`) are generated from the running application. After changing the user interface, regenerate them from the repository root with `npm run build:web && npm run docs:screenshots`.
+
 To rebuild later, activate the environment again with `source .venv/bin/activate` and run `make html`. Use `make clean` to remove the generated pages. The equations are rendered with MathJax, which is loaded from a CDN, so viewing them needs an internet connection.
 
 ## Project structure
@@ -220,7 +237,7 @@ To rebuild later, activate the environment again with `source .venv/bin/activate
 | `e2e/` | Playwright end-to-end tests (`npm run test:e2e`), in local mode and with an access token |
 | `Dockerfile`, `compose.yaml` | Server image and deployment example (`doc/deployment.md`) |
 | `.github/workflows/` | CI: core, unit and end-to-end tests on macOS and Ubuntu; Docker image smoke test |
-| `doc/` | Sphinx documentation (GLCM equations and references), the design plan and the deployment guide |
+| `doc/` | Sphinx documentation (user guide with screenshots, GLCM equations and references, developer guide), the design plan and the deployment guide |
 | `samples/` | Sample images: synthetic test patterns, CC0 textures and `lena.jpg` (see `samples/README.md`) |
 | `scripts/` | Helper scripts, e.g. `generate-samples.ts` (`npm run samples`) |
 

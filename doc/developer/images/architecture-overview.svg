@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600" role="img" aria-labelledby="title desc"
+     font-family="'Inter', 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+  <title id="title">GLCM Texture Analysis architecture</title>
+  <desc id="desc">The web app in the browser calls the API server over HTTP with JSON, binary pixel data and Server-Sent Events. The server calls the Node-API addon, which calls the glcm_core C++ library. The server stores images, results and caches in the data directory. Shared TypeBox schemas define request validation, TypeScript types and the OpenAPI document for the web app and the server.</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrow-light" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      .band-title { font-size: 14px; font-weight: 700; fill: #ffffff; }
+      .subtitle { font-size: 11px; fill: #64748b; font-family: 'SFMono-Regular', Menlo, Consolas, monospace; }
+      .item { font-size: 12.5px; fill: #1e293b; }
+      .chip { font-size: 12px; fill: #1e293b; font-family: 'SFMono-Regular', Menlo, Consolas, monospace; }
+      .tech { font-size: 11px; fill: #475569; font-style: italic; }
+      .label { font-size: 11.5px; font-weight: 600; fill: #334155; }
+      .note { font-size: 10.5px; fill: #64748b; }
+      .title { font-size: 15px; font-weight: 700; fill: #0f172a; }
+    </style>
+  </defs>
+
+  <rect width="960" height="600" fill="#ffffff"/>
+
+  <!-- Browser: web app -->
+  <g filter="url(#shadow)">
+    <rect x="20" y="40" width="250" height="380" rx="14" fill="#eef4fe" stroke="#3b73d9" stroke-width="1.5"/>
+  </g>
+  <path d="M20,54 A14,14 0 0 1 34,40 H256 A14,14 0 0 1 270,54 V84 H20 Z" fill="#3b73d9"/>
+  <text x="36" y="67" class="band-title">Browser · Web app</text>
+  <text x="36" y="106" class="subtitle">web/ · @glcm/web</text>
+  <g>
+    <rect x="36" y="120" width="218" height="30" rx="8" fill="#ffffff" stroke="#bcd2f7"/>
+    <text x="50" y="140" class="item">Image viewer · WebGL2</text>
+    <rect x="36" y="158" width="218" height="30" rx="8" fill="#ffffff" stroke="#bcd2f7"/>
+    <text x="50" y="178" class="item">ROI tools · ROI Manager</text>
+    <rect x="36" y="196" width="218" height="30" rx="8" fill="#ffffff" stroke="#bcd2f7"/>
+    <text x="50" y="216" class="item">Analysis settings</text>
+    <rect x="36" y="234" width="218" height="30" rx="8" fill="#ffffff" stroke="#bcd2f7"/>
+    <text x="50" y="254" class="item">Measurement results</text>
+    <rect x="36" y="272" width="218" height="30" rx="8" fill="#ffffff" stroke="#bcd2f7"/>
+    <text x="50" y="292" class="item">Exports · projects · ROI sets</text>
+  </g>
+  <line x1="36" y1="322" x2="254" y2="322" stroke="#bcd2f7"/>
+  <text x="36" y="344" class="tech">React 19 · Mantine 9 · Konva</text>
+  <text x="36" y="362" class="tech">Zustand · TanStack Query · Vite</text>
+
+  <!-- API server -->
+  <g filter="url(#shadow)">
+    <rect x="370" y="40" width="250" height="380" rx="14" fill="#edf8f1" stroke="#2e9d62" stroke-width="1.5"/>
+  </g>
+  <path d="M370,54 A14,14 0 0 1 384,40 H606 A14,14 0 0 1 620,54 V84 H370 Z" fill="#2e9d62"/>
+  <text x="386" y="67" class="band-title">API server · Node.js</text>
+  <text x="386" y="106" class="subtitle">server/ · @glcm/server</text>
+  <g>
+    <rect x="386" y="120" width="218" height="30" rx="8" fill="#ffffff" stroke="#b7e2c8"/>
+    <text x="400" y="140" class="item">REST API /api/v1</text>
+    <rect x="386" y="158" width="218" height="30" rx="8" fill="#ffffff" stroke="#b7e2c8"/>
+    <text x="400" y="178" class="item">Analysis jobs (ROI × distance)</text>
+    <rect x="386" y="196" width="218" height="30" rx="8" fill="#ffffff" stroke="#b7e2c8"/>
+    <text x="400" y="216" class="item">Progress events (SSE)</text>
+    <rect x="386" y="234" width="218" height="30" rx="8" fill="#ffffff" stroke="#b7e2c8"/>
+    <text x="400" y="254" class="item">Exports: CSV · JSON · ZIP</text>
+    <rect x="386" y="272" width="218" height="30" rx="8" fill="#ffffff" stroke="#b7e2c8"/>
+    <text x="400" y="292" class="item">Token auth · CORS · rate limits</text>
+  </g>
+  <line x1="386" y1="322" x2="604" y2="322" stroke="#b7e2c8"/>
+  <text x="386" y="344" class="tech">Fastify 5 · TypeBox · fflate</text>
+  <text x="386" y="362" class="tech">Serves the built web app</text>
+
+  <!-- Node-API addon -->
+  <g filter="url(#shadow)">
+    <rect x="720" y="40" width="220" height="130" rx="14" fill="#f3eefc" stroke="#7c4ddb" stroke-width="1.5"/>
+  </g>
+  <path d="M720,54 A14,14 0 0 1 734,40 H926 A14,14 0 0 1 940,54 V84 H720 Z" fill="#7c4ddb"/>
+  <text x="736" y="67" class="band-title">Node-API addon</text>
+  <text x="736" y="106" class="subtitle">bindings/node · @glcm/native</text>
+  <rect x="736" y="120" width="188" height="30" rx="8" fill="#ffffff" stroke="#d6c6f5"/>
+  <text x="750" y="140" class="item">Async workers · JSON in/out</text>
+
+  <!-- glcm_core -->
+  <g filter="url(#shadow)">
+    <rect x="720" y="210" width="220" height="210" rx="14" fill="#fff5e8" stroke="#e07b00" stroke-width="1.5"/>
+  </g>
+  <path d="M720,224 A14,14 0 0 1 734,210 H926 A14,14 0 0 1 940,224 V254 H720 Z" fill="#e07b00"/>
+  <text x="736" y="237" class="band-title">glcm_core · C++17</text>
+  <text x="736" y="276" class="subtitle">core/</text>
+  <g text-anchor="middle">
+    <rect x="736" y="290" width="90" height="28" rx="7" fill="#ffffff" stroke="#f5cf9c"/>
+    <text x="781" y="309" class="chip">analysis</text>
+    <rect x="834" y="290" width="90" height="28" rx="7" fill="#ffffff" stroke="#f5cf9c"/>
+    <text x="879" y="309" class="chip">roi</text>
+    <rect x="736" y="326" width="90" height="28" rx="7" fill="#ffffff" stroke="#f5cf9c"/>
+    <text x="781" y="345" class="chip">imaging</text>
+    <rect x="834" y="326" width="90" height="28" rx="7" fill="#ffffff" stroke="#f5cf9c"/>
+    <text x="879" y="345" class="chip">pipeline</text>
+    <rect x="736" y="362" width="90" height="28" rx="7" fill="#ffffff" stroke="#f5cf9c"/>
+    <text x="781" y="381" class="chip">io</text>
+    <rect x="834" y="362" width="90" height="28" rx="7" fill="#ffffff" stroke="#f5cf9c"/>
+    <text x="879" y="381" class="chip">tests</text>
+  </g>
+  <text x="736" y="410" class="tech">OpenCV · Eigen · nlohmann/json</text>
+
+  <!-- Shared schemas -->
+  <g filter="url(#shadow)">
+    <rect x="20" y="470" width="600" height="100" rx="14" fill="#f3f5f8" stroke="#64748b" stroke-width="1.5"/>
+  </g>
+  <text x="40" y="508" class="title">Shared schemas</text>
+  <text x="40" y="528" class="subtitle">packages/api · @glcm/api</text>
+  <text x="40" y="548" class="tech">TypeBox 1.x</text>
+  <g>
+    <rect x="236" y="505" width="130" height="30" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="301" y="525" class="item" text-anchor="middle">Request validation</text>
+    <rect x="376" y="505" width="118" height="30" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="435" y="525" class="item" text-anchor="middle">TypeScript types</text>
+    <rect x="504" y="505" width="100" height="30" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="554" y="525" class="item" text-anchor="middle">OpenAPI 3.1</text>
+  </g>
+
+  <!-- Data directory -->
+  <g filter="url(#shadow)">
+    <path d="M720,486 A110,14 0 0 1 940,486 V556 A110,14 0 0 1 720,556 Z" fill="#e8f7f8" stroke="#0e9aa7" stroke-width="1.5"/>
+  </g>
+  <ellipse cx="830" cy="486" rx="110" ry="14" fill="#d3f0f2" stroke="#0e9aa7" stroke-width="1.5"/>
+  <text x="830" y="526" class="title" text-anchor="middle">Data directory</text>
+  <text x="830" y="546" class="subtitle" text-anchor="middle">images/ · results/ · cache/</text>
+
+  <!-- Connections -->
+  <line x1="274" y1="210" x2="366" y2="210" stroke="#475569" stroke-width="1.8" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="320" y="198" class="label" text-anchor="middle">HTTP /api/v1</text>
+  <text x="320" y="228" class="note" text-anchor="middle">JSON · pixels</text>
+  <text x="320" y="242" class="note" text-anchor="middle">PNG · SSE</text>
+
+  <line x1="620" y1="105" x2="716" y2="105" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="668" y="95" class="label" text-anchor="middle">Node-API</text>
+  <text x="668" y="122" class="note" text-anchor="middle">promises</text>
+
+  <line x1="830" y1="170" x2="830" y2="206" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="842" y="193" class="label">C++ calls</text>
+
+  <path d="M620,395 H665 V521 H716" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="674" y="452" class="note">files</text>
+
+  <line x1="145" y1="470" x2="145" y2="424" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow-light)"/>
+  <text x="155" y="451" class="note">types</text>
+  <line x1="495" y1="470" x2="495" y2="424" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow-light)"/>
+  <text x="505" y="451" class="note">validation · types</text>
+</svg>
