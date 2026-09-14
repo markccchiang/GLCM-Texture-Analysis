@@ -3,3 +3,5 @@ doc/_build/
 doc/.venv/
 CLAUDE.md
 .idea/
+node_modules/
+bindings/node/build/

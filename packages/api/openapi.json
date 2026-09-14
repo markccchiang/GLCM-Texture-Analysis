@@ -1,0 +1,1130 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "GLCM Texture Analysis API",
+    "description": "HTTP API of the GLCM texture analysis server (doc/ui-design-plan.md, section 8.5).",
+    "version": "0.1.0"
+  },
+  "components": {
+    "schemas": {}
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Liveness check",
+        "tags": [
+          "system"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "coreVersion"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok"
+                      ]
+                    },
+                    "coreVersion": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog": {
+      "get": {
+        "summary": "Features, presets and limits",
+        "tags": [
+          "system"
+        ],
+        "description": "Everything the web app needs to build its feature picker and validate settings before sending them.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "features",
+                    "presets",
+                    "limits",
+                    "uploads"
+                  ],
+                  "properties": {
+                    "features": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name",
+                          "group",
+                          "nonStandard",
+                          "nonStandardReason",
+                          "docAnchor",
+                          "cost"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Stable identifier used in analysis settings, e.g. \"CorrelationII\""
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "group": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "regionStatistics"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "haralick"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "other"
+                                ]
+                              }
+                            ]
+                          },
+                          "nonStandard": {
+                            "type": "boolean",
+                            "description": "Differs from the literature definition; see nonStandardReason"
+                          },
+                          "nonStandardReason": {
+                            "type": "string"
+                          },
+                          "docAnchor": {
+                            "type": "string",
+                            "description": "Page and anchor in the Sphinx documentation"
+                          },
+                          "cost": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "normal"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "slow"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "presets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name",
+                          "features",
+                          "enablesScore"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "features": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "enablesScore": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    },
+                    "limits": {
+                      "type": "object",
+                      "required": [
+                        "minGrayLevels",
+                        "maxGrayLevels",
+                        "defaultGrayLevels",
+                        "maxDistance",
+                        "directions",
+                        "quantizationMethods",
+                        "aggregations",
+                        "logBases",
+                        "scoreProfiles",
+                        "defaultScoreCoefficients"
+                      ],
+                      "properties": {
+                        "minGrayLevels": {
+                          "type": "integer"
+                        },
+                        "maxGrayLevels": {
+                          "type": "integer"
+                        },
+                        "defaultGrayLevels": {
+                          "type": "integer"
+                        },
+                        "maxDistance": {
+                          "type": "integer"
+                        },
+                        "directions": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer"
+                          }
+                        },
+                        "quantizationMethods": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "aggregations": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "logBases": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "scoreProfiles": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "defaultScoreCoefficients": {
+                          "type": "object",
+                          "required": [
+                            "age",
+                            "mean",
+                            "entropy",
+                            "contrast"
+                          ],
+                          "properties": {
+                            "age": {
+                              "type": "number"
+                            },
+                            "mean": {
+                              "type": "number"
+                            },
+                            "entropy": {
+                              "type": "number"
+                            },
+                            "contrast": {
+                              "type": "number"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "uploads": {
+                      "type": "object",
+                      "required": [
+                        "maxUploadBytes",
+                        "maxImagePixels",
+                        "rawTransferMaxPixels",
+                        "displayMaxSize"
+                      ],
+                      "properties": {
+                        "maxUploadBytes": {
+                          "type": "integer"
+                        },
+                        "maxImagePixels": {
+                          "type": "integer"
+                        },
+                        "rawTransferMaxPixels": {
+                          "type": "integer",
+                          "description": "Images up to this many pixels are sent to the browser as raw data"
+                        },
+                        "displayMaxSize": {
+                          "type": "integer",
+                          "description": "Largest long side of display.png"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/images": {
+      "post": {
+        "summary": "Upload an image",
+        "tags": [
+          "images"
+        ],
+        "description": "multipart/form-data with one file field. PNG, JPEG, BMP and 8/16-bit TIFF are decoded on the server; color images are converted to grayscale.",
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "imageId",
+                    "name",
+                    "sizeBytes",
+                    "width",
+                    "height",
+                    "bitDepth",
+                    "sourceChannels",
+                    "sha256",
+                    "transfer",
+                    "windowMin",
+                    "windowMax",
+                    "histogram",
+                    "warnings",
+                    "createdAt"
+                  ],
+                  "properties": {
+                    "imageId": {
+                      "type": "string",
+                      "pattern": "^img_[0-9a-f]{32}$"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "File name of the upload"
+                    },
+                    "sizeBytes": {
+                      "type": "integer",
+                      "description": "Size of the uploaded file"
+                    },
+                    "width": {
+                      "type": "integer"
+                    },
+                    "height": {
+                      "type": "integer"
+                    },
+                    "bitDepth": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "enum": [
+                            8
+                          ]
+                        },
+                        {
+                          "type": "number",
+                          "enum": [
+                            16
+                          ]
+                        }
+                      ]
+                    },
+                    "sourceChannels": {
+                      "type": "integer",
+                      "description": "Channels before grayscale conversion (1 or 3)"
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "description": "SHA-256 of the uploaded file (hex)"
+                    },
+                    "transfer": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "raw"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "server"
+                          ]
+                        }
+                      ],
+                      "description": "\"raw\": GET /raw is available and the browser renders the image; \"server\": use display.png and /pixel"
+                    },
+                    "windowMin": {
+                      "type": "integer",
+                      "description": "Default display window: 0.5th percentile"
+                    },
+                    "windowMax": {
+                      "type": "integer",
+                      "description": "Default display window: 99.5th percentile"
+                    },
+                    "histogram": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "minItems": 256,
+                      "maxItems": 256,
+                      "description": "256 equal bins over 0-255 or 0-65535"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/images/{id}": {
+      "get": {
+        "summary": "Image metadata",
+        "tags": [
+          "images"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^img_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Image id returned by POST /images"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "imageId",
+                    "name",
+                    "sizeBytes",
+                    "width",
+                    "height",
+                    "bitDepth",
+                    "sourceChannels",
+                    "sha256",
+                    "transfer",
+                    "windowMin",
+                    "windowMax",
+                    "histogram",
+                    "warnings",
+                    "createdAt"
+                  ],
+                  "properties": {
+                    "imageId": {
+                      "type": "string",
+                      "pattern": "^img_[0-9a-f]{32}$"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "File name of the upload"
+                    },
+                    "sizeBytes": {
+                      "type": "integer",
+                      "description": "Size of the uploaded file"
+                    },
+                    "width": {
+                      "type": "integer"
+                    },
+                    "height": {
+                      "type": "integer"
+                    },
+                    "bitDepth": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "enum": [
+                            8
+                          ]
+                        },
+                        {
+                          "type": "number",
+                          "enum": [
+                            16
+                          ]
+                        }
+                      ]
+                    },
+                    "sourceChannels": {
+                      "type": "integer",
+                      "description": "Channels before grayscale conversion (1 or 3)"
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "description": "SHA-256 of the uploaded file (hex)"
+                    },
+                    "transfer": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "raw"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "server"
+                          ]
+                        }
+                      ],
+                      "description": "\"raw\": GET /raw is available and the browser renders the image; \"server\": use display.png and /pixel"
+                    },
+                    "windowMin": {
+                      "type": "integer",
+                      "description": "Default display window: 0.5th percentile"
+                    },
+                    "windowMax": {
+                      "type": "integer",
+                      "description": "Default display window: 99.5th percentile"
+                    },
+                    "histogram": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "minItems": 256,
+                      "maxItems": 256,
+                      "description": "256 equal bins over 0-255 or 0-65535"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an image",
+        "tags": [
+          "images"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^img_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Image id returned by POST /images"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted (no body)"
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/images/{id}/display.png": {
+      "get": {
+        "summary": "8-bit rendering with window/level",
+        "tags": [
+          "images"
+        ],
+        "description": "Intensities are mapped with the integer window/level formula shared with the browser renderer (doc/ui-design-plan.md, section 6.1) and downscaled so the long side is at most maxSize.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "in": "query",
+            "name": "min",
+            "required": false,
+            "description": "Window minimum; default windowMin"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "in": "query",
+            "name": "max",
+            "required": false,
+            "description": "Window maximum; default windowMax"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16384
+            },
+            "in": "query",
+            "name": "maxSize",
+            "required": false,
+            "description": "Largest long side; capped by the server limit"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^img_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Image id returned by POST /images"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PNG image",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (no body)"
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/images/{id}/raw": {
+      "get": {
+        "summary": "Raw grayscale samples",
+        "tags": [
+          "images"
+        ],
+        "description": "Row-major samples from the top-left pixel, no header; 16-bit samples are little-endian. Size and format are in the X-Image-Width, X-Image-Height, X-Image-Bit-Depth and X-Image-Byte-Order headers. Compressed with zstd or gzip when accepted. Only for images with transfer \"raw\" (409 otherwise).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^img_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Image id returned by POST /images"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Grayscale samples",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (no body)"
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/images/{id}/pixel": {
+      "get": {
+        "summary": "One grayscale value",
+        "tags": [
+          "images"
+        ],
+        "description": "Used for the hover readout of images that are too large for GET /raw.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "in": "query",
+            "name": "x",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "in": "query",
+            "name": "y",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^img_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Image id returned by POST /images"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "x",
+                    "y",
+                    "value"
+                  ],
+                  "properties": {
+                    "x": {
+                      "type": "integer"
+                    },
+                    "y": {
+                      "type": "integer"
+                    },
+                    "value": {
+                      "type": "integer",
+                      "description": "Grayscale value of the stored image"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "system",
+      "description": "Health and feature catalog"
+    },
+    {
+      "name": "images",
+      "description": "Upload, display and pixel data"
+    }
+  ]
+}

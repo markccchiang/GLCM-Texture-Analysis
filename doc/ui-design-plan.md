@@ -1,6 +1,6 @@
 # Texture Analysis Web UI — Design Plan
 
-Status: **Draft v3** — all open questions are resolved. **Phase 0 (core preparation) is implemented** in `core/`; later phases are not.
+Status: **Draft v3** — all open questions are resolved. **Phase 0 (core preparation)** is implemented in `core/`, and **phase 1 (addon and API skeleton)** in `bindings/node/`, `packages/api/` and `server/`; later phases are not.
 Scope: an ImageJ-style texture analysis application with a **TypeScript web frontend** and the existing C++ GLCM core behind a server API. It runs locally on macOS or Linux and can later be deployed to Linux servers for large-scale analysis.
 
 Decisions taken (reviews of drafts v1 and v2):
@@ -624,7 +624,7 @@ The OpenAPI document is generated from the TypeBox schemas and published at `/ap
 | Phase | Scope | Exit criteria |
 |---|---|---|
 | **0. Core preparation** — implemented | §7 items 1–11, repository layout, CMake changes | All existing and new GoogleTest tests pass on macOS and Linux. **Met:** 80 tests, 0 warnings on macOS (Apple Clang, OpenCV 5) and on Ubuntu 24.04 arm64 and x86_64 (GCC 13, OpenCV 4.6). |
-| **1. Addon + API skeleton** | N-API addon, Fastify server, `packages/api` schemas, `/health`, `/catalog`, `/images` (upload, display, raw, pixel) | Vitest server/addon tests pass; OpenAPI generated. |
+| **1. Addon + API skeleton** — implemented | N-API addon, Fastify server, `packages/api` schemas, `/health`, `/catalog`, `/images` (upload, display, raw, pixel) | Vitest server/addon tests pass; OpenAPI generated. **Met:** the addon builds without warnings, and 37 Vitest tests and `tsc` pass on macOS (Node 25) and Linux arm64 (`node:24-bookworm`, GCC 12, OpenCV 4.6); `packages/api/openapi.json` generated. Until phase 5 the server refuses non-loopback addresses; the image SHA-256 is computed by the server while streaming the upload. |
 | **2. Web shell + image viewer** | Vite/React app, layout, menus, open image, zoom/pan, window/level, pixel readout | **R1 met** in local mode. |
 | **3. ROI tools + measurement** | ROI tools and manager, undo/redo, roi-stats, settings panel, presets, analyses + SSE, results table; **remove `controller/`, `viewer/`, `cvui.h`, `glcm-analysis`, `canvas-example`** | **R2, R3 met**; Playwright test values equal core test values. |
 | **4. Save / import / export** | Results CSV/JSON, ROI set import/export, ROI image ZIP, projects | **R4 met**; import/export round trips are lossless. |

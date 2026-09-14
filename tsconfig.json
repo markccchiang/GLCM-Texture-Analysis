@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "types": ["node"]
+  },
+  "include": [
+    "packages/api/src",
+    "bindings/node/index.d.ts",
+    "bindings/node/test",
+    "server/src",
+    "server/scripts",
+    "server/test",
+    "vitest.config.ts"
+  ]
+}

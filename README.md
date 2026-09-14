@@ -12,6 +12,7 @@ Select a rectangle or draw a polygon on the image. The tool computes the feature
 - [Eigen](https://eigen.tuxfamily.org/) 3.3 or newer (5.x works)
 - [nlohmann/json](https://github.com/nlohmann/json) 3.11 or newer
 - [GoogleTest](https://github.com/google/googletest) (optional, for the unit tests)
+- [Node.js](https://nodejs.org/) 24 or newer (only for the web server)
 
 On macOS with Homebrew:
 
@@ -120,6 +121,49 @@ ctest --test-dir build
 
 The tests (`core/tests/`) check the features against Haralick's worked example and against a simple, independent GLCM implementation, and cover ROI masks, image loading, quantization, display rendering, the analysis pipeline and the exporters.
 
+## Web server (in development)
+
+`server/` is the API server of the planned web application (`doc/ui-design-plan.md`, phase 1):
+- it uses the C++ core through a Node-API addon (`bindings/node`);
+- it shares its request and response schemas with the future web app through `packages/api`.
+
+It needs Node.js 24 or newer, plus the C++ dependencies above.
+
+```bash
+npm install             # all workspaces
+npm run build:native    # build the addon with cmake-js (again after changing core/)
+npm test                # addon and server tests (Vitest)
+npm run typecheck       # TypeScript
+npm start               # http://127.0.0.1:8080/api/v1/health
+npm run openapi         # regenerate packages/api/openapi.json
+```
+
+For now the server only listens on a loopback address; token authentication for server deployments comes in a later phase. It is configured with environment variables:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `GLCM_HOST` | `127.0.0.1` | Listen address; must be `127.0.0.1`, `::1` or `localhost` for now |
+| `GLCM_PORT` | `8080` | Port |
+| `GLCM_DATA_DIR` | `~/.glcm-texture-analysis` | Uploaded images and caches |
+| `GLCM_MAX_UPLOAD_BYTES` | 209,857,600 (200 MiB) | Largest upload |
+| `GLCM_MAX_IMAGE_PIXELS` | 400,000,000 | Largest decoded image |
+| `GLCM_RAW_TRANSFER_MAX_PIXELS` | 16,777,216 (4096²) | Images up to this size are sent to the browser as raw data |
+| `GLCM_DISPLAY_MAX_SIZE` | `4096` | Largest long side of `display.png` |
+| `GLCM_DISPLAY_CACHE_BYTES` | 536,870,912 (512 MiB) | Disk space for cached `display.png` renderings |
+| `GLCM_LOG_LEVEL` | `info` | Fastify log level |
+
+Endpoints (full details in `packages/api/openapi.json`):
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /api/v1/health` | Liveness and core version |
+| `GET /api/v1/catalog` | Features (with non-standard flags), presets and limits |
+| `POST /api/v1/images` | Upload an image as a multipart `file` field |
+| `GET`, `DELETE /api/v1/images/{id}` | Image info (size, bit depth, default window, histogram); delete |
+| `GET /api/v1/images/{id}/display.png?min&max&maxSize` | 8-bit rendering with window/level |
+| `GET /api/v1/images/{id}/raw` | Raw little-endian samples, zstd or gzip compressed, for images up to 4096 × 4096 |
+| `GET /api/v1/images/{id}/pixel?x&y` | One pixel value |
+
 ## Documentation
 
 The `doc/` folder contains a [Sphinx](https://www.sphinx-doc.org/) site (theme: [sphinx_rtd_theme](https://sphinx-rtd-theme.readthedocs.io/)) with every GLCM equation as implemented in `core/analysis/TextureAnalysis.cpp` and a list of references.
@@ -149,6 +193,9 @@ To rebuild later, activate the environment again with `source .venv/bin/activate
 | --- | --- |
 | `core/` | `glcm_core` library: `analysis/` (GLCM features), `roi/` (ROI masks), `imaging/` (loading, quantization, display), `pipeline/` (settings, analysis runner), `io/` (JSON, CSV, ROI image export), `tests/` |
 | `controller/`, `viewer/` | Legacy desktop application: selection loops and the cvui score panel (removed in phase 3 of `doc/ui-design-plan.md`) |
+| `bindings/node/` | Node-API addon (`@glcm/native`) exposing `glcm_core` to the server |
+| `packages/api/` | Shared API schemas and types (`@glcm/api`) and the generated OpenAPI document |
+| `server/` | Fastify API server (`@glcm/server`) |
 | `doc/` | Sphinx documentation: GLCM equations and references |
 | `samples/` | Sample image |
 

@@ -1,0 +1,17 @@
+{
+  "name": "@glcm/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared API schemas and types for the GLCM texture analysis server and web app",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./openapi.json": "./openapi.json"
+  },
+  "dependencies": {
+    "typebox": "1.3.30"
+  }
+}
