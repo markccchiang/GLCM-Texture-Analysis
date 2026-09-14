@@ -48,6 +48,8 @@ export interface JobManagerOptions {
   concurrency: number;
   /** Finished analyses kept in memory; the oldest are forgotten first */
   retainFinished: number;
+  /** Called once an analysis has finished, e.g. to store its results */
+  onFinished?: (state: AnalysisState) => Promise<void> | void;
 }
 
 const FINISHED: ReadonlySet<AnalysisStatus> = new Set(['completed', 'cancelled', 'failed']);
@@ -225,6 +227,21 @@ export class JobManager {
       event: 'finished',
       data: { status, completed: state.info.completed, total: state.info.total, error },
     });
+    Promise.resolve()
+      .then(() => this.options.onFinished?.(state))
+      .catch((failure: unknown) => console.error(`Could not store analysis ${state.info.analysisId}`, failure));
+  }
+
+  /** Forgets finished analyses that finished before a time (milliseconds since the epoch) */
+  forgetFinishedBefore(cutoff: number): number {
+    let forgotten = 0;
+    for (const [id, state] of this.analyses) {
+      if (isFinished(state.info.status) && Date.parse(state.info.finishedAt ?? state.info.createdAt) < cutoff) {
+        this.analyses.delete(id);
+        forgotten += 1;
+      }
+    }
+    return forgotten;
   }
 
   private forgetOldAnalyses(): void {

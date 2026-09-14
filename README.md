@@ -130,15 +130,28 @@ Viewer controls:
 - Space + drag, a middle-button drag or the Pan tool pans.
 - `+`/`−` zoom, `1` shows 100 %, `0` fits the image, arrow keys pan and `N` toggles the navigator.
 
-For now the server only listens on a loopback address; token authentication for server deployments comes in a later phase. It is configured with environment variables:
+On a loopback address the server runs in **local mode**, without authentication. Any other address is **server mode**, which requires an access token (`GLCM_API_TOKEN`); the web app asks for it once per browser tab. Server mode also switches to lower upload limits, rate limiting and retention. To deploy it with Docker behind an HTTPS reverse proxy, see [doc/deployment.md](doc/deployment.md), which also contains the security checklist.
+
+```bash
+export GLCM_API_TOKEN="$(openssl rand -base64 32)"
+docker compose up -d                                  # server on 127.0.0.1:8080, data in the glcm-data volume
+node scripts/smoke-test.mjs http://127.0.0.1:8080     # checks authentication, upload, analysis and export
+```
+
+The server is configured with environment variables:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `GLCM_HOST` | `127.0.0.1` | Listen address; must be `127.0.0.1`, `::1` or `localhost` for now |
+| `GLCM_HOST` | `127.0.0.1` | Listen address; anything other than `127.0.0.1`, `::1` or `localhost` is server mode |
+| `GLCM_API_TOKEN` | none | Access token (at least 43 characters, e.g. `openssl rand -base64 32`); required in server mode, enforced whenever set |
+| `GLCM_CORS_ORIGINS` | none | Comma-separated origins of other sites allowed to call the API |
+| `GLCM_RATE_LIMIT_PER_MINUTE` | `0`; `600` in server mode | API requests per minute per token (0 = no limit) |
+| `GLCM_RETENTION_HOURS` | `0`; `168` in server mode | Delete uploaded images and results older than this (0 = keep) |
+| `GLCM_TRUST_PROXY` | `false` | Use `X-Forwarded-*` headers from a reverse proxy |
 | `GLCM_PORT` | `8080` | Port |
-| `GLCM_DATA_DIR` | `~/.glcm-texture-analysis` | Uploaded images and caches |
-| `GLCM_MAX_UPLOAD_BYTES` | 209,857,600 (200 MiB) | Largest upload |
-| `GLCM_MAX_IMAGE_PIXELS` | 400,000,000 | Largest decoded image |
+| `GLCM_DATA_DIR` | `~/.glcm-texture-analysis`; `/data` in server mode | Uploaded images, results and caches |
+| `GLCM_MAX_UPLOAD_BYTES` | 209,857,600 (200 MiB); 100 MiB in server mode | Largest upload |
+| `GLCM_MAX_IMAGE_PIXELS` | 400,000,000; 100,000,000 in server mode | Largest decoded image |
 | `GLCM_RAW_TRANSFER_MAX_PIXELS` | 16,777,216 (4096²) | Images up to this size are sent to the browser as raw data |
 | `GLCM_DISPLAY_MAX_SIZE` | `4096` | Largest long side of `display.png` |
 | `GLCM_DISPLAY_CACHE_BYTES` | 536,870,912 (512 MiB) | Disk space for cached `display.png` renderings |
@@ -204,8 +217,10 @@ To rebuild later, activate the environment again with `source .venv/bin/activate
 | `packages/api/` | Shared API schemas and types (`@glcm/api`) and the generated OpenAPI document |
 | `server/` | Fastify API server (`@glcm/server`); also serves the built web app and the sample images |
 | `web/` | Browser app (`@glcm/web`): React, Mantine, Konva, WebGL2 image rendering, ROI tools, settings and results |
-| `e2e/` | Playwright end-to-end tests (`npm run test:e2e`) |
-| `doc/` | Sphinx documentation: GLCM equations and references |
+| `e2e/` | Playwright end-to-end tests (`npm run test:e2e`), in local mode and with an access token |
+| `Dockerfile`, `compose.yaml` | Server image and deployment example (`doc/deployment.md`) |
+| `.github/workflows/` | CI: core, unit and end-to-end tests on macOS and Ubuntu; Docker image smoke test |
+| `doc/` | Sphinx documentation (GLCM equations and references), the design plan and the deployment guide |
 | `samples/` | Sample images: synthetic test patterns, CC0 textures and `lena.jpg` (see `samples/README.md`) |
 | `scripts/` | Helper scripts, e.g. `generate-samples.ts` (`npm run samples`) |
 

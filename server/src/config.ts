@@ -1,10 +1,12 @@
 import os from 'node:os';
 import path from 'node:path';
 
+export type ServerMode = 'local' | 'server';
+
 export interface ServerConfig {
   host: string;
   port: number;
-  /** Uploaded images and caches (doc/ui-design-plan.md, section 8.2) */
+  /** Uploaded images, results and caches (doc/ui-design-plan.md, section 8.2) */
   dataDir: string;
   maxUploadBytes: number;
   maxImagePixels: number;
@@ -21,13 +23,29 @@ export interface ServerConfig {
   webDir: string | null;
   /** Sample images offered on the start screen; none when null */
   samplesDir: string | null;
+  /** Bearer token required by /api/v1 (except /health); required in server mode */
+  apiToken: string | null;
+  /** Origins allowed to call the API from other sites (CORS); none by default */
+  corsOrigins: string[];
+  /** Requests per minute per token (or client address); 0 disables the limit */
+  rateLimitPerMinute: number;
+  /** Uploaded images and results older than this are deleted; 0 keeps them */
+  retentionHours: number;
+  /** Trust X-Forwarded-* headers from a reverse proxy (client addresses for rate limits and logs) */
+  trustProxy: boolean;
 }
 
 const REPOSITORY_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
 const MIB = 1024 * 1024;
 
-export const DEFAULT_CONFIG: Omit<ServerConfig, 'dataDir' | 'webDir' | 'samplesDir'> = {
+/** Base64 of 32 random bytes, e.g. `openssl rand -base64 32` */
+export const MIN_TOKEN_LENGTH = 43;
+
+type Defaults = Omit<ServerConfig, 'dataDir' | 'webDir' | 'samplesDir'>;
+
+/** Defaults of local mode (loopback address) */
+export const DEFAULT_CONFIG: Defaults = {
   host: '127.0.0.1',
   port: 8080,
   maxUploadBytes: 200 * MIB,
@@ -37,7 +55,28 @@ export const DEFAULT_CONFIG: Omit<ServerConfig, 'dataDir' | 'webDir' | 'samplesD
   displayCacheBytes: 512 * MIB,
   analysisConcurrency: Math.max(1, os.availableParallelism()),
   logLevel: 'info',
+  apiToken: null,
+  corsOrigins: [],
+  rateLimitPerMinute: 0,
+  retentionHours: 0,
+  trustProxy: false,
 };
+
+/** Defaults that differ in server mode (any other address) */
+export const SERVER_MODE_DEFAULTS: Partial<Defaults> = {
+  maxUploadBytes: 100 * MIB,
+  maxImagePixels: 10_000 * 10_000,
+  rateLimitPerMinute: 600,
+  retentionHours: 7 * 24,
+};
+
+export function isLoopbackHost(host: string): boolean {
+  return host === '127.0.0.1' || host === '::1' || host === 'localhost';
+}
+
+export function serverMode(config: Pick<ServerConfig, 'host'>): ServerMode {
+  return isLoopbackHost(config.host) ? 'local' : 'server';
+}
 
 function integerSetting(env: NodeJS.ProcessEnv, name: string, fallback: number, minimum: number): number {
   const text = env[name];
@@ -51,24 +90,70 @@ function integerSetting(env: NodeJS.ProcessEnv, name: string, fallback: number, 
   return value;
 }
 
-/** Configuration from GLCM_* environment variables, falling back to DEFAULT_CONFIG */
+function booleanSetting(env: NodeJS.ProcessEnv, name: string): boolean {
+  const text = (env[name] ?? '').toLowerCase();
+  if (text === '' || text === 'false' || text === '0') {
+    return false;
+  }
+  if (text === 'true' || text === '1') {
+    return true;
+  }
+  throw new Error(`${name} must be true or false, got "${env[name]}"`);
+}
+
+/** Configuration from GLCM_* environment variables, falling back to the defaults of the mode */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
+  const host = env.GLCM_HOST || DEFAULT_CONFIG.host;
+  const mode = serverMode({ host });
+  const defaults: Defaults = mode === 'server' ? { ...DEFAULT_CONFIG, ...SERVER_MODE_DEFAULTS } : DEFAULT_CONFIG;
+  const defaultDataDir = mode === 'server' ? '/data' : path.join(os.homedir(), '.glcm-texture-analysis');
+
   return {
-    host: env.GLCM_HOST || DEFAULT_CONFIG.host,
-    port: integerSetting(env, 'GLCM_PORT', DEFAULT_CONFIG.port, 0),
-    dataDir: path.resolve(env.GLCM_DATA_DIR || path.join(os.homedir(), '.glcm-texture-analysis')),
-    maxUploadBytes: integerSetting(env, 'GLCM_MAX_UPLOAD_BYTES', DEFAULT_CONFIG.maxUploadBytes, 1),
-    maxImagePixels: integerSetting(env, 'GLCM_MAX_IMAGE_PIXELS', DEFAULT_CONFIG.maxImagePixels, 1),
-    rawTransferMaxPixels: integerSetting(env, 'GLCM_RAW_TRANSFER_MAX_PIXELS', DEFAULT_CONFIG.rawTransferMaxPixels, 0),
-    displayMaxSize: integerSetting(env, 'GLCM_DISPLAY_MAX_SIZE', DEFAULT_CONFIG.displayMaxSize, 1),
-    displayCacheBytes: integerSetting(env, 'GLCM_DISPLAY_CACHE_BYTES', DEFAULT_CONFIG.displayCacheBytes, 0),
-    analysisConcurrency: integerSetting(env, 'GLCM_ANALYSIS_CONCURRENCY', DEFAULT_CONFIG.analysisConcurrency, 1),
-    logLevel: env.GLCM_LOG_LEVEL || DEFAULT_CONFIG.logLevel,
+    host,
+    port: integerSetting(env, 'GLCM_PORT', defaults.port, 0),
+    dataDir: path.resolve(env.GLCM_DATA_DIR || defaultDataDir),
+    maxUploadBytes: integerSetting(env, 'GLCM_MAX_UPLOAD_BYTES', defaults.maxUploadBytes, 1),
+    maxImagePixels: integerSetting(env, 'GLCM_MAX_IMAGE_PIXELS', defaults.maxImagePixels, 1),
+    rawTransferMaxPixels: integerSetting(env, 'GLCM_RAW_TRANSFER_MAX_PIXELS', defaults.rawTransferMaxPixels, 0),
+    displayMaxSize: integerSetting(env, 'GLCM_DISPLAY_MAX_SIZE', defaults.displayMaxSize, 1),
+    displayCacheBytes: integerSetting(env, 'GLCM_DISPLAY_CACHE_BYTES', defaults.displayCacheBytes, 0),
+    analysisConcurrency: integerSetting(env, 'GLCM_ANALYSIS_CONCURRENCY', defaults.analysisConcurrency, 1),
+    logLevel: env.GLCM_LOG_LEVEL || defaults.logLevel,
     webDir: path.resolve(env.GLCM_WEB_DIR || path.join(REPOSITORY_ROOT, 'web', 'dist')),
     samplesDir: path.resolve(env.GLCM_SAMPLES_DIR || path.join(REPOSITORY_ROOT, 'samples')),
+    apiToken: env.GLCM_API_TOKEN || null,
+    corsOrigins: (env.GLCM_CORS_ORIGINS ?? '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+    rateLimitPerMinute: integerSetting(env, 'GLCM_RATE_LIMIT_PER_MINUTE', defaults.rateLimitPerMinute, 0),
+    retentionHours: integerSetting(env, 'GLCM_RETENTION_HOURS', defaults.retentionHours, 0),
+    trustProxy: booleanSetting(env, 'GLCM_TRUST_PROXY'),
   };
 }
 
-export function isLoopbackHost(host: string): boolean {
-  return host === '127.0.0.1' || host === '::1' || host === 'localhost';
+/** Refuses unsafe configurations (doc/ui-design-plan.md, section 8.2); throws an Error explaining the problem */
+export function validateConfig(config: ServerConfig): void {
+  const { apiToken } = config;
+  if (apiToken !== null && (apiToken.length < MIN_TOKEN_LENGTH || /\s/.test(apiToken))) {
+    throw new Error(
+      `GLCM_API_TOKEN must be at least ${MIN_TOKEN_LENGTH} characters without spaces, e.g. the output of "openssl rand -base64 32"`,
+    );
+  }
+  if (serverMode(config) === 'server' && apiToken === null) {
+    throw new Error(
+      `Listening on ${config.host} is server mode, which requires GLCM_API_TOKEN (e.g. "openssl rand -base64 32"). Use GLCM_HOST=127.0.0.1 for local mode.`,
+    );
+  }
+  for (const origin of config.corsOrigins) {
+    let url: URL;
+    try {
+      url = new URL(origin);
+    } catch {
+      throw new Error(`GLCM_CORS_ORIGINS contains "${origin}", which is not an origin such as https://glcm.example.org`);
+    }
+    if ((url.protocol !== 'https:' && url.protocol !== 'http:') || url.origin !== origin) {
+      throw new Error(`GLCM_CORS_ORIGINS contains "${origin}", which is not an origin such as https://glcm.example.org`);
+    }
+  }
 }

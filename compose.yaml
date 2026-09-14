@@ -1,0 +1,22 @@
+# Server deployment example (doc/deployment.md). Start with:
+#   export GLCM_API_TOKEN="$(openssl rand -base64 32)"
+#   docker compose up -d
+# and put a reverse proxy with HTTPS in front of port 8080.
+
+services:
+  glcm:
+    build: .
+    image: glcm-texture-analysis
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      GLCM_API_TOKEN: ${GLCM_API_TOKEN:?Set GLCM_API_TOKEN, e.g. export GLCM_API_TOKEN="$(openssl rand -base64 32)"}
+      GLCM_RETENTION_HOURS: "168"
+      GLCM_RATE_LIMIT_PER_MINUTE: "600"
+      GLCM_TRUST_PROXY: "true"
+    volumes:
+      - glcm-data:/data
+    restart: unless-stopped
+
+volumes:
+  glcm-data:

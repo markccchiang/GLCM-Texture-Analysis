@@ -1,4 +1,5 @@
-// HTTP client of the /api/v1 API (doc/ui-design-plan.md, section 8.5).
+// HTTP client of the /api/v1 API (doc/ui-design-plan.md, section 8.5). Every request carries the access token when
+// the server requires one (api/auth.ts).
 
 import {
   API_PREFIX,
@@ -20,6 +21,7 @@ import {
 } from '@glcm/api';
 import { fileNameFromDisposition } from '../files/download';
 import { decodeRawSamples, rawFormatFromHeaders, type RawImage } from '../image/raw';
+import { apiFetch, authHeaders, useAuth } from './auth';
 
 export class ApiRequestError extends Error {
   constructor(
@@ -44,11 +46,20 @@ async function errorFromResponse(response: Response): Promise<ApiRequestError> {
 }
 
 async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(url, { signal, headers: { accept: 'application/json' } });
+  const response = await apiFetch(url, { signal, headers: { accept: 'application/json' } });
   if (!response.ok) {
     throw await errorFromResponse(response);
   }
   return (await response.json()) as T;
+}
+
+/** Server mode and authentication; never needs the token */
+export async function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
+  const response = await fetch(`${API_PREFIX}/health`, { signal, headers: { accept: 'application/json' } });
+  if (!response.ok) {
+    throw await errorFromResponse(response);
+  }
+  return (await response.json()) as HealthResponse;
 }
 
 export function getCatalog(signal?: AbortSignal): Promise<CatalogResponse> {
@@ -60,7 +71,7 @@ export function getSamples(signal?: AbortSignal): Promise<SamplesResponse> {
 }
 
 export async function downloadSample(samplePath: string, signal?: AbortSignal): Promise<File> {
-  const response = await fetch(`${API_PREFIX}/samples/file?path=${encodeURIComponent(samplePath)}`, { signal });
+  const response = await apiFetch(`${API_PREFIX}/samples/file?path=${encodeURIComponent(samplePath)}`, { signal });
   if (!response.ok) {
     throw await errorFromResponse(response);
   }
@@ -79,6 +90,9 @@ export function uploadImage(file: File, onProgress?: ProgressCallback, signal?: 
     request.open('POST', `${API_PREFIX}/images`);
     request.responseType = 'json';
     request.setRequestHeader('accept', 'application/json');
+    for (const [name, value] of Object.entries(authHeaders())) {
+      request.setRequestHeader(name, value);
+    }
 
     request.upload.onprogress = (event) => {
       if (event.lengthComputable) {
@@ -89,9 +103,12 @@ export function uploadImage(file: File, onProgress?: ProgressCallback, signal?: 
       const body = request.response as (ImageInfo & Partial<ErrorResponse>) | null;
       if (request.status === 201 && body) {
         resolve(body);
-      } else {
-        reject(new ApiRequestError(request.status, body?.error ?? 'HttpError', body?.message ?? `Upload failed with status ${request.status}`));
+        return;
       }
+      if (request.status === 401) {
+        useAuth.getState().requireToken();
+      }
+      reject(new ApiRequestError(request.status, body?.error ?? 'HttpError', body?.message ?? `Upload failed with status ${request.status}`));
     };
     request.onerror = () => reject(new ApiRequestError(0, 'NetworkError', 'The server could not be reached'));
     request.onabort = () => reject(new DOMException('The upload was cancelled', 'AbortError'));
@@ -104,7 +121,7 @@ export function uploadImage(file: File, onProgress?: ProgressCallback, signal?: 
 }
 
 export async function deleteImage(imageId: string): Promise<void> {
-  const response = await fetch(`${API_PREFIX}/images/${imageId}`, { method: 'DELETE' });
+  const response = await apiFetch(`${API_PREFIX}/images/${imageId}`, { method: 'DELETE' });
   if (!response.ok && response.status !== 404) {
     throw await errorFromResponse(response);
   }
@@ -115,7 +132,7 @@ export async function deleteImage(imageId: string): Promise<void> {
  * by the image info, because Content-Length is the compressed size.
  */
 export async function fetchRawImage(info: ImageInfo, onProgress?: ProgressCallback, signal?: AbortSignal): Promise<RawImage> {
-  const response = await fetch(`${API_PREFIX}/images/${info.imageId}/raw`, { signal });
+  const response = await apiFetch(`${API_PREFIX}/images/${info.imageId}/raw`, { signal });
   if (!response.ok) {
     throw await errorFromResponse(response);
   }
@@ -162,7 +179,7 @@ export function displayUrl(imageId: string, { min, max, maxSize }: DisplayOption
 }
 
 export async function fetchDisplayBlob(imageId: string, options: DisplayOptions, signal?: AbortSignal): Promise<Blob> {
-  const response = await fetch(displayUrl(imageId, options), { signal });
+  const response = await apiFetch(displayUrl(imageId, options), { signal });
   if (!response.ok) {
     throw await errorFromResponse(response);
   }
@@ -174,7 +191,7 @@ export function getPixel(imageId: string, x: number, y: number, signal?: AbortSi
 }
 
 async function sendJson<T>(method: 'POST' | 'DELETE', url: string, body?: unknown, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(url, {
+  const response = await apiFetch(url, {
     method,
     signal,
     headers: body === undefined ? { accept: 'application/json' } : { accept: 'application/json', 'content-type': 'application/json' },
@@ -212,7 +229,7 @@ export interface DownloadedFile {
 }
 
 async function postForFile(url: string, body: unknown, fallbackName: string): Promise<DownloadedFile> {
-  const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const response = await apiFetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   if (!response.ok) {
     throw await errorFromResponse(response);
   }
@@ -233,7 +250,7 @@ export async function findImagesBySha256(sha256: string, signal?: AbortSignal): 
 
 /** The uploaded file of an image */
 export async function downloadOriginal(imageId: string): Promise<Uint8Array> {
-  const response = await fetch(`${API_PREFIX}/images/${imageId}/original`);
+  const response = await apiFetch(`${API_PREFIX}/images/${imageId}/original`);
   if (!response.ok) {
     throw await errorFromResponse(response);
   }
@@ -241,5 +258,5 @@ export async function downloadOriginal(imageId: string): Promise<Uint8Array> {
 }
 
 export async function getCoreVersion(): Promise<string> {
-  return (await getJson<HealthResponse>(`${API_PREFIX}/health`)).coreVersion;
+  return (await getHealth()).coreVersion;
 }

@@ -6,6 +6,13 @@
     "version": "0.1.0"
   },
   "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "GLCM_API_TOKEN; required when the server sets one"
+      }
+    },
     "schemas": {}
   },
   "paths": {
@@ -15,6 +22,8 @@
         "tags": [
           "system"
         ],
+        "description": "The only API route that never needs the bearer token; tells the web app whether to ask for one.",
+        "security": [],
         "responses": {
           "200": {
             "description": "Default Response",
@@ -24,7 +33,9 @@
                   "type": "object",
                   "required": [
                     "status",
-                    "coreVersion"
+                    "coreVersion",
+                    "mode",
+                    "authentication"
                   ],
                   "properties": {
                     "status": {
@@ -35,6 +46,40 @@
                     },
                     "coreVersion": {
                       "type": "string"
+                    },
+                    "mode": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "local"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "server"
+                          ]
+                        }
+                      ],
+                      "description": "local: loopback address; server: any other address"
+                    },
+                    "authentication": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "none"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "bearer"
+                          ]
+                        }
+                      ],
+                      "description": "bearer: every other /api/v1 request needs \"Authorization: Bearer <token>\""
                     }
                   }
                 }
@@ -2923,7 +2968,7 @@
         "tags": [
           "analyses"
         ],
-        "description": "Queued jobs are dropped; running jobs finish and their results are kept.",
+        "description": "Queued jobs are dropped; running jobs finish and their results are kept. Finished analyses are not changed.",
         "parameters": [
           {
             "schema": {
@@ -5126,6 +5171,11 @@
       }
     }
   },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
   "tags": [
     {
       "name": "system",

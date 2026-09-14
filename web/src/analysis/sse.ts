@@ -1,5 +1,7 @@
-// Server-Sent Events over fetch (doc/ui-design-plan.md, section 8.2: EventSource cannot send an Authorization header,
-// which server mode will need).
+// Server-Sent Events over fetch (doc/ui-design-plan.md, section 8.2: EventSource cannot send the Authorization header
+// that server mode needs).
+
+import { apiFetch } from '../api/auth';
 
 export interface SseMessage {
   event: string;
@@ -54,7 +56,7 @@ export class SseParser {
 
 /** Reads an event stream until it ends or the signal aborts */
 export async function readEventStream(url: string, onMessage: (message: SseMessage) => void, signal?: AbortSignal): Promise<void> {
-  const response = await fetch(url, { signal, headers: { accept: 'text/event-stream' } });
+  const response = await apiFetch(url, { signal, headers: { accept: 'text/event-stream' } });
   if (!response.ok || !response.body) {
     throw new Error(`Event stream failed with status ${response.status}`);
   }

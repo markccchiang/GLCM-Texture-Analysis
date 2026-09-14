@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events';
 import type { ServerResponse } from 'node:http';
 import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 import {
@@ -17,12 +18,14 @@ import { Type } from 'typebox';
 import { isFinished, type AnalysisState, type JobManager } from '../analysis/JobManager.js';
 import { ApiError } from '../errors.js';
 import { attachment, fileStem } from '../files.js';
-import { formatResultsDocument } from './exports.js';
 import type { ImageStore } from '../storage/ImageStore.js';
+import type { ResultStore } from '../storage/ResultStore.js';
+import { formatResultsDocument } from './exports.js';
 
 export interface AnalysisRoutesOptions {
   store: ImageStore;
   jobs: JobManager;
+  results: ResultStore;
   /** Interval of SSE keep-alive comments */
   heartbeatMs?: number;
 }
@@ -40,7 +43,7 @@ function writeEvent(response: ServerResponse, { event, data }: AnalysisEvent): v
   response.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
-export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = async (app, { store, jobs, heartbeatMs = 15000 }) => {
+export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = async (app, { store, jobs, results, heartbeatMs = 15000 }) => {
   async function requireImage(imageId: string): Promise<ImageInfo> {
     const info = await store.info(imageId);
     if (!info) {
@@ -49,12 +52,17 @@ export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = 
     return info;
   }
 
-  function requireAnalysis(analysisId: string): AnalysisState {
+  /** A running or recently finished analysis from memory, or a finished one stored on disk */
+  async function requireAnalysis(analysisId: string): Promise<AnalysisState> {
     const state = jobs.get(analysisId);
-    if (!state) {
+    if (state) {
+      return state;
+    }
+    const stored = await results.load(analysisId);
+    if (!stored) {
       throw new ApiError(404, 'NotFound', `Analysis ${analysisId} was not found`);
     }
-    return state;
+    return { info: stored.info, results: stored.results.results, events: new EventEmitter() };
   }
 
   app.post(
@@ -117,7 +125,7 @@ export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = 
         response: { 200: AnalysisInfo, 400: ErrorResponse, 404: ErrorResponse },
       },
     },
-    async (request) => requireAnalysis(request.params.id).info,
+    async (request) => (await requireAnalysis(request.params.id)).info,
   );
 
   app.delete(
@@ -125,7 +133,7 @@ export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = 
     {
       schema: {
         summary: 'Cancel an analysis',
-        description: 'Queued jobs are dropped; running jobs finish and their results are kept.',
+        description: 'Queued jobs are dropped; running jobs finish and their results are kept. Finished analyses are not changed.',
         tags: ['analyses'],
         params: AnalysisIdParams,
         response: { 204: NoBody('Cancelled (no body)'), 400: ErrorResponse, 404: ErrorResponse },
@@ -133,7 +141,8 @@ export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = 
     },
     async (request, reply) => {
       if (!jobs.cancel(request.params.id)) {
-        throw new ApiError(404, 'NotFound', `Analysis ${request.params.id} was not found`);
+        // A finished analysis stored on disk cannot be cancelled any more
+        await requireAnalysis(request.params.id);
       }
       return reply.code(204).send(undefined);
     },
@@ -149,7 +158,7 @@ export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = 
         response: { 200: AnalysisResults, 400: ErrorResponse, 404: ErrorResponse },
       },
     },
-    async (request) => jobs.results(requireAnalysis(request.params.id)),
+    async (request) => jobs.results(await requireAnalysis(request.params.id)),
   );
 
   for (const format of ['csv', 'json'] as const) {
@@ -172,8 +181,8 @@ export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = 
         },
       },
       async (request, reply) => {
-        const { timestamp, image, settings, results } = jobs.results(requireAnalysis(request.params.id));
-        const text = formatResultsDocument({ timestamp, image: { name: image.name, sha256: image.sha256 }, settings, results }, format);
+        const { timestamp, image, settings, results: measurements } = jobs.results(await requireAnalysis(request.params.id));
+        const text = formatResultsDocument({ timestamp, image: { name: image.name, sha256: image.sha256 }, settings, results: measurements }, format);
         return reply
           .header('Content-Disposition', attachment(`${fileStem(image.name)}-results.${format}`))
           .type(format === 'csv' ? 'text/csv; charset=utf-8' : 'application/json; charset=utf-8')
@@ -199,10 +208,12 @@ export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = 
       },
     },
     async (request, reply) => {
-      const state = requireAnalysis(request.params.id);
+      const state = await requireAnalysis(request.params.id);
       const response = reply.raw;
       reply.hijack();
       response.writeHead(200, {
+        // Hijacked responses skip Fastify's hooks, so headers set by plugins (e.g. CORS) are copied here
+        ...(reply.getHeaders() as Record<string, string>),
         'Content-Type': 'text/event-stream; charset=utf-8',
         'Cache-Control': 'no-store',
         Connection: 'keep-alive',

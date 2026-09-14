@@ -1,0 +1,96 @@
+# Server deployment
+
+This guide runs the GLCM texture analysis server for several users, as in phase 5 of `doc/ui-design-plan.md`. For personal use on your own computer, `npm start` (local mode) is enough; see the README.
+
+## Local mode and server mode
+
+The server decides its mode from `GLCM_HOST`:
+
+| | Local mode | Server mode |
+| --- | --- | --- |
+| Address | `127.0.0.1`, `::1` or `localhost` | any other address, e.g. `0.0.0.0` in a container |
+| Access token | optional | **required**: the server refuses to start without `GLCM_API_TOKEN` |
+| Data directory | `~/.glcm-texture-analysis` | `/data` |
+| Largest upload | 200 MiB, 20 000 × 20 000 px | 100 MiB, 10 000 × 10 000 px |
+| Rate limit | off | 600 requests per minute per token |
+| Retention | keep everything | images and results older than 7 days are deleted |
+
+Every default can be changed with the `GLCM_*` variables listed in the README.
+
+## Run with Docker
+
+Create a token (at least 43 characters, e.g. 32 random bytes in base64) and start the container:
+
+```bash
+export GLCM_API_TOKEN="$(openssl rand -base64 32)"
+docker compose up -d                 # uses compose.yaml: port 127.0.0.1:8080, volume glcm-data
+docker compose logs -f glcm
+```
+
+Or without Compose:
+
+```bash
+docker build -t glcm-texture-analysis .
+docker run -d --name glcm -p 127.0.0.1:8080:8080 -v glcm-data:/data -e GLCM_API_TOKEN glcm-texture-analysis
+node scripts/smoke-test.mjs http://127.0.0.1:8080   # uses GLCM_API_TOKEN from the environment
+```
+
+The image is built in two stages. The first compiles `glcm_core`, the Node-API addon and the web app. The runtime stage is `node:24-bookworm-slim` with only the OpenCV runtime libraries, and runs as the unprivileged `node` user. It stores everything in the `/data` volume:
+- `images/` holds uploads and decoded pixels;
+- `results/` holds finished analyses, so they survive restarts;
+- `cache/` holds rendered display images.
+
+Back up the volume to keep images and results. A health check calls `GET /api/v1/health`.
+
+Share the token with users over a secure channel. The web app asks for it once and keeps it in the browser tab's session storage, so closing the tab forgets it. To rotate the token, restart the container with a new `GLCM_API_TOKEN`; users are asked for the new token on their next request.
+
+## HTTPS reverse proxy
+
+The server speaks plain HTTP. Put a reverse proxy with HTTPS in front of it, and keep the container port bound to `127.0.0.1` (as `compose.yaml` does) so it is only reachable through the proxy. Set `GLCM_TRUST_PROXY=true` so that client addresses and rate limits use `X-Forwarded-For`.
+
+Caddy (obtains certificates automatically):
+
+```
+glcm.example.org {
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+With nginx, allow large uploads and do not buffer progress events:
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    client_max_body_size 100m;
+    proxy_buffering off;          # Server-Sent Events of /api/v1/analyses/{id}/events
+    proxy_read_timeout 1h;
+}
+```
+
+The web app is served from the same origin as the API, so no CORS configuration is needed. Set `GLCM_CORS_ORIGINS` (a comma-separated list such as `https://tools.example.org`) only when pages on other sites call the API.
+
+## Security checklist
+
+These are the requirements of `doc/ui-design-plan.md`, section 8.2, and how each is checked. File references:
+- `security.test.ts` is `server/test/security.test.ts`;
+- `auth.spec.ts` is `e2e/auth.spec.ts`;
+- `smoke-test.mjs` is `scripts/smoke-test.mjs`, which also runs against the Docker image in CI.
+
+| Requirement | Implementation | Checked by |
+| --- | --- | --- |
+| Local mode binds to loopback only and needs no token | `serverMode()` in `server/src/config.ts` | `security.test.ts` › configuration |
+| Server mode refuses to start without a token of at least 32 random bytes | `validateConfig()`: no token, fewer than 43 characters or whitespace is an error; `main.ts` exits with status 1 | `security.test.ts` › configuration |
+| Every `/api/v1` request except `/health` needs `Authorization: Bearer <token>`, compared in constant time, `401` without details | `registerAuthentication()` in `server/src/security.ts`: SHA-256 digests compared with `timingSafeEqual`; `{error: "Unauthorized", message: "Authentication required"}` and `WWW-Authenticate: Bearer` | `security.test.ts` › authentication; `smoke-test.mjs` |
+| The web app asks for the token once and keeps it in `sessionStorage` | `web/src/api/auth.ts`, `TokenPrompt.tsx` | `auth.spec.ts`; `web/src/api/auth.test.ts` |
+| Images and progress events carry the header (no `<img src>` or `EventSource`) | `apiFetch()` for display images, raw pixels, downloads and the fetch-based SSE reader; the upload request sets the header too | `auth.spec.ts` (open, measure) |
+| HTTPS at a reverse proxy | This guide; `GLCM_TRUST_PROXY` | Deployment review |
+| CORS allow-list, empty by default | `registerCors()` only when `GLCM_CORS_ORIGINS` is set; origins are validated | `security.test.ts` › CORS |
+| Per-token rate limits | `registerRateLimit()`: key is the token's SHA-256 (or the client address), `429 TooManyRequests` with `Retry-After` | `security.test.ts` › limits |
+| No client-supplied file paths; random ids; sanitized export names | Image and analysis ids are random UUIDs checked against patterns; samples are served only from their listing; `fileStem()`, `SanitizeFileName()` | `web.test.ts` (sample traversal), `exports.test.ts`, core `RoiImageExportTest.SanitizesFileNames` |
+| Input validation: image size, `Ng` ≤ 256, distances ≤ 64, ≤ 10 000 vertices per ROI, ≤ 1 000 ROIs per request, every body schema-validated | TypeBox schemas in `packages/api`; `maxUploadBytes`, `maxImagePixels`; `glcm::ValidateSettings` | `security.test.ts` › limits; `analyses.test.ts`; `images.test.ts` |
+| Uploaded images and results expire | `startRetention()` in `server/src/storage/retention.ts`, at startup and periodically | `security.test.ts` › storage |
+| Storage under the data directory with random names | `ImageStore` (`images/`), `ResultStore` (`results/`), `DisplayCache` (`cache/`); exports are generated per request and not stored | `security.test.ts` › storage |
+| The token is not logged | Fastify logger redacts `req.headers.authorization` | Code review (`server/src/app.ts`) |

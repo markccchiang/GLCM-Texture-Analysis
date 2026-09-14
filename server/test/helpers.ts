@@ -14,18 +14,26 @@ export interface TestApp {
   close(): Promise<void>;
 }
 
-/** App with its own temporary data directory */
-export async function createTestApp(overrides: Partial<ServerConfig> = {}): Promise<TestApp> {
-  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'glcm-server-test-'));
+export interface TestAppOptions {
+  /** Use this data directory and keep it on close (e.g. to restart on the same data) */
+  dataDir?: string;
+  retention?: boolean;
+}
+
+/** App with its own temporary data directory, unless one is given */
+export async function createTestApp(overrides: Partial<ServerConfig> = {}, options: TestAppOptions = {}): Promise<TestApp> {
+  const dataDir = options.dataDir ?? (await fs.mkdtemp(path.join(os.tmpdir(), 'glcm-server-test-')));
   const config: ServerConfig = { ...DEFAULT_CONFIG, dataDir, logLevel: 'silent', webDir: null, samplesDir: null, ...overrides };
-  const app = await buildApp(config, { logger: false });
+  const app = await buildApp(config, { logger: false, retention: options.retention });
   return {
     app,
     config,
     dataDir,
     async close() {
       await app.close();
-      await fs.rm(dataDir, { recursive: true, force: true });
+      if (!options.dataDir) {
+        await fs.rm(dataDir, { recursive: true, force: true });
+      }
     },
   };
 }

@@ -14,30 +14,42 @@ import { exportRoutes } from './routes/exports.js';
 import { healthRoutes } from './routes/health.js';
 import { imageRoutes } from './routes/images.js';
 import { sampleRoutes } from './routes/samples.js';
+import { registerAuthentication, registerCors, registerRateLimit } from './security.js';
 import { DisplayCache } from './storage/DisplayCache.js';
 import { ImageStore } from './storage/ImageStore.js';
+import { ResultStore } from './storage/ResultStore.js';
+import { startRetention } from './storage/retention.js';
 import { hasWebApp, registerWebApp, sendWebApp, wantsWebApp } from './web.js';
 
 export interface BuildAppOptions {
   /** false disables request logging (tests, OpenAPI generation) */
   logger?: boolean;
+  /** Start the periodic retention cleanup when config.retentionHours > 0 (the server entry point does) */
+  retention?: boolean;
 }
 
-/** Finished analyses kept in memory */
+/** Finished analyses kept in memory; all of them are also stored on disk */
 const RETAINED_ANALYSES = 100;
 
 export async function buildApp(config: ServerConfig, options: BuildAppOptions = {}) {
   const app = Fastify({
-    logger: options.logger === false ? false : { level: config.logLevel },
+    logger: options.logger === false ? false : { level: config.logLevel, redact: ['req.headers.authorization'] },
     // Analysis requests carry ROI geometry (up to 1000 ROIs × 10 000 vertices); images arrive as multipart uploads
     bodyLimit: 64 * 1024 * 1024,
+    trustProxy: config.trustProxy,
   }).withTypeProvider<TypeBoxTypeProvider>();
 
   const store = new ImageStore(config.dataDir);
   await store.init();
+  const results = new ResultStore(config.dataDir);
+  await results.init();
   const displayCache = new DisplayCache(path.join(config.dataDir, 'cache', 'display'), config.displayCacheBytes);
   await displayCache.init();
-  const jobs = new JobManager({ concurrency: config.analysisConcurrency, retainFinished: RETAINED_ANALYSES });
+  const jobs: JobManager = new JobManager({
+    concurrency: config.analysisConcurrency,
+    retainFinished: RETAINED_ANALYSES,
+    onFinished: (state) => results.save({ info: state.info, results: jobs.results(state) }),
+  });
 
   await app.register(swagger, {
     openapi: {
@@ -47,6 +59,10 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
         description: 'HTTP API of the GLCM texture analysis server (doc/ui-design-plan.md, section 8.5).',
         version: native.coreVersion(),
       },
+      components: {
+        securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', description: 'GLCM_API_TOKEN; required when the server sets one' } },
+      },
+      security: [{ bearerAuth: [] }],
       tags: [
         { name: 'system', description: 'Health and feature catalog' },
         { name: 'images', description: 'Upload, display and pixel data' },
@@ -80,6 +96,16 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
     return reply.code(500).send({ error: 'InternalError', message: 'Internal server error' });
   });
 
+  if (config.corsOrigins.length > 0) {
+    await registerCors(app, config.corsOrigins);
+  }
+  if (config.rateLimitPerMinute > 0) {
+    await registerRateLimit(app, config);
+  }
+  if (config.apiToken) {
+    registerAuthentication(app, config.apiToken);
+  }
+
   const serveWebApp = hasWebApp(config.webDir);
   if (serveWebApp) {
     await registerWebApp(app, config.webDir!);
@@ -94,15 +120,20 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
 
   await app.register(
     async (api) => {
-      await api.register(healthRoutes);
+      await api.register(healthRoutes, { config });
       await api.register(catalogRoutes, { config });
       await api.register(imageRoutes, { config, store, displayCache });
-      await api.register(analysisRoutes, { store, jobs });
+      await api.register(analysisRoutes, { store, jobs, results });
       await api.register(exportRoutes, { store });
       await api.register(sampleRoutes, { samplesDir: config.samplesDir });
     },
     { prefix: API_PREFIX },
   );
+
+  if (options.retention && config.retentionHours > 0) {
+    const stop = startRetention({ images: store, results, jobs }, config.retentionHours * 60 * 60_000, app.log);
+    app.addHook('onClose', async () => stop());
+  }
 
   return app;
 }

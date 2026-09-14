@@ -1,6 +1,7 @@
 import { Badge, Button, Menu, Text } from '@mantine/core';
 import { IconCheck } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
+import { useAuth } from '../api/auth';
 import { measure } from '../analysis/measure';
 import { renameSelectedRoi } from '../app/actions';
 import { exportResultsFile, exportRoiSetFile } from '../files/actions';
@@ -50,6 +51,7 @@ export function MenuBar() {
   const hasActive = useRois((state) => state.activeShape !== null);
   const hasResults = useResults((state) => state.rows.length > 0);
   const showLabels = useUi((state) => state.showRoiLabels);
+  const hasToken = useAuth((state) => state.token !== null);
   const viewer = useViewer.getState;
   const rois = useRois.getState;
   const ui = useUi.getState;
@@ -88,6 +90,12 @@ export function MenuBar() {
         >
           Close Image
         </Menu.Item>
+        {hasToken && (
+          <>
+            <Menu.Divider />
+            <Menu.Item onClick={() => useAuth.getState().requireToken()}>Change Access Token…</Menu.Item>
+          </>
+        )}
       </TopMenu>
 
       <TopMenu label="Edit">

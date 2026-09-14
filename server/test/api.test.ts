@@ -19,7 +19,7 @@ describe('system routes', () => {
   it('reports health', async () => {
     const response = await t.app.inject({ method: 'GET', url: '/api/v1/health' });
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ status: 'ok', coreVersion: '0.1.0' });
+    expect(response.json()).toEqual({ status: 'ok', coreVersion: '0.1.0', mode: 'local', authentication: 'none' });
   });
 
   it('serves the feature catalog with upload limits', async () => {

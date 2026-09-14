@@ -22,6 +22,10 @@ export type ErrorResponse = Static<typeof ErrorResponse>;
 export const HealthResponse = Type.Object({
   status: Type.Literal('ok'),
   coreVersion: Type.String(),
+  mode: Type.Union([Type.Literal('local'), Type.Literal('server')], { description: 'local: loopback address; server: any other address' }),
+  authentication: Type.Union([Type.Literal('none'), Type.Literal('bearer')], {
+    description: 'bearer: every other /api/v1 request needs "Authorization: Bearer <token>"',
+  }),
 });
 export type HealthResponse = Static<typeof HealthResponse>;
 

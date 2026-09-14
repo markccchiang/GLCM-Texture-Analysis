@@ -1,7 +1,10 @@
 import { useHotkeys } from '@mantine/hooks';
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { Group as PanelGroup, Panel, Separator, useDefaultLayout } from 'react-resizable-panels';
+import { useAuth } from './api/auth';
+import { getHealth } from './api/client';
 import { SettingsPanel } from './analysis/SettingsPanel';
+import { TokenPrompt } from './components/TokenPrompt';
 import { MenuBar } from './components/MenuBar';
 import { AppModals } from './components/Modals';
 import { PanelSection } from './components/PanelSection';
@@ -98,6 +101,19 @@ export function App() {
   const layoutVersion = useUi((state) => state.layoutVersion);
   const fileRequest = useUi((state) => state.fileRequest);
 
+  // Ask for the access token right away when the server requires one
+  useEffect(() => {
+    const controller = new AbortController();
+    getHealth(controller.signal)
+      .then((health) => {
+        if (health.authentication === 'bearer' && !useAuth.getState().token) {
+          useAuth.getState().requireToken();
+        }
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
+
   useEffect(() => {
     const input = fileInputRef.current;
     if (fileRequest && input) {
@@ -176,6 +192,7 @@ export function App() {
         }}
       />
       <AppModals />
+      <TokenPrompt />
       {dragging && (
         <div className="drop-overlay">
           <div>Drop an image, a project (.glcmproj) or an ROI set (.roi.json)</div>

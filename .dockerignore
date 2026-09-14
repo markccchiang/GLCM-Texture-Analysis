@@ -1,0 +1,13 @@
+.git
+.github
+.idea
+**/node_modules
+**/build
+bindings/node/build
+web/dist
+doc/_build
+doc/.venv
+test-results
+playwright-report
+CLAUDE.md
+*.tgz
