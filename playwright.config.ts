@@ -10,6 +10,8 @@ const PORT = 8181;
 const TOKEN_PORT = 8182;
 const VIEWPORT = { width: 1440, height: 900 };
 const TOKEN_TESTS = /auth\.spec\.ts/;
+// Set by GitHub Actions
+const CI = Boolean(process.env.CI);
 
 export default defineConfig({
   testDir: 'e2e',
@@ -17,7 +19,11 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   // One server and one analysis queue per mode: run the tests one after another
   workers: 1,
-  reporter: [['list']],
+  // In CI a failed test runs once more: slow runners can miss a timeout. A test that passes on the retry is reported as
+  // flaky, and a test that fails both times still fails the job.
+  retries: CI ? 1 : 0,
+  // The github reporter turns failures into annotations on the workflow run, readable without downloading the logs
+  reporter: CI ? [['list'], ['github']] : [['list']],
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
     locale: 'en-US',
