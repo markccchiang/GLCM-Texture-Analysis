@@ -204,7 +204,7 @@ Documentation, build and deployment
      - This documentation; equations rendered with MathJax
    * - Docker
      - multi-stage build
-     - ``node:24-bookworm`` builds the core, addon and web app; ``node:24-bookworm-slim`` with
+     - ``node:24-bookworm`` (pinned by digest, like the runtime image) builds the core, addon and web app; ``node:24-bookworm-slim`` with
        ``libopencv-core406``, ``libopencv-imgproc406`` and ``libopencv-imgcodecs406`` runs the server as user ``node``
    * - Docker Compose
      - ``compose.yaml``

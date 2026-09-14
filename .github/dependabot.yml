@@ -1,0 +1,13 @@
+# Keeps the pinned GitHub Actions (commit SHAs in .github/workflows) and Docker base images (digests in Dockerfile) up to
+# date by proposing pull requests.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly

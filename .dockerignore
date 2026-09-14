@@ -11,3 +11,8 @@ test-results
 playwright-report
 CLAUDE.md
 *.tgz
+cmake-build-*
+.venv-medical
+.env*
+**/.DS_Store
+*.log

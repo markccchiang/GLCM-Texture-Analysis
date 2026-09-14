@@ -1,5 +1,7 @@
 # Continuous integration (doc/ui-design-plan.md, sections 8.3 and 8.6): core, addon, server, web and end-to-end tests
 # on macOS (arm64) and Ubuntu (x86_64), and the Docker image with a smoke test.
+#
+# Actions are pinned to commit SHAs (the version is in the comment); .github/dependabot.yml proposes updates.
 
 name: CI
 
@@ -23,8 +25,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    # A hanging step fails the job instead of holding a runner for GitHub's default of 6 hours
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install C++ dependencies (Ubuntu)
         if: runner.os == 'Linux'
@@ -36,7 +40,7 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install opencv eigen nlohmann-json googletest
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: npm
@@ -59,6 +63,19 @@ jobs:
       - name: Unit tests (addon, server, web)
         run: npm test
 
+      - name: Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      # Browser builds match the Playwright version, so they are cached per version and operating system
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/Library/Caches/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}
+
       - name: End-to-end tests (Chromium, WebKit)
         run: |
           npx playwright install --with-deps chromium webkit
@@ -66,7 +83,7 @@ jobs:
 
       - name: Keep test results of failed runs
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-results-${{ matrix.os }}
           path: test-results
@@ -75,27 +92,47 @@ jobs:
   docker:
     name: Docker image
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
+      # Layers are cached in the GitHub Actions cache, so unchanged dependency layers are not rebuilt
       - name: Build the image
-        run: docker build -t glcm-texture-analysis .
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          load: true
+          tags: glcm-texture-analysis
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
 
+      # A port other than 8080 also checks that the image's health check follows GLCM_PORT
       - name: Smoke test in server mode
         run: |
           export GLCM_API_TOKEN="$(openssl rand -base64 32)"
-          docker run -d --name glcm -p 8080:8080 -e GLCM_API_TOKEN glcm-texture-analysis
+          docker run -d --name glcm -p 8080:9090 -e GLCM_PORT=9090 -e GLCM_API_TOKEN glcm-texture-analysis
           for attempt in $(seq 1 30); do
             curl -sf http://127.0.0.1:8080/api/v1/health && break
             sleep 2
           done
           node scripts/smoke-test.mjs http://127.0.0.1:8080
+
+      - name: Health check reports healthy
+        run: |
+          for attempt in $(seq 1 30); do
+            status="$(docker inspect --format '{{.State.Health.Status}}' glcm)"
+            echo "health: $status"
+            [ "$status" = healthy ] && exit 0
+            [ "$status" = unhealthy ] && exit 1
+            sleep 5
+          done
+          exit 1
 
       - name: Container logs
         if: always()

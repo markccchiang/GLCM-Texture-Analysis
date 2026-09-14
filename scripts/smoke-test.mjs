@@ -9,6 +9,10 @@ const imagePath = process.argv[3] ?? path.join(import.meta.dirname, '..', 'sampl
 const token = process.env.GLCM_API_TOKEN ?? '';
 const api = `${baseUrl}/api/v1`;
 
+// Every request, including reading a response body such as the event stream, fails after this time instead of hanging
+const REQUEST_TIMEOUT_MS = 120_000;
+const fetch = (url, options = {}) => globalThis.fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS), ...options });
+
 let failures = 0;
 function check(condition, message) {
   console.log(`${condition ? '✓' : '✗'} ${message}`);

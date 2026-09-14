@@ -6,8 +6,10 @@
 # The container listens on 0.0.0.0, which is server mode: GLCM_API_TOKEN is required. Put a reverse proxy with HTTPS
 # in front of it (see doc/deployment.md).
 
+# Base images are pinned by digest (the tag is kept for readability); .github/dependabot.yml proposes updates.
+
 # ---- Build: core, Node-API addon and web app -------------------------------------------------------------------------
-FROM node:24-bookworm AS build
+FROM node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0 AS build
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends cmake g++ make libopencv-dev libeigen3-dev nlohmann-json3-dev \
@@ -32,7 +34,7 @@ RUN npm run build:native && npm run build:web \
     && npm prune --omit=dev
 
 # ---- Runtime ---------------------------------------------------------------------------------------------------------
-FROM node:24-bookworm-slim
+FROM node:24-bookworm-slim@sha256:2fe369e969550cde8e867afc3fe370b260140cab4a23d467074295b42163d553
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libopencv-core406 libopencv-imgproc406 libopencv-imgcodecs406 \
@@ -66,7 +68,8 @@ USER node
 VOLUME /data
 EXPOSE 8080
 
+# Uses GLCM_PORT, so the check keeps working when the port is changed with -e GLCM_PORT=...
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
-    CMD ["node", "-e", "fetch('http://127.0.0.1:8080/api/v1/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+    CMD ["node", "-e", "fetch('http://127.0.0.1:' + (process.env.GLCM_PORT || 8080) + '/api/v1/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
 
 CMD ["node", "--import", "tsx", "server/src/main.ts"]

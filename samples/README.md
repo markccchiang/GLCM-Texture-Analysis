@@ -39,7 +39,7 @@ All five are 8-bit grayscale PNGs. `camera.png` is the default sample: **Open sa
 
 One slice or radiograph each, from public de-identified datasets, stored as lossless 16-bit grayscale PNGs. They exercise the 16-bit path with real clinical intensities; choose **Quantization** and **Gray levels** in the Analysis Settings to suit each image's value range. They are for testing and demonstration only, not for diagnosis.
 
-`scripts/fetch-medical-samples.py` downloads the source data and writes these files; the pinned series and instances make the output identical on every run (see the script for the Python packages it needs). They keep the licences below, not the repository's MIT License.
+`scripts/fetch-medical-samples.py` downloads the source data and writes these files; install its Python packages from `scripts/requirements-medical.txt`, where they are pinned. The pinned series and instances make the output identical on every run, and the script stops with an error when the pixels of an image differ from the committed files, for example because the source data or a package changed. They keep the licences below, not the repository's MIT License.
 
 | File | Size | Content | Conversion |
 | --- | --- | --- | --- |

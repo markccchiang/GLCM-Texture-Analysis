@@ -2,12 +2,13 @@
 """Downloads the medical sample images and converts them into samples/medical/.
 
     python3 -m venv .venv-medical
-    .venv-medical/bin/pip install pydicom numpy nibabel pillow
+    .venv-medical/bin/pip install -r scripts/requirements-medical.txt
     .venv-medical/bin/python scripts/fetch-medical-samples.py
 
 Each image is one 2D slice or radiograph, stored as a lossless 16-bit grayscale PNG. The sources, licenses and
-conversions are described in samples/README.md. The script pins the exact series and instances, so running it again
-gives the same pixels.
+conversions are described in samples/README.md. The script pins the exact series and instances, the Python packages
+are pinned in requirements-medical.txt, and the SHA-256 of every image's pixels is checked, so a changed download or
+decoder stops the script instead of silently changing the samples.
 """
 
 import hashlib
@@ -35,6 +36,13 @@ XRAY_SERIES = '1.3.6.1.4.1.14519.5.2.1.9999.103.2033282158389577844152198164874'
 XRAY_INSTANCE = '1.3.6.1.4.1.14519.5.2.1.9999.103.2294547012929720947691791872212'
 XRAY_WIDTH = 1024
 
+# SHA-256 of the uint16 pixel array of each output file (row-major, native byte order as written by numpy)
+EXPECTED_PIXELS_SHA256 = {
+    'ct-chest.png': '6fc2fc92db49d2a769b629274c1e16d153cc2da0963229664ab1886ad811fd05',
+    'xray-chest.png': '9b53b9fce54e7a16423b107776acb2d6a8ce3284e268b5dd61624c36c6bb91a8',
+    'mri-brain-t1.png': 'be3ae4e4a35cbd3c99e228c4b0d851d6ac50cab77a23bfa5c3e7231232d2a47f',
+}
+
 # OpenNeuro ds000001, sub-01: T1-weighted anatomical MRI, axial slice 120 in RAS orientation
 MRI_URL = 'https://s3.amazonaws.com/openneuro.org/ds000001/sub-01/anat/sub-01_T1w.nii.gz'
 MRI_SLICE = 120
@@ -58,9 +66,14 @@ def dicom_instance(series_uid: str, instance_uid: str) -> pydicom.Dataset:
 
 def save_png(pixels: np.ndarray, name: str) -> None:
     assert pixels.dtype == np.uint16
+    digest = hashlib.sha256(pixels.astype('<u2').tobytes()).hexdigest()
+    if digest != EXPECTED_PIXELS_SHA256[name]:
+        raise RuntimeError(
+            f'{name}: the pixels differ from the committed sample (sha256 {digest}, expected {EXPECTED_PIXELS_SHA256[name]}). '
+            'The source data or a package version changed; check it before updating EXPECTED_PIXELS_SHA256.'
+        )
     path = OUTPUT / name
     Image.fromarray(pixels).save(path, optimize=True)
-    digest = hashlib.sha256(pixels.tobytes()).hexdigest()
     print(f'{path.relative_to(ROOT)}: {pixels.shape[1]} × {pixels.shape[0]}, values {pixels.min()}–{pixels.max()}, pixels sha256 {digest}')
 
 
@@ -77,7 +90,8 @@ def xray_chest() -> None:
     pixels = dataset.pixel_array.astype(np.float32)
     height = round(pixels.shape[0] * XRAY_WIDTH / pixels.shape[1])
     # Area averaging keeps the 15-bit values of the detector
-    reduced = np.asarray(Image.fromarray(pixels, mode='F').resize((XRAY_WIDTH, height), Image.Resampling.BOX))
+    # A float32 array becomes a mode "F" image (the mode argument of fromarray is deprecated)
+    reduced = np.asarray(Image.fromarray(pixels).resize((XRAY_WIDTH, height), Image.Resampling.BOX))
     save_png(np.clip(np.rint(reduced), 0, 65535).astype(np.uint16), 'xray-chest.png')
 
 

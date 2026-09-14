@@ -9,3 +9,4 @@ bindings/node/build/
 web/dist/
 test-results/
 playwright-report/
+__pycache__/

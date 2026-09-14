@@ -37,12 +37,12 @@ docker run -d --name glcm -p 127.0.0.1:8080:8080 -v glcm-data:/data -e GLCM_API_
 node scripts/smoke-test.mjs http://127.0.0.1:8080   # uses GLCM_API_TOKEN from the environment
 ```
 
-The image is built in two stages. The first compiles `glcm_core`, the Node-API addon and the web app. The runtime stage is `node:24-bookworm-slim` with only the OpenCV runtime libraries, and runs as the unprivileged `node` user. It stores everything in the `/data` volume:
+The image is built in two stages from base images pinned by digest (Dependabot proposes updates). The first compiles `glcm_core`, the Node-API addon and the web app. The runtime stage is `node:24-bookworm-slim` with only the OpenCV runtime libraries, and runs as the unprivileged `node` user. It stores everything in the `/data` volume:
 - `images/` holds uploads and decoded pixels;
 - `results/` holds finished analyses, so they survive restarts (on `SIGTERM` the server finishes writing them before it exits);
 - `cache/` holds rendered display images.
 
-Back up the volume to keep images and results. A health check calls `GET /api/v1/health`.
+Back up the volume to keep images and results. A health check calls `GET /api/v1/health` on `GLCM_PORT`, so it keeps working when the port is changed.
 
 Share the token with users over a secure channel. The web app asks for it once and keeps it in the browser tab's session storage, so closing the tab forgets it. To rotate the token, restart the container with a new `GLCM_API_TOKEN`; users are asked for the new token on their next request.
 

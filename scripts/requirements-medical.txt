@@ -1,0 +1,7 @@
+# Python packages of scripts/fetch-medical-samples.py, pinned so that the samples are reproduced exactly:
+#   python3 -m venv .venv-medical && .venv-medical/bin/pip install -r scripts/requirements-medical.txt
+nibabel==5.4.2
+numpy==2.5.3
+packaging==26.3
+pillow==12.3.0
+pydicom==3.0.2
