@@ -9,7 +9,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { chromium, expect, type Locator, type Page } from '@playwright/test';
+import { chromium, expect, type Browser, type Locator, type Page } from '@playwright/test';
 import { chooseMenuItem, clickAt, drag, toPage, waitForImage } from '../e2e/helpers.js';
 import { E2E_API_TOKEN } from '../e2e/token.js';
 
@@ -35,30 +35,52 @@ interface Server {
   dataDir: string;
 }
 
+async function isListening(port: number): Promise<boolean> {
+  try {
+    await fetch(`http://127.0.0.1:${port}/api/v1/health`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function startServer(port: number, apiToken: string): Promise<Server> {
+  // A server left over from an earlier run would pass the health check and serve an outdated build
+  if (await isListening(port)) {
+    throw new Error(`Port ${port} is already in use; stop the other server first`);
+  }
   const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'glcm-docs-'));
   const child = spawn(process.execPath, ['--import', 'tsx', 'server/src/main.ts'], {
     cwd: ROOT,
     env: { ...process.env, GLCM_HOST: '127.0.0.1', GLCM_PORT: String(port), GLCM_DATA_DIR: dataDir, GLCM_API_TOKEN: apiToken, GLCM_LOG_LEVEL: 'warn', UV_THREADPOOL_SIZE: '8' },
     stdio: ['ignore', 'inherit', 'inherit'],
   });
-  for (let attempt = 0; attempt < 120; attempt += 1) {
+  const server = { process: child, dataDir };
+  for (let attempt = 0; attempt < 120 && child.exitCode === null && child.signalCode === null; attempt += 1) {
     try {
       if ((await fetch(`http://127.0.0.1:${port}/api/v1/health`)).ok) {
-        return { process: child, dataDir };
+        return server;
       }
     } catch {
       // Not listening yet
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  child.kill();
-  throw new Error(`The server on port ${port} did not start`);
+  const exitCode = child.exitCode;
+  await stopServer(server);
+  throw new Error(exitCode !== null ? `The server on port ${port} exited with status ${exitCode}` : `The server on port ${port} did not start`);
 }
 
 async function stopServer(server: Server): Promise<void> {
-  server.process.kill('SIGTERM');
-  await new Promise((resolve) => server.process.once('exit', resolve));
+  const { process: child } = server;
+  // Waiting for "exit" from a process that has already exited would never finish
+  if (child.exitCode === null && child.signalCode === null) {
+    const exited = new Promise((resolve) => child.once('exit', resolve));
+    child.kill('SIGTERM');
+    const forceKill = setTimeout(() => child.kill('SIGKILL'), 10_000);
+    await exited;
+    clearTimeout(forceKill);
+  }
   await fs.rm(server.dataDir, { recursive: true, force: true });
 }
 
@@ -132,11 +154,14 @@ async function hideNotifications(page: Page): Promise<void> {
 
 async function main(): Promise<void> {
   await fs.mkdir(OUTPUT, { recursive: true });
-  const server = await startServer(PORT, '');
-  const tokenServer = await startServer(TOKEN_PORT, E2E_API_TOKEN);
-  const browser = await chromium.launch();
-
+  // Everything started is stopped in "finally", also when a later step fails
+  const servers: Server[] = [];
+  let browser: Browser | undefined;
   try {
+    servers.push(await startServer(PORT, ''));
+    servers.push(await startServer(TOKEN_PORT, E2E_API_TOKEN));
+    browser = await chromium.launch();
+
     const context = await browser.newContext({ baseURL: `http://127.0.0.1:${PORT}`, viewport: VIEWPORT, locale: 'en-US', colorScheme: 'dark' });
     await context.addInitScript((settings) => {
       window.localStorage.setItem('glcm.analysisSettings', JSON.stringify({ state: { settings }, version: 1 }));
@@ -302,9 +327,10 @@ async function main(): Promise<void> {
     await dialogShot(tokenPage, 'token-prompt', tokenPage.getByRole('dialog', { name: 'Access token' }));
     await tokenContext.close();
   } finally {
-    await browser.close();
-    await stopServer(server);
-    await stopServer(tokenServer);
+    await browser?.close();
+    for (const server of servers) {
+      await stopServer(server);
+    }
   }
 }
 

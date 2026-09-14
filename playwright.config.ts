@@ -1,6 +1,7 @@
 // End-to-end tests (doc/ui-design-plan.md, section 8.3): npm run test:e2e builds the web app and starts two servers,
 // one without authentication (local mode) and one that requires an access token.
 
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
@@ -12,6 +13,10 @@ const VIEWPORT = { width: 1440, height: 900 };
 const TOKEN_TESTS = /auth\.spec\.ts/;
 // Set by GitHub Actions
 const CI = Boolean(process.env.CI);
+// A new data directory per run, so that images stored by earlier runs cannot be found by their SHA-256. Worker processes
+// load this file again and inherit the environment, so they use the same directory; global-teardown.ts removes it.
+process.env.GLCM_E2E_DATA_DIR ??= fs.mkdtempSync(path.join(os.tmpdir(), 'glcm-e2e-'));
+const DATA_DIR = process.env.GLCM_E2E_DATA_DIR;
 
 export default defineConfig({
   testDir: 'e2e',
@@ -19,6 +24,7 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   // One server and one analysis queue per mode: run the tests one after another
   workers: 1,
+  globalTeardown: './e2e/global-teardown.ts',
   // In CI a failed test runs once more: slow runners can miss a timeout. A test that passes on the retry is reported as
   // flaky, and a test that fails both times still fails the job.
   retries: CI ? 1 : 0,
@@ -51,7 +57,7 @@ export default defineConfig({
       timeout: 120_000,
       env: {
         GLCM_PORT: String(PORT),
-        GLCM_DATA_DIR: path.join(os.tmpdir(), 'glcm-e2e-data'),
+        GLCM_DATA_DIR: path.join(DATA_DIR, 'local'),
         GLCM_LOG_LEVEL: 'warn',
       },
     },
@@ -62,7 +68,7 @@ export default defineConfig({
       timeout: 120_000,
       env: {
         GLCM_PORT: String(TOKEN_PORT),
-        GLCM_DATA_DIR: path.join(os.tmpdir(), 'glcm-e2e-token-data'),
+        GLCM_DATA_DIR: path.join(DATA_DIR, 'token'),
         GLCM_API_TOKEN: E2E_API_TOKEN,
         GLCM_LOG_LEVEL: 'warn',
       },

@@ -38,6 +38,16 @@ async function rejectionCode(promise: Promise<unknown>): Promise<string | undefi
   return 'resolved';
 }
 
+/** The code of the error thrown by a synchronous call, or "no error" when it does not throw */
+function codeOf(action: () => void): string | undefined {
+  try {
+    action();
+  } catch (error) {
+    return (error as { code?: string }).code;
+  }
+  return 'no error';
+}
+
 describe('catalog', () => {
   it('reports the core version', () => {
     expect(native.coreVersion()).toBe('0.1.0');
@@ -234,25 +244,14 @@ describe('analysis', () => {
     directions: [0, 45, 90, 135],
   };
 
-  function codeOf(action: () => void): string | undefined {
-    try {
-      action();
-    } catch (error) {
-      return (error as { code?: string }).code;
-    }
-    return 'no error';
-  }
-
   it('validates requests synchronously', () => {
     expect(native.validateAnalysis(JSON.stringify([FULL_IMAGE_ROI]), JSON.stringify(settings))).toBeUndefined();
     expect(codeOf(() => native.validateAnalysis('[]', JSON.stringify({ ...settings, features: ['NoSuchFeature'] })))).toBe('INVALID_ARGUMENT');
     expect(codeOf(() => native.validateAnalysis('[]', JSON.stringify({ ...settings, grayLevels: 300 })))).toBe('INVALID_ARGUMENT');
     expect(codeOf(() => native.validateAnalysis('[{"shape": {}}]', JSON.stringify(settings)))).toBe('INVALID_ARGUMENT');
-    try {
-      native.validateAnalysis('[]', JSON.stringify({ ...settings, distances: [0] }));
-    } catch (error) {
-      expect((error as Error).message).toMatch(/distance/i);
-    }
+    const zeroDistance = () => native.validateAnalysis('[]', JSON.stringify({ ...settings, distances: [0] }));
+    expect(codeOf(zeroDistance)).toBe('INVALID_ARGUMENT');
+    expect(zeroDistance).toThrow(/distance/i);
   });
 
   it("reproduces Haralick's worked example", async () => {
@@ -317,11 +316,7 @@ describe('exports', () => {
 
   it('rejects invalid documents and formats', () => {
     expect(() => native.formatResults('{"format": "glcm-results", "version": 1, "results": []}', 'csv')).toThrow(/settings is missing/);
-    try {
-      native.formatResults('{', 'json');
-    } catch (error) {
-      expect((error as { code?: string }).code).toBe('INVALID_ARGUMENT');
-    }
+    expect(codeOf(() => native.formatResults('{', 'json'))).toBe('INVALID_ARGUMENT');
     expect(() => native.formatResults('{}', 'xml' as 'csv')).toThrow(TypeError);
   });
 

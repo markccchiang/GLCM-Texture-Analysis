@@ -30,8 +30,17 @@ test('asks for the access token once per tab and sends it with every request', a
   await expect(page.getByTestId('results-table').locator('tbody tr')).toHaveCount(5);
   expect((await resultRows(page)).every((row) => row.status === 'ok')).toBe(true);
 
-  // The token lasts for the tab: no prompt after a reload
-  await page.reload();
+  // The token lasts for the tab: no prompt after a reload. The app decides about the prompt after /health, so wait for it
+  // and for a request that needs the token before checking that no prompt appeared.
+  const isApi = (url: string, pathname: string) => new URL(url).pathname === pathname;
+  const [health, samples] = await Promise.all([
+    page.waitForResponse((response) => isApi(response.url(), '/api/v1/health')),
+    page.waitForResponse((response) => isApi(response.url(), '/api/v1/samples')),
+    page.reload(),
+  ]);
+  expect(health.status()).toBe(200);
+  expect(samples.status()).toBe(200);
+  expect(await samples.request().headerValue('authorization')).toBe(`Bearer ${E2E_API_TOKEN}`);
   await expect(page.getByRole('button', { name: 'Open sample image' })).toBeVisible();
   await expect(prompt).toBeHidden();
 

@@ -115,10 +115,21 @@ test('saves and opens projects, re-uploading an embedded image', async ({ page }
   const embedded = await download(page, () => page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click());
   expect(embedded.file.suggestedFilename()).toBe('camera.glcmproj');
   expect(JSON.parse(await fs.readFile(embedded.path, 'utf8')).image.data).toEqual(expect.any(String));
-  expect((await page.request.delete(`/api/v1/images/${imageBefore.imageId}`)).status()).toBe(204);
+  // Delete every copy: earlier tests uploaded the same sample, and the app opens a stored image with the same SHA-256
+  // before it uses the embedded data
+  const copies = async () =>
+    ((await (await page.request.get(`/api/v1/images?sha256=${imageBefore.sha256}`)).json()) as { images: Array<{ imageId: string }> }).images;
+  const stored = await copies();
+  expect(stored.map((image) => image.imageId)).toContain(imageBefore.imageId);
+  for (const image of stored) {
+    expect((await page.request.delete(`/api/v1/images/${image.imageId}`)).status()).toBe(204);
+  }
+  expect(await copies()).toEqual([]);
 
   await page.goto('/?testHooks');
+  const upload = page.waitForRequest((request) => request.method() === 'POST' && new URL(request.url()).pathname === '/api/v1/images');
   await chooseFile(page, () => chooseMenuItem(page, 'File', 'Open Project…'), embedded.path);
+  await upload;
   await waitForImage(page);
   await expect(page.getByTestId('roi-row')).toHaveCount(1);
   const reopened = (await openImage(page))!;
