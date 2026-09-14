@@ -72,8 +72,12 @@ function compileShader(gl: WebGL2RenderingContext, type: number, source: string)
   return shader;
 }
 
-/** WebGL2 renderer, or null when WebGL2 is unavailable or the image exceeds MAX_TEXTURE_SIZE */
-export function createWebGlRenderer(image: RawImage): ImageRenderer | null {
+/**
+ * WebGL2 renderer, or null when WebGL2 is unavailable or the image exceeds MAX_TEXTURE_SIZE. onContextLost is called
+ * when the browser takes the context away (GPU reset, driver update, too many contexts); the renderer then draws
+ * nothing, and the caller should replace it.
+ */
+export function createWebGlRenderer(image: RawImage, onContextLost?: () => void): ImageRenderer | null {
   const canvas = createCanvas(image.width, image.height);
   // preserveDrawingBuffer: Konva copies the canvas whenever it redraws, not only right after render()
   const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true, antialias: false, depth: false, alpha: false });
@@ -128,15 +132,29 @@ export function createWebGlRenderer(image: RawImage): ImageRenderer | null {
   const maxLocation = gl.getUniformLocation(program, 'u_max');
   gl.viewport(0, 0, image.width, image.height);
 
+  let disposed = false;
+  const onLost = () => {
+    // dispose() loses the context on purpose
+    if (!disposed) {
+      onContextLost?.();
+    }
+  };
+  canvas.addEventListener('webglcontextlost', onLost);
+
   return {
     kind: 'webgl2',
     canvas,
     render(windowMin, windowMax) {
+      if (gl.isContextLost()) {
+        return;
+      }
       gl.uniform1ui(minLocation, windowMin);
       gl.uniform1ui(maxLocation, windowMax);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     },
     dispose() {
+      disposed = true;
+      canvas.removeEventListener('webglcontextlost', onLost);
       gl.deleteTexture(texture);
       gl.deleteBuffer(buffer);
       gl.deleteProgram(program);
@@ -170,10 +188,10 @@ export function createLutRenderer(image: RawImage): ImageRenderer {
 }
 
 /** WebGL2 when possible, otherwise the LUT renderer; throws only if neither works (the caller then uses display.png) */
-export function createRenderer(image: RawImage, options: { allowWebGl?: boolean } = {}): ImageRenderer {
+export function createRenderer(image: RawImage, options: { allowWebGl?: boolean; onContextLost?: () => void } = {}): ImageRenderer {
   if (options.allowWebGl !== false) {
     try {
-      const renderer = createWebGlRenderer(image);
+      const renderer = createWebGlRenderer(image, options.onContextLost);
       if (renderer) {
         return renderer;
       }

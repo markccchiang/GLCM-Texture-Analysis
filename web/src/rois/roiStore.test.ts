@@ -116,6 +116,21 @@ describe('ROI store', () => {
     expect(names()).toEqual(['ROI 1']);
   });
 
+  it('keeps ids unique when an imported file repeats them', () => {
+    const existing = store().addRoi(rectangle(0));
+    const imported = store().importRois([
+      { id: 'twin', name: 'A', color: '#ff0000', shape: rectangle(10) },
+      { id: 'twin', name: 'B', color: '#00ff00', shape: rectangle(20) },
+      { id: existing, name: 'C', color: '#0000ff', shape: rectangle(30) },
+      { id: 'twin', name: 'D', color: '#ffff00', shape: rectangle(40) },
+    ]);
+    expect(imported[0]).toBe('twin');
+    const ids = store().rois.map((roi) => roi.id);
+    expect(new Set(ids).size).toBe(5);
+    expect(store().selectedIds).toEqual(imported);
+    expect(names()).toEqual(['ROI 1', 'A', 'B', 'C', 'D']);
+  });
+
   it('changes visibility without history', () => {
     const id = store().addRoi(rectangle(0));
     const steps = store().past.length;

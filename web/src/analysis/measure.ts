@@ -10,6 +10,7 @@ import { useViewer } from '../stores/viewerStore';
 import { adaptToImage, checkSettings, requestSettings } from './settings';
 import { useAnalysisSettings } from './settingsStore';
 import { readEventStream } from './sse';
+import { waitForFinalResults } from './waitForResults';
 
 function fail(title: string, message: string): void {
   notifications.show({ color: 'red', title, message, autoClose: 8000 });
@@ -79,7 +80,8 @@ export async function measure(scope: 'selected' | 'all'): Promise<void> {
   const { analysisId } = info;
   results.startRun(info);
 
-  let finished: AnalysisFinishedEvent | null = null;
+  // Set by the event callback (an object, because TypeScript does not follow assignments inside callbacks)
+  const stream: { finished: AnalysisFinishedEvent | null } = { finished: null };
   try {
     await readEventStream(analysisEventsUrl(analysisId), (message) => {
       const event = { event: message.event, data: JSON.parse(message.data) } as AnalysisEvent;
@@ -89,15 +91,25 @@ export async function measure(scope: 'selected' | 'all'): Promise<void> {
       } else if (event.event === 'progress') {
         useResults.getState().setProgress(analysisId, event.data.completed, event.data.total);
       } else if (event.event === 'finished') {
-        finished = event.data;
+        stream.finished = event.data;
       }
     });
   } catch (error) {
-    fail('Lost the connection to the measurement', (error as Error).message);
+    notifications.show({
+      color: 'yellow',
+      title: 'Lost the connection to the measurement',
+      message: `${(error as Error).message}. The results are loaded when the measurement finishes.`,
+      autoClose: 8000,
+    });
   }
 
   try {
-    const final = await getAnalysisResults(analysisId);
+    // Without a "finished" event the stream ended early, while the analysis may still be running on the server
+    const final = stream.finished
+      ? await getAnalysisResults(analysisId)
+      : await waitForFinalResults(() => getAnalysisResults(analysisId), {
+          onPending: (partial) => useResults.getState().setProgress(analysisId, partial.results.length, info.total),
+        });
     useResults.getState().finishRun(analysisId, final.status, final.results, final.timestamp);
     const failedCount = final.results.filter((result) => result.status !== 'ok').length;
     if (final.status === 'cancelled') {
@@ -110,7 +122,7 @@ export async function measure(scope: 'selected' | 'all'): Promise<void> {
       });
     }
   } catch (error) {
-    useResults.getState().finishRun(analysisId, (finished as AnalysisFinishedEvent | null)?.status ?? 'failed');
+    useResults.getState().finishRun(analysisId, stream.finished?.status ?? 'failed');
     fail('Could not load the results', (error as Error).message);
   }
 }

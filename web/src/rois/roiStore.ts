@@ -108,14 +108,13 @@ export const useRois = create<RoiState>()((set, get) => {
 
     importRois: (imported) => {
       const { rois, nextNumber } = get();
+      // Ids already taken, including those chosen earlier in this import (a file may repeat an id)
       const existing = new Set(rois.map((roi) => roi.id));
-      const added = imported.map((roi, i) => ({
-        id: roi.id && !existing.has(roi.id) ? roi.id : newRoiId(),
-        name: roi.name,
-        color: roi.color || roiColor(nextNumber - 1 + i),
-        visible: roi.visible ?? true,
-        shape: roi.shape,
-      }));
+      const added = imported.map((roi, i) => {
+        const id = roi.id && !existing.has(roi.id) ? roi.id : newRoiId();
+        existing.add(id);
+        return { id, name: roi.name, color: roi.color || roiColor(nextNumber - 1 + i), visible: roi.visible ?? true, shape: roi.shape };
+      });
       commit([...rois, ...added], { selectedIds: added.map((roi) => roi.id), nextNumber: nextNumber + added.length });
       return added.map((roi) => roi.id);
     },

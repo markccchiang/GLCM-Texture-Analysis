@@ -225,7 +225,8 @@ How the image reaches the canvas depends on its size:
 - **Up to 4096 × 4096 pixels:** the raw samples are downloaded once (``GET /images/{id}/raw``, compressed) and rendered
   in the browser. ``image/renderer.ts`` uploads them as an unsigned-integer WebGL2 texture (``R8UI``/``R16UI``) and
   evaluates the window/level formula in a fragment shader, so moving the window slider needs no requests. Without
-  WebGL2, a lookup table on a 2D canvas is used.
+  WebGL2, a lookup table on a 2D canvas is used; the same happens when the browser takes the WebGL context away (GPU
+  reset, driver update, too many contexts), so the image does not go blank.
 - **Larger images:** the server renders ``display.png`` for each window (debounced, cached), and hover values come from
   ``GET /images/{id}/pixel``.
 

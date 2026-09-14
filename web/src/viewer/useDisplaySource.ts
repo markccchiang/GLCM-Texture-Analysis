@@ -18,6 +18,10 @@ export function useDisplaySource(): void {
   const useWebGl = usePreferences((state) => state.useWebGl);
   const [renderer, setRenderer] = useState<ImageRenderer | null>(null);
   const [rendererFailed, setRendererFailed] = useState(false);
+  // The image whose WebGL context was lost (GPU reset, driver update, too many contexts). It is rendered with the
+  // lookup table from then on; the next image tries WebGL again.
+  const [contextLostImage, setContextLostImage] = useState<typeof image>(null);
+  const webGlLost = image !== null && contextLostImage === image;
 
   // One renderer per raw image
   useEffect(() => {
@@ -28,7 +32,13 @@ export function useDisplaySource(): void {
     }
     let created: ImageRenderer;
     try {
-      created = createRenderer(image.raw, { allowWebGl: useWebGl });
+      created = createRenderer(image.raw, {
+        allowWebGl: useWebGl && !webGlLost,
+        onContextLost: () => {
+          console.warn('The WebGL context was lost; using the lookup-table renderer');
+          setContextLostImage(image);
+        },
+      });
     } catch (error) {
       console.warn('No browser renderer available; using server rendering', error);
       setRenderer(null);
@@ -42,7 +52,7 @@ export function useDisplaySource(): void {
       }
       created.dispose();
     };
-  }, [image, useWebGl]);
+  }, [image, useWebGl, webGlLost]);
 
   // Redraw at most once per frame when the window changes
   useEffect(() => {

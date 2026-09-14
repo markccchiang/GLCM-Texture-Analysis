@@ -37,6 +37,8 @@ const PIXEL_LOOKUP_DELAY_MS = 80;
 const TOOLTIP_DELAY_MS = 300;
 /** Clicking this close (screen pixels) to the first vertex closes a polygon */
 const CLOSE_DISTANCE = 8;
+/** A click this soon after closing a polygon, at the same place, is the second click of a double-click */
+const DOUBLE_CLICK_MS = 500;
 
 /** Safari's non-standard pinch events */
 interface GestureEvent extends UIEvent {
@@ -81,6 +83,8 @@ export function ImageCanvas() {
   const pixelLookup = useRef<{ timer?: number; controller?: AbortController }>({});
   const tooltipTimer = useRef<number | undefined>(undefined);
   const [draft, setDraftState] = useState<PolygonDraft | null>(null);
+  /** Screen position and time of the click that last closed a polygon on its first vertex */
+  const polygonClosedRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const [spaceHeld, setSpaceHeld] = useState(false);
   const [gestureKind, setGestureKind] = useState<Gesture['kind'] | null>(null);
   const [tooltip, setTooltip] = useState<{ roiId: string; x: number; y: number } | null>(null);
@@ -372,12 +376,19 @@ export function ImageCanvas() {
       case 'polygon': {
         const current = draftRef.current;
         if (!current) {
+          // Double-clicking the first vertex: the first click closed the polygon, and this second click must neither
+          // discard it nor start a new one
+          const closed = polygonClosedRef.current;
+          if (closed && event.timeStamp - closed.time < DOUBLE_CLICK_MS && Math.hypot(closed.x - local.x, closed.y - local.y) <= CLOSE_DISTANCE) {
+            return;
+          }
           roiStore.setActiveShape(null);
           setDraft({ points: [[point.x, point.y]], cursor: point });
           return;
         }
         const first = imageToScreen(state.viewport, { x: current.points[0][0], y: current.points[0][1] });
         if (current.points.length >= 3 && Math.hypot(first.x - local.x, first.y - local.y) <= CLOSE_DISTANCE) {
+          polygonClosedRef.current = { x: local.x, y: local.y, time: event.timeStamp };
           finishPolygon();
           return;
         }

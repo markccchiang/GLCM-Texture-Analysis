@@ -253,3 +253,83 @@ test('navigates the image and edits ROIs', async ({ page }) => {
   await page.keyboard.press('ControlOrMeta+z');
   await expect(page.getByTestId('roi-row')).toHaveCount(1);
 });
+
+test('closes a polygon by double-clicking its first vertex', async ({ page }) => {
+  await page.keyboard.press('p');
+  for (const [x, y] of [
+    [100, 100],
+    [220, 110],
+    [180, 220],
+  ]) {
+    await clickAt(page, x, y);
+  }
+  const first = await toPage(page, 100, 100);
+  await page.mouse.dblclick(first.x, first.y);
+  await page.keyboard.press('t');
+
+  const rows = page.getByTestId('roi-row');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText('Polygon');
+  const [roi] = await storedRois(page);
+  expect((roi.shape as { points: number[][] }).points).toHaveLength(3);
+});
+
+test('finishes a measurement when the progress stream drops', async ({ page }) => {
+  await page.route('**/api/v1/analyses/*/events', (route) => route.abort());
+  // The first results request answers "running", as if the analysis had not finished when the stream dropped
+  let firstResults = true;
+  await page.route('**/api/v1/analyses/*/results', async (route) => {
+    if (!firstResults) {
+      await route.continue();
+      return;
+    }
+    firstResults = false;
+    const response = await route.fetch();
+    await route.fulfill({ response, json: { ...(await response.json()), status: 'running', results: [] } });
+  });
+
+  await page.keyboard.press('r');
+  await drag(page, [100, 100], [164, 164]);
+  await page.keyboard.press('t');
+  await page.keyboard.press('m');
+
+  await expect(page.getByTestId('results-table').locator('tbody tr')).toHaveCount(5, { timeout: 15_000 });
+  expect((await resultRows(page)).every((row) => row.status === 'ok')).toBe(true);
+  const runStatuses = () =>
+    page.evaluate(() =>
+      (window as unknown as { __glcm: { results: { getState(): { runs: Array<{ status: string }> } } } }).__glcm.results.getState().runs.map((run) => run.status),
+    );
+  await expect.poll(runStatuses).toEqual(['completed']);
+});
+
+test('switches to the lookup-table renderer when the WebGL context is lost', async ({ page }) => {
+  const status = page.getByTestId('status-bar');
+  test.skip(!(await status.textContent())?.includes('WebGL2'), 'This browser does not render with WebGL2');
+
+  const lost = await page.evaluate(() => {
+    const source = (window as unknown as { __glcm: { viewer: { getState(): { displaySource: unknown } } } }).__glcm.viewer.getState().displaySource;
+    const extension = source instanceof HTMLCanvasElement ? source.getContext('webgl2')?.getExtension('WEBGL_lose_context') : null;
+    extension?.loseContext();
+    return Boolean(extension);
+  });
+  expect(lost).toBe(true);
+  await expect(status).toContainText('Lookup table');
+
+  // The replacement canvas holds the rendered image: opaque, not all black
+  const drawn = await page.evaluate(() => {
+    const source = (window as unknown as { __glcm: { viewer: { getState(): { displaySource: unknown } } } }).__glcm.viewer.getState().displaySource;
+    if (!(source instanceof HTMLCanvasElement)) {
+      return null;
+    }
+    const data = source.getContext('2d')!.getImageData(0, 0, source.width, source.height).data;
+    let sum = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      sum += data[i];
+    }
+    return { opaque: data[3] === 255, mean: sum / (data.length / 4) };
+  });
+  expect(drawn).not.toBeNull();
+  expect(drawn!.opaque).toBe(true);
+  expect(drawn!.mean).toBeGreaterThan(10);
+});
+

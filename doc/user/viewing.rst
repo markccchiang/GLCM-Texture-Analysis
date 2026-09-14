@@ -85,4 +85,5 @@ The histogram uses a logarithmic scale so that rare intensities stay visible; th
 
    Images up to 4096 × 4096 pixels are rendered by your browser, so the window follows the slider immediately. Larger
    images are rendered by the server, and the view updates a moment after you stop moving the slider. The status bar
-   shows which is used (*WebGL2*, *Lookup table* or *Server rendering*).
+   shows which is used (*WebGL2*, *Lookup table* or *Server rendering*). If the browser loses its WebGL context, for
+   example after the graphics driver restarts, the image switches to *Lookup table* on its own.
