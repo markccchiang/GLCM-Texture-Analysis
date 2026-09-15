@@ -212,6 +212,7 @@ const FEATURE_GROUP_LABELS: Record<string, string> = {
   regionStatistics: 'First-order statistics',
   haralick: 'Haralick features',
   other: 'Other co-occurrence features',
+  runLength: 'Run length features (GLRLM)',
 };
 
 /** Where the server serves the built Sphinx documentation (GLCM_DOCS_DIR) */

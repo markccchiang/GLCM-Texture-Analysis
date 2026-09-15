@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "analysis/FirstOrder.hpp"
+#include "analysis/RunLength.hpp"
 #include "imaging/Quantizer.hpp"
 #include "io/Identifiers.hpp"
 #include "io/Json.hpp"
@@ -538,6 +539,31 @@ TEST(AnalysisRunnerFirstOrderTest, ReportsFirstOrderStatisticsOfTheRoiInEveryDir
     const double n = result.pixel_count;
     EXPECT_NEAR(result.values.at(Type::Variance).H, std::pow(result.values.at(Type::Std).H, 2) * (n - 1) / n, 1e-9);
     EXPECT_TRUE(result.values.count(Type::Contrast) > 0);
+}
+
+TEST(AnalysisRunnerRunLengthTest, ReportsRunLengthFeaturesPerDirectionAtEveryDistance) {
+    AnalysisSettings settings = DefaultSettings(8);
+    settings.features = {Type::GlrlmRunPercentage, Type::GlrlmShortRunEmphasis, Type::Contrast};
+    settings.directions = {Direction::H, Direction::RD};
+    settings.distances = {1, 3};
+    const cv::Mat image = Pattern8(30, 30);
+    const AnalysisOutput output = RunAnalysis(image, {MakeRoi("r1", "A", RectangleRoi{2, 3, 20, 10})}, settings);
+    ASSERT_EQ(output.results.size(), 2u);
+
+    const cv::Rect box(2, 3, 20, 10);
+    const cv::Mat mask(box.size(), CV_8UC1, cv::Scalar(255));
+    const QuantizationResult quantized = Quantize(image(box), mask, settings.gray_levels, settings.quantization);
+    const auto expected = ComputeRunLengthFeatures(quantized.image, mask, settings.gray_levels, settings.directions, settings.log_base,
+        {Type::GlrlmRunPercentage, Type::GlrlmShortRunEmphasis});
+    for (const MeasurementResult& result : output.results) {
+        ASSERT_EQ(result.status, MeasurementStatus::Ok);
+        for (const auto& [type, features] : expected) {
+            SCOPED_TRACE(TextureAnalysis::TypeToString(type));
+            EXPECT_EQ(result.values.at(type).H, features.H);
+            EXPECT_EQ(result.values.at(type).RD, features.RD);
+            EXPECT_TRUE(std::isnan(result.values.at(type).V));
+        }
+    }
 }
 
 TEST(ResultsCsvTest, WritesAreasWithAPixelSpacing) {

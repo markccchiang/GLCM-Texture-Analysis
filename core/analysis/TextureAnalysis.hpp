@@ -62,6 +62,23 @@ enum class Type {
     Kurtosis,
     FirstOrderEntropy,
     Uniformity,
+    // Gray level run length matrix features (analysis/RunLength)
+    GlrlmShortRunEmphasis,
+    GlrlmLongRunEmphasis,
+    GlrlmGrayLevelNonUniformity,
+    GlrlmGrayLevelNonUniformityNormalized,
+    GlrlmRunLengthNonUniformity,
+    GlrlmRunLengthNonUniformityNormalized,
+    GlrlmRunPercentage,
+    GlrlmGrayLevelVariance,
+    GlrlmRunVariance,
+    GlrlmRunEntropy,
+    GlrlmLowGrayLevelRunEmphasis,
+    GlrlmHighGrayLevelRunEmphasis,
+    GlrlmShortRunLowGrayLevelEmphasis,
+    GlrlmShortRunHighGrayLevelEmphasis,
+    GlrlmLongRunLowGrayLevelEmphasis,
+    GlrlmLongRunHighGrayLevelEmphasis,
     // Not texture features: added by CalculateScore
     Score,
     Age

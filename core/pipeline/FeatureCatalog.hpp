@@ -10,7 +10,7 @@
 
 namespace glcm {
 
-enum class FeatureGroup { RegionStatistics, Haralick, Other };
+enum class FeatureGroup { RegionStatistics, Haralick, Other, RunLength };
 
 enum class FeatureCost { Normal, Slow };
 
@@ -43,7 +43,7 @@ std::optional<Type> FeatureTypeFromId(const std::string& id);
 
 const std::vector<FeaturePreset>& FeaturePresets();
 
-// "regionStatistics", "haralick" or "other"
+// "regionStatistics", "haralick", "other" or "runLength"
 std::string FeatureGroupId(FeatureGroup group);
 
 } // namespace glcm

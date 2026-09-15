@@ -90,6 +90,10 @@ Namespace ``glcm``; include paths are relative to ``core/``.
        entropy and uniformity), defined as in PyRadiomics. ``core/tests/data/pyradiomics-firstorder.json``, written by
        ``scripts/radiomics-reference.py`` (Python 3.12, ``scripts/requirements-radiomics.txt``), holds PyRadiomics values
        that ``FirstOrderTest`` compares against.
+   * - ``analysis/RunLength``
+     - ``ComputeRunLengthMatrix`` (runs of equal gray levels per direction, ended by the mask) and
+       ``ComputeRunLengthFeatures``: the 16 gray level run length matrix features of PyRadiomics, per direction.
+       ``RunLengthTest`` compares them with ``core/tests/data/pyradiomics-glrlm.json``.
    * - ``analysis/Score``
      - The age-based score from mean, entropy and contrast with configurable ``ScoreCoefficients``.
    * - ``roi/Roi``
@@ -107,7 +111,8 @@ Namespace ``glcm``; include paths are relative to ``core/``.
      - Features, gray levels, quantization, distances, directions, aggregation, log base and score settings, with
        ``DefaultSettings`` and ``ValidateSettings``.
    * - ``pipeline/AnalysisRunner``
-     - ``RunAnalysis`` measures every ROI at every distance: region statistics and first-order statistics (once per ROI)
+     - ``RunAnalysis`` measures every ROI at every distance: region statistics, first-order statistics and run length
+       features (once per ROI)
        from the original intensities, quantization, texture features, the score (calibration or current-settings profile), warnings, and
        ``Skipped``/``Failed`` results instead of exceptions for single ROIs.
    * - ``io/``

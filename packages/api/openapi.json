@@ -150,6 +150,12 @@
                                 "enum": [
                                   "other"
                                 ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "runLength"
+                                ]
                               }
                             ]
                           },

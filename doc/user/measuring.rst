@@ -180,6 +180,7 @@ series are named after the image and the ROI. **Save SVG** saves the chart as an
 .. note::
 
    The first-order statistics (Mean, Std, Minimum to Kurtosis) are computed from the original intensities of the ROI.
-   First-order Entropy and Uniformity, and all co-occurrence features, use the quantized gray levels, so they depend on
-   the gray levels and quantization settings. The formulas are listed in
+   First-order Entropy and Uniformity, the co-occurrence features and the run length features use the quantized gray
+   levels, so they depend on the gray levels and quantization settings. Run length features do not depend on the
+   distance: every distance gives the same values. The formulas are listed in
    :doc:`../equations`.

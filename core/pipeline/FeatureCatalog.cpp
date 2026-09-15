@@ -18,6 +18,7 @@ const char YANG_SUM_OF_SQUARES[] =
 const char REGION_ANCHOR[] = "equations.html#first-order-statistics";
 const char HARALICK_ANCHOR[] = "equations.html#haralick-features";
 const char OTHER_ANCHOR[] = "equations.html#other-co-occurrence-features";
+const char RUN_LENGTH_ANCHOR[] = "equations.html#run-length-features-glrlm";
 
 FeatureInfo Make(Type type, const char* id, FeatureGroup group, const char* anchor, FeatureCost cost = FeatureCost::Normal,
     const char* non_standard_reason = "") {
@@ -74,6 +75,23 @@ std::vector<FeatureInfo> BuildCatalog() {
         Make(Type::ClusterProminence, "ClusterProminence", G::Other, OTHER_ANCHOR),
         Make(Type::Dissimilarity, "Dissimilarity", G::Other, OTHER_ANCHOR),
         Make(Type::HomogeneityI, "HomogeneityI", G::Other, OTHER_ANCHOR),
+
+        Make(Type::GlrlmShortRunEmphasis, "GlrlmShortRunEmphasis", G::RunLength, RUN_LENGTH_ANCHOR),
+        Make(Type::GlrlmLongRunEmphasis, "GlrlmLongRunEmphasis", G::RunLength, RUN_LENGTH_ANCHOR),
+        Make(Type::GlrlmGrayLevelNonUniformity, "GlrlmGrayLevelNonUniformity", G::RunLength, RUN_LENGTH_ANCHOR),
+        Make(Type::GlrlmGrayLevelNonUniformityNormalized, "GlrlmGrayLevelNonUniformityNormalized", G::RunLength, RUN_LENGTH_ANCHOR),
+        Make(Type::GlrlmRunLengthNonUniformity, "GlrlmRunLengthNonUniformity", G::RunLength, RUN_LENGTH_ANCHOR),
+        Make(Type::GlrlmRunLengthNonUniformityNormalized, "GlrlmRunLengthNonUniformityNormalized", G::RunLength, RUN_LENGTH_ANCHOR),
+        Make(Type::GlrlmRunPercentage, "GlrlmRunPercentage", G::RunLength, RUN_LENGTH_ANCHOR),
+        Make(Type::GlrlmGrayLevelVariance, "GlrlmGrayLevelVariance", G::RunLength, RUN_LENGTH_ANCHOR),
+        Make(Type::GlrlmRunVariance, "GlrlmRunVariance", G::RunLength, RUN_LENGTH_ANCHOR),
+        Make(Type::GlrlmRunEntropy, "GlrlmRunEntropy", G::RunLength, RUN_LENGTH_ANCHOR),
+        Make(Type::GlrlmLowGrayLevelRunEmphasis, "GlrlmLowGrayLevelRunEmphasis", G::RunLength, RUN_LENGTH_ANCHOR),
+        Make(Type::GlrlmHighGrayLevelRunEmphasis, "GlrlmHighGrayLevelRunEmphasis", G::RunLength, RUN_LENGTH_ANCHOR),
+        Make(Type::GlrlmShortRunLowGrayLevelEmphasis, "GlrlmShortRunLowGrayLevelEmphasis", G::RunLength, RUN_LENGTH_ANCHOR),
+        Make(Type::GlrlmShortRunHighGrayLevelEmphasis, "GlrlmShortRunHighGrayLevelEmphasis", G::RunLength, RUN_LENGTH_ANCHOR),
+        Make(Type::GlrlmLongRunLowGrayLevelEmphasis, "GlrlmLongRunLowGrayLevelEmphasis", G::RunLength, RUN_LENGTH_ANCHOR),
+        Make(Type::GlrlmLongRunHighGrayLevelEmphasis, "GlrlmLongRunHighGrayLevelEmphasis", G::RunLength, RUN_LENGTH_ANCHOR),
         Make(Type::MaximumProbability, "MaximumProbability", G::Other, OTHER_ANCHOR),
         Make(Type::InverseDifferenceNormalized, "InverseDifferenceNormalized", G::Other, OTHER_ANCHOR),
         Make(Type::InverseDifferenceMomentNormalized, "InverseDifferenceMomentNormalized", G::Other, OTHER_ANCHOR),
@@ -109,10 +127,13 @@ const std::vector<FeaturePreset>& FeaturePresets() {
     static const std::vector<FeaturePreset> presets = [] {
         std::set<Type> all;
         std::set<Type> first_order;
+        std::set<Type> run_length;
         for (const FeatureInfo& info : FeatureCatalog()) {
             all.insert(info.type);
             if (info.group == FeatureGroup::RegionStatistics) {
                 first_order.insert(info.type);
+            } else if (info.group == FeatureGroup::RunLength) {
+                run_length.insert(info.type);
             }
         }
         return std::vector<FeaturePreset>{
@@ -126,6 +147,7 @@ const std::vector<FeaturePreset>& FeaturePresets() {
                 {Type::Mean, Type::Std, Type::Contrast, Type::Entropy, Type::Energy, Type::HomogeneityII, Type::CorrelationII}, false},
             {"score", "Score (Mean, Entropy, Contrast)", {Type::Mean, Type::Entropy, Type::Contrast}, true},
             {"firstOrder", "First-order statistics", first_order, false},
+            {"glrlm", "Run length (GLRLM)", run_length, false},
             {"all", "All features", all, false},
         };
     }();
@@ -140,6 +162,8 @@ std::string FeatureGroupId(FeatureGroup group) {
             return "haralick";
         case FeatureGroup::Other:
             return "other";
+        case FeatureGroup::RunLength:
+            return "runLength";
     }
     throw std::invalid_argument("Unknown feature group");
 }

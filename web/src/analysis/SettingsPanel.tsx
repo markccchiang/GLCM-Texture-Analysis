@@ -46,6 +46,7 @@ const GROUP_LABELS: Record<string, string> = {
   regionStatistics: 'First-order statistics',
   haralick: 'Haralick',
   other: 'Other',
+  runLength: 'Run length (GLRLM)',
 };
 
 const QUANTIZATION_OPTIONS: Array<{ value: QuantizationMethod; label: string }> = [

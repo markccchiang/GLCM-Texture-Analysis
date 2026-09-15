@@ -10,6 +10,7 @@ find_package(nlohmann_json 3.11 REQUIRED)
 
 add_library(glcm_core STATIC
         analysis/FirstOrder.cpp
+        analysis/RunLength.cpp
         analysis/Score.cpp
         analysis/TextureAnalysis.cpp
         imaging/DisplayRenderer.cpp
@@ -45,6 +46,7 @@ if (GLCM_BUILD_TESTS)
         enable_testing()
         add_executable(glcm-tests
                 tests/FirstOrderTest.cpp
+                tests/RunLengthTest.cpp
                 tests/TextureAnalysisTest.cpp
                 tests/ImagingTest.cpp
                 tests/IoTest.cpp

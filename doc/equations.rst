@@ -417,6 +417,75 @@ Other co-occurrence features
 
 Auto Correlation, Dissimilarity and Maximum Probability are often cited from [Soh1999]_.
 
+Run length features (GLRLM)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A **run** is a longest line of consecutive pixels of :math:`\Omega` with the same gray level along one direction: 0°
+(along the row), 90° (along the column), 45° or 135° (the diagonals, with the pixel steps of the co-occurrence matrix).
+Pixels outside the ROI end a run. For each direction, :math:`R(i, j)` counts the runs of gray level :math:`i` and length
+:math:`j`; the features are computed per direction, and the mean and range rows combine the directions as for the
+co-occurrence features. Runs do not depend on the distance :math:`d`, so every distance reports the same values.
+
+Unlike the co-occurrence features, gray levels are numbered from 1 here, :math:`i = \text{level} + 1`, as in PyRadiomics
+[vanGriethuysen2017]_ and the IBSI [Zwanenburg2020]_: several features divide by :math:`i`. The definitions follow
+PyRadiomics' GLRLM and are checked against it in the core tests, with a fixed bin width of 1 (which, like PyRadiomics'
+bins, starts at the ROI minimum). ``ComputeRunLengthFeatures`` (``core/analysis/RunLength``) computes them; all values
+are NaN for an empty region.
+
+With :math:`N_r = \sum_{i,j} R(i, j)` runs, :math:`N_p` pixels in :math:`\Omega`, :math:`p(i, j) = R(i, j) / N_r`,
+:math:`R_g(i) = \sum_j R(i, j)` runs per gray level and :math:`R_r(j) = \sum_i R(i, j)` runs per length:
+
+``GlrlmShortRunEmphasis`` — Short Run Emphasis
+   .. math:: f = \frac{1}{N_r} \sum_{i,j} \frac{R(i, j)}{j^2}
+
+``GlrlmLongRunEmphasis`` — Long Run Emphasis
+   .. math:: f = \frac{1}{N_r} \sum_{i,j} R(i, j) \, j^2
+
+``GlrlmGrayLevelNonUniformity`` — Gray Level Non-Uniformity (GLRLM)
+   .. math:: f = \frac{1}{N_r} \sum_i R_g(i)^2
+
+``GlrlmGrayLevelNonUniformityNormalized`` — Gray Level Non-Uniformity Normalized (GLRLM)
+   .. math:: f = \frac{1}{N_r^2} \sum_i R_g(i)^2
+
+``GlrlmRunLengthNonUniformity`` — Run Length Non-Uniformity
+   .. math:: f = \frac{1}{N_r} \sum_j R_r(j)^2
+
+``GlrlmRunLengthNonUniformityNormalized`` — Run Length Non-Uniformity Normalized
+   .. math:: f = \frac{1}{N_r^2} \sum_j R_r(j)^2
+
+``GlrlmRunPercentage`` — Run Percentage
+   .. math:: f = \frac{N_r}{N_p}
+
+``GlrlmGrayLevelVariance`` — Gray Level Variance (GLRLM)
+   .. math:: f = \sum_{i,j} p(i, j) \, (i - \mu_i)^2, \qquad \mu_i = \sum_{i,j} p(i, j) \, i
+
+``GlrlmRunVariance`` — Run Variance
+   .. math:: f = \sum_{i,j} p(i, j) \, (j - \mu_j)^2, \qquad \mu_j = \sum_{i,j} p(i, j) \, j
+
+``GlrlmRunEntropy`` — Run Entropy
+   .. math:: f = -\sum_{i,j} p(i, j) \log\bigl(p(i, j) + \epsilon\bigr)
+
+   :math:`\epsilon` is the machine epsilon, and the logarithm follows the log base setting (PyRadiomics uses
+   :math:`\log_2`).
+
+``GlrlmLowGrayLevelRunEmphasis`` — Low Gray Level Run Emphasis
+   .. math:: f = \frac{1}{N_r} \sum_{i,j} \frac{R(i, j)}{i^2}
+
+``GlrlmHighGrayLevelRunEmphasis`` — High Gray Level Run Emphasis
+   .. math:: f = \frac{1}{N_r} \sum_{i,j} R(i, j) \, i^2
+
+``GlrlmShortRunLowGrayLevelEmphasis`` — Short Run Low Gray Level Emphasis
+   .. math:: f = \frac{1}{N_r} \sum_{i,j} \frac{R(i, j)}{i^2 j^2}
+
+``GlrlmShortRunHighGrayLevelEmphasis`` — Short Run High Gray Level Emphasis
+   .. math:: f = \frac{1}{N_r} \sum_{i,j} \frac{R(i, j) \, i^2}{j^2}
+
+``GlrlmLongRunLowGrayLevelEmphasis`` — Long Run Low Gray Level Emphasis
+   .. math:: f = \frac{1}{N_r} \sum_{i,j} \frac{R(i, j) \, j^2}{i^2}
+
+``GlrlmLongRunHighGrayLevelEmphasis`` — Long Run High Gray Level Emphasis
+   .. math:: f = \frac{1}{N_r} \sum_{i,j} R(i, j) \, i^2 j^2
+
 Score
 ~~~~~
 

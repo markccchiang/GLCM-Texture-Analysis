@@ -845,6 +845,38 @@ std::string TextureAnalysis::TypeToString(Type type) {
             return "Entropy (first-order)";
         case Type::Uniformity:
             return "Uniformity";
+        case Type::GlrlmShortRunEmphasis:
+            return "Short Run Emphasis";
+        case Type::GlrlmLongRunEmphasis:
+            return "Long Run Emphasis";
+        case Type::GlrlmGrayLevelNonUniformity:
+            return "Gray Level Non-Uniformity (GLRLM)";
+        case Type::GlrlmGrayLevelNonUniformityNormalized:
+            return "Gray Level Non-Uniformity Normalized (GLRLM)";
+        case Type::GlrlmRunLengthNonUniformity:
+            return "Run Length Non-Uniformity";
+        case Type::GlrlmRunLengthNonUniformityNormalized:
+            return "Run Length Non-Uniformity Normalized";
+        case Type::GlrlmRunPercentage:
+            return "Run Percentage";
+        case Type::GlrlmGrayLevelVariance:
+            return "Gray Level Variance (GLRLM)";
+        case Type::GlrlmRunVariance:
+            return "Run Variance";
+        case Type::GlrlmRunEntropy:
+            return "Run Entropy";
+        case Type::GlrlmLowGrayLevelRunEmphasis:
+            return "Low Gray Level Run Emphasis";
+        case Type::GlrlmHighGrayLevelRunEmphasis:
+            return "High Gray Level Run Emphasis";
+        case Type::GlrlmShortRunLowGrayLevelEmphasis:
+            return "Short Run Low Gray Level Emphasis";
+        case Type::GlrlmShortRunHighGrayLevelEmphasis:
+            return "Short Run High Gray Level Emphasis";
+        case Type::GlrlmLongRunLowGrayLevelEmphasis:
+            return "Long Run Low Gray Level Emphasis";
+        case Type::GlrlmLongRunHighGrayLevelEmphasis:
+            return "Long Run High Gray Level Emphasis";
         case Type::Score:
             return "Score";
         case Type::Age:

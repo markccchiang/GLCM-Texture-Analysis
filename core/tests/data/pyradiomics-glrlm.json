@@ -1,0 +1,65 @@
+{
+  "source": "PyRadiomics 3.1.0a2.post8+g6a761c4, NumPy 2.5.3, SimpleITK 2.5.6",
+  "settings": {
+    "binWidth": 1,
+    "force2D": true,
+    "force2Ddimension": 0,
+    "logBase": "log2"
+  },
+  "cases": [
+    {
+      "image": "textures/camera.png",
+      "rectangle": [
+        100,
+        100,
+        64,
+        48
+      ],
+      "features": {
+        "GrayLevelNonUniformity": 81.64476934929385,
+        "GrayLevelNonUniformityNormalized": 0.03677105656735343,
+        "GrayLevelVariance": 6150.104704420257,
+        "HighGrayLevelRunEmphasis": 11642.329264974294,
+        "LongRunEmphasis": 3.0487631366878336,
+        "LongRunHighGrayLevelEmphasis": 80728.28045287316,
+        "LongRunLowGrayLevelEmphasis": 0.012200890643214633,
+        "LowGrayLevelRunEmphasis": 0.008130619870642921,
+        "RunEntropy": 6.2825148372583195,
+        "RunLengthNonUniformity": 1450.6421218466687,
+        "RunLengthNonUniformityNormalized": 0.6524278315486084,
+        "RunPercentage": 0.7227376302083334,
+        "RunVariance": 1.128652445576244,
+        "ShortRunEmphasis": 0.8335052429505441,
+        "ShortRunHighGrayLevelEmphasis": 7752.27765345089,
+        "ShortRunLowGrayLevelEmphasis": 0.00763541904245019
+      }
+    },
+    {
+      "image": "textures/brick.png",
+      "rectangle": [
+        200,
+        150,
+        90,
+        70
+      ],
+      "features": {
+        "GrayLevelNonUniformity": 243.15116327806635,
+        "GrayLevelNonUniformityNormalized": 0.05232024287679597,
+        "GrayLevelVariance": 929.1595333715982,
+        "HighGrayLevelRunEmphasis": 3296.45297496056,
+        "LongRunEmphasis": 2.5912938258595934,
+        "LongRunHighGrayLevelEmphasis": 5123.968246972315,
+        "LongRunLowGrayLevelEmphasis": 0.003344213196186459,
+        "LowGrayLevelRunEmphasis": 0.0015173391326993863,
+        "RunEntropy": 6.3875155128796255,
+        "RunLengthNonUniformity": 2942.6616694976365,
+        "RunLengthNonUniformityNormalized": 0.6303209567173365,
+        "RunPercentage": 0.7367460317460317,
+        "RunVariance": 0.7232544855889089,
+        "ShortRunEmphasis": 0.8203287515984518,
+        "ShortRunHighGrayLevelEmphasis": 3061.707081714949,
+        "ShortRunLowGrayLevelEmphasis": 0.0013069793536400597
+      }
+    }
+  ]
+}
