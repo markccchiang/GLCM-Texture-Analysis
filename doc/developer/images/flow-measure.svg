@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 1055" width="960" height="1055" role="img" aria-labelledby="title desc" font-family="'Inter', 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+  <title id="title">Measuring</title>
+  <desc id="desc">While ROIs change, the browser sends debounced POST /images/{id}/roi-stats requests; the server calls roiStats, which rasterizes each ROI, and returns pixel counts for the ROI Manager. To measure, the browser sends POST /analyses; the server validates the request with validateAnalysis, answers 202 with AnalysisInfo and queues one job per ROI and distance. The browser reads GET /analyses/{id}/events: for each job the server calls runAnalysis and sends result and progress events, then a finished event after storing results/&lt;id&gt;.json. Finally the browser fetches the ordered results with GET /analyses/{id}/results and appends rows to the Results table.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-20%" width="120%" height="150%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+
+  <rect width="960" height="1055" fill="#ffffff"/>
+  <rect x="24" y="616.0" width="912" height="187.0" rx="10" fill="#fafbfc" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <path d="M24,626.0 A10,10 0 0 1 34,616.0 H215.5 V638.0 H24 Z" fill="#e2e8f0"/>
+  <line x1="160" y1="82" x2="160" y2="1009.0" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 5"/>
+  <line x1="480" y1="82" x2="480" y2="1009.0" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 5"/>
+  <line x1="800" y1="82" x2="800" y2="1009.0" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 5"/>
+  <g filter="url(#shadow)"><rect x="40" y="20" width="240" height="62" rx="12" fill="#eef4fe" stroke="#3b73d9" stroke-width="1.5"/></g>
+  <path d="M40,32 A12,12 0 0 1 52,20 H268 A12,12 0 0 1 280,32 V50 H40 Z" fill="#3b73d9"/>
+  <text x="160.0" y="40.0" font-size="13.5" fill="#ffffff" font-weight="700" text-anchor="middle">Browser · web app</text>
+  <text x="160.0" y="70.0" font-size="11" fill="#64748b" text-anchor="middle" font-family="'SFMono-Regular', Menlo, Consolas, monospace">web/src</text>
+  <g filter="url(#shadow)"><rect x="360" y="20" width="240" height="62" rx="12" fill="#edf8f1" stroke="#2e9d62" stroke-width="1.5"/></g>
+  <path d="M360,32 A12,12 0 0 1 372,20 H588 A12,12 0 0 1 600,32 V50 H360 Z" fill="#2e9d62"/>
+  <text x="480.0" y="40.0" font-size="13.5" fill="#ffffff" font-weight="700" text-anchor="middle">API server</text>
+  <text x="480.0" y="70.0" font-size="11" fill="#64748b" text-anchor="middle" font-family="'SFMono-Regular', Menlo, Consolas, monospace">server/src</text>
+  <g filter="url(#shadow)"><rect x="680" y="20" width="240" height="62" rx="12" fill="#fff5e8" stroke="#e07b00" stroke-width="1.5"/></g>
+  <path d="M680,32 A12,12 0 0 1 692,20 H908 A12,12 0 0 1 920,32 V50 H680 Z" fill="#e07b00"/>
+  <text x="800.0" y="40.0" font-size="13.5" fill="#ffffff" font-weight="700" text-anchor="middle">Addon · C++ core</text>
+  <text x="800.0" y="70.0" font-size="11" fill="#64748b" text-anchor="middle" font-family="'SFMono-Regular', Menlo, Consolas, monospace">@glcm/native · glcm_core</text>
+  <text x="24.0" y="126.0" font-size="10.5" fill="#64748b" font-weight="700" letter-spacing="0.08em">WHILE DRAWING: PIXEL COUNTS</text>
+  <line x1="240.1" y1="122.0" x2="936" y2="122.0" stroke="#e2e8f0" stroke-width="1.2"/>
+  <line x1="165" y1="160.0" x2="473" y2="160.0" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <circle cx="182" cy="146.0" r="9" fill="#3b73d9"/>
+  <text x="182.0" y="149.5" font-size="10.5" fill="#ffffff" font-weight="700" text-anchor="middle">1</text>
+  <text x="198.0" y="150.0" font-size="11.5" fill="#1e293b" font-family="'SFMono-Regular', Menlo, Consolas, monospace">POST /images/{id}/roi-stats</text>
+  <rect x="63.3" y="174.0" width="193.4" height="27" rx="8" fill="#eef4fe" stroke="#bcd2f7" stroke-width="1.2"/>
+  <text x="160.0" y="193.0" font-size="11" fill="#334155" text-anchor="middle">debounced while ROIs change</text>
+  <line x1="485" y1="233.0" x2="793" y2="233.0" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <circle cx="502" cy="219.0" r="9" fill="#2e9d62"/>
+  <text x="502.0" y="222.5" font-size="10.5" fill="#ffffff" font-weight="700" text-anchor="middle">2</text>
+  <text x="518.0" y="223.0" font-size="11.5" fill="#1e293b" font-family="'SFMono-Regular', Menlo, Consolas, monospace">roiStats</text>
+  <rect x="700.3" y="247.0" width="199.4" height="27" rx="8" fill="#fff5e8" stroke="#f5cf9c" stroke-width="1.2"/>
+  <text x="800.0" y="266.0" font-size="11" fill="#334155" text-anchor="middle">RasterizeCroppedMask per ROI</text>
+  <line x1="795" y1="306.0" x2="487" y2="306.0" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arrow-muted)"/>
+  <circle cx="778" cy="292.0" r="9" fill="#e07b00"/>
+  <text x="778.0" y="295.5" font-size="10.5" fill="#ffffff" font-weight="700" text-anchor="middle">3</text>
+  <text x="762.0" y="296.0" font-size="11.5" fill="#1e293b" text-anchor="end" font-family="'SFMono-Regular', Menlo, Consolas, monospace">statistics per ROI</text>
+  <line x1="475" y1="344.0" x2="167" y2="344.0" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arrow-muted)"/>
+  <circle cx="458" cy="330.0" r="9" fill="#2e9d62"/>
+  <text x="458.0" y="333.5" font-size="10.5" fill="#ffffff" font-weight="700" text-anchor="middle">4</text>
+  <text x="442.0" y="334.0" font-size="11.5" fill="#1e293b" text-anchor="end" font-family="'SFMono-Regular', Menlo, Consolas, monospace">pixel counts for the ROI Manager</text>
+  <text x="24.0" y="380.0" font-size="10.5" fill="#64748b" font-weight="700" letter-spacing="0.08em">MEASURE: ANALYSIS JOBS</text>
+  <line x1="202.3" y1="376.0" x2="936" y2="376.0" stroke="#e2e8f0" stroke-width="1.2"/>
+  <line x1="165" y1="414.0" x2="473" y2="414.0" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <circle cx="182" cy="400.0" r="9" fill="#3b73d9"/>
+  <text x="182.0" y="403.5" font-size="10.5" fill="#ffffff" font-weight="700" text-anchor="middle">5</text>
+  <text x="198.0" y="404.0" font-size="11.5" fill="#1e293b" font-family="'SFMono-Regular', Menlo, Consolas, monospace">POST /analyses {rois, settings}</text>
+  <line x1="485" y1="452.0" x2="793" y2="452.0" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <circle cx="502" cy="438.0" r="9" fill="#2e9d62"/>
+  <text x="502.0" y="441.5" font-size="10.5" fill="#ffffff" font-weight="700" text-anchor="middle">6</text>
+  <text x="518.0" y="442.0" font-size="11.5" fill="#1e293b" font-family="'SFMono-Regular', Menlo, Consolas, monospace">validateAnalysis</text>
+  <rect x="676.1" y="466.0" width="247.8" height="27" rx="8" fill="#fff5e8" stroke="#f5cf9c" stroke-width="1.2"/>
+  <text x="800.0" y="485.0" font-size="11" fill="#334155" text-anchor="middle">parse and validate ROIs and settings</text>
+  <line x1="475" y1="525.0" x2="167" y2="525.0" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arrow-muted)"/>
+  <circle cx="458" cy="511.0" r="9" fill="#2e9d62"/>
+  <text x="458.0" y="514.5" font-size="10.5" fill="#ffffff" font-weight="700" text-anchor="middle">7</text>
+  <text x="442.0" y="515.0" font-size="11.5" fill="#1e293b" text-anchor="end" font-family="'SFMono-Regular', Menlo, Consolas, monospace">202 AnalysisInfo</text>
+  <rect x="389.4" y="539.0" width="181.2" height="27" rx="8" fill="#edf8f1" stroke="#b7e2c8" stroke-width="1.2"/>
+  <text x="480.0" y="558.0" font-size="11" fill="#334155" text-anchor="middle">queue ROI × distance jobs</text>
+  <line x1="165" y1="598.0" x2="473" y2="598.0" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <circle cx="182" cy="584.0" r="9" fill="#3b73d9"/>
+  <text x="182.0" y="587.5" font-size="10.5" fill="#ffffff" font-weight="700" text-anchor="middle">8</text>
+  <text x="198.0" y="588.0" font-size="11.5" fill="#1e293b" font-family="'SFMono-Regular', Menlo, Consolas, monospace">GET /analyses/{id}/events</text>
+  <line x1="485" y1="672.0" x2="793" y2="672.0" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <circle cx="502" cy="658.0" r="9" fill="#2e9d62"/>
+  <text x="502.0" y="661.5" font-size="10.5" fill="#ffffff" font-weight="700" text-anchor="middle">9</text>
+  <text x="518.0" y="662.0" font-size="11.5" fill="#1e293b" font-family="'SFMono-Regular', Menlo, Consolas, monospace">runAnalysis</text>
+  <rect x="682.1" y="686.0" width="235.7" height="27" rx="8" fill="#fff5e8" stroke="#f5cf9c" stroke-width="1.2"/>
+  <text x="800.0" y="705.0" font-size="11" fill="#334155" text-anchor="middle">RunAnalysis: one ROI, one distance</text>
+  <line x1="795" y1="745.0" x2="487" y2="745.0" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arrow-muted)"/>
+  <circle cx="778" cy="731.0" r="9" fill="#e07b00"/>
+  <text x="778.0" y="734.5" font-size="10.5" fill="#ffffff" font-weight="700" text-anchor="middle">10</text>
+  <text x="762.0" y="735.0" font-size="11.5" fill="#1e293b" text-anchor="end" font-family="'SFMono-Regular', Menlo, Consolas, monospace">result</text>
+  <line x1="475" y1="783.0" x2="167" y2="783.0" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arrow-muted)"/>
+  <circle cx="458" cy="769.0" r="9" fill="#2e9d62"/>
+  <text x="458.0" y="772.5" font-size="10.5" fill="#ffffff" font-weight="700" text-anchor="middle">11</text>
+  <text x="442.0" y="773.0" font-size="11.5" fill="#1e293b" text-anchor="end" font-family="'SFMono-Regular', Menlo, Consolas, monospace">event: result · progress</text>
+  <text x="36.0" y="631.0" font-size="10.5" fill="#475569" font-weight="700">for each job, a few at a time</text>
+  <line x1="475" y1="835.0" x2="167" y2="835.0" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arrow-muted)"/>
+  <circle cx="458" cy="821.0" r="9" fill="#2e9d62"/>
+  <text x="458.0" y="824.5" font-size="10.5" fill="#ffffff" font-weight="700" text-anchor="middle">12</text>
+  <text x="442.0" y="825.0" font-size="11.5" fill="#1e293b" text-anchor="end" font-family="'SFMono-Regular', Menlo, Consolas, monospace">event: finished</text>
+  <rect x="387.8" y="849.0" width="184.3" height="27" rx="8" fill="#e8f7f8" stroke="#a9dde2" stroke-width="1.2"/>
+  <text x="480.0" y="868.0" font-size="11" fill="#334155" text-anchor="middle" font-family="'SFMono-Regular', Menlo, Consolas, monospace">store results/&lt;id&gt;.json</text>
+  <line x1="165" y1="908.0" x2="473" y2="908.0" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <circle cx="182" cy="894.0" r="9" fill="#3b73d9"/>
+  <text x="182.0" y="897.5" font-size="10.5" fill="#ffffff" font-weight="700" text-anchor="middle">13</text>
+  <text x="198.0" y="898.0" font-size="11.5" fill="#1e293b" font-family="'SFMono-Regular', Menlo, Consolas, monospace">GET /analyses/{id}/results</text>
+  <line x1="475" y1="946.0" x2="167" y2="946.0" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arrow-muted)"/>
+  <circle cx="458" cy="932.0" r="9" fill="#2e9d62"/>
+  <text x="458.0" y="935.5" font-size="10.5" fill="#ffffff" font-weight="700" text-anchor="middle">14</text>
+  <text x="442.0" y="936.0" font-size="11.5" fill="#1e293b" text-anchor="end" font-family="'SFMono-Regular', Menlo, Consolas, monospace">ordered results</text>
+  <rect x="42.1" y="960.0" width="235.7" height="27" rx="8" fill="#eef4fe" stroke="#bcd2f7" stroke-width="1.2"/>
+  <text x="160.0" y="979.0" font-size="11" fill="#334155" text-anchor="middle">rows appended to the Results table</text>
+  <line x1="686" y1="1031.0" x2="730" y2="1031.0" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text x="738.0" y="1035.0" font-size="11" fill="#64748b">request</text>
+  <line x1="818" y1="1031.0" x2="862" y2="1031.0" stroke="#64748b" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arrow-muted)"/>
+  <text x="870.0" y="1035.0" font-size="11" fill="#64748b">response</text>
+</svg>

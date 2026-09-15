@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 980" width="960" height="980" role="img" aria-labelledby="title desc" font-family="'Inter', 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+  <title id="title">Batch measurement</title>
+  <desc id="desc">For each image file, the browser computes its SHA-256 and reuses an image the server already stores, otherwise it uploads the file with POST /images. The ROIs are clipped to the image; without an ROI left the image is skipped. The settings are fitted to the bit depth; invalid settings mark the image failed. Otherwise POST /analyses starts the analysis, whose run is added to the Results table, and the browser polls GET /analyses/{id}/results until the results are final, or cancels with DELETE /analyses/{id}; then the next image follows. Download combined CSV fetches GET /analyses/{id}/results.csv for each finished image, merges files with the same settings and header, and saves one CSV file, or a ZIP with one CSV per group of settings.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-20%" width="120%" height="150%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+
+  <rect width="960" height="980" fill="#ffffff"/>
+  <rect x="20" y="20" width="560" height="940" rx="14" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.2"/>
+  <rect x="600" y="20" width="340" height="530" rx="14" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.2"/>
+  <rect x="600" y="580" width="340" height="150" rx="14" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.2"/>
+  <text x="40.0" y="50.0" font-size="10.5" fill="#64748b" font-weight="700" letter-spacing="0.08em">FOR EACH IMAGE FILE</text>
+  <text x="560.0" y="50.0" font-size="11" fill="#64748b" text-anchor="end" font-family="'SFMono-Regular', Menlo, Consolas, monospace">batch/runBatch.ts</text>
+  <g filter="url(#shadow)"><rect x="77.0" y="80.0" width="290" height="50" rx="10" fill="#eef4fe" stroke="#bcd2f7" stroke-width="1.4"/></g>
+  <text x="222.0" y="102.0" font-size="12.5" fill="#1e293b" font-weight="600" text-anchor="middle">SHA-256 of the file</text>
+  <text x="222.0" y="118.0" font-size="10.5" fill="#64748b" text-anchor="middle" font-family="'SFMono-Regular', Menlo, Consolas, monospace">Web Crypto, in the browser</text>
+  <path d="M222.0,130.0 L222.0,154.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow)"><polygon points="222,155.0 352.0,190 222,225.0 92.0,190" fill="#ffffff" stroke="#94a3b8" stroke-width="1.4"/></g>
+  <text x="222.0" y="189.0" font-size="12" fill="#1e293b" font-weight="600" text-anchor="middle">Already stored?</text>
+  <text x="222.0" y="204.0" font-size="10" fill="#64748b" text-anchor="middle" font-family="'SFMono-Regular', Menlo, Consolas, monospace">GET /images?sha256=</text>
+  <path d="M352.0,190.0 L395.0,190.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <text x="362.0" y="181.0" font-size="11" fill="#64748b" font-weight="600">yes</text>
+  <g filter="url(#shadow)"><rect x="397.0" y="167.0" width="170" height="46" rx="10" fill="#edf8f1" stroke="#b7e2c8" stroke-width="1.4"/></g>
+  <text x="482.0" y="194.5" font-size="12.5" fill="#1e293b" font-weight="600" text-anchor="middle">Reuse the image</text>
+  <path d="M222.0,225.0 L222.0,258.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <text x="232.0" y="246.0" font-size="11" fill="#64748b" font-weight="600">no</text>
+  <g filter="url(#shadow)"><rect x="77.0" y="260.0" width="290" height="50" rx="10" fill="#edf8f1" stroke="#b7e2c8" stroke-width="1.4"/></g>
+  <text x="222.0" y="282.0" font-size="12.5" fill="#1e293b" font-weight="600" text-anchor="middle">Upload the file</text>
+  <text x="222.0" y="298.0" font-size="10.5" fill="#64748b" text-anchor="middle" font-family="'SFMono-Regular', Menlo, Consolas, monospace">POST /images</text>
+  <path d="M222.0,310.0 L222.0,348.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <path d="M482.0,213.0 L482.0,375.0 L369.0,375.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow)"><rect x="77.0" y="350.0" width="290" height="50" rx="10" fill="#eef4fe" stroke="#bcd2f7" stroke-width="1.4"/></g>
+  <text x="222.0" y="372.0" font-size="12.5" fill="#1e293b" font-weight="600" text-anchor="middle">Clip the ROIs to the image</text>
+  <text x="222.0" y="388.0" font-size="10.5" fill="#64748b" text-anchor="middle" font-family="'SFMono-Regular', Menlo, Consolas, monospace">prepareRoiImport</text>
+  <path d="M222.0,400.0 L222.0,432.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow)"><polygon points="222,433.0 332.0,465 222,497.0 112.0,465" fill="#ffffff" stroke="#94a3b8" stroke-width="1.4"/></g>
+  <text x="222.0" y="469.0" font-size="12" fill="#1e293b" font-weight="600" text-anchor="middle">Any ROI left?</text>
+  <path d="M332.0,465.0 L426.0,465.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <text x="344.0" y="456.0" font-size="11" fill="#64748b" font-weight="600">no</text>
+  <rect x="431.9" y="452" width="76.3" height="26" rx="13" fill="#fdf3dc" stroke="#9a6212" stroke-width="1.2"/>
+  <text x="470.0" y="469.0" font-size="11.5" fill="#9a6212" font-weight="700" text-anchor="middle">Skipped</text>
+  <text x="470.0" y="494.0" font-size="10.5" fill="#64748b" text-anchor="middle">recorded; next image</text>
+  <path d="M222.0,497.0 L222.0,528.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <text x="232.0" y="516.0" font-size="11" fill="#64748b" font-weight="600">yes</text>
+  <g filter="url(#shadow)"><rect x="77.0" y="530.0" width="290" height="50" rx="10" fill="#eef4fe" stroke="#bcd2f7" stroke-width="1.4"/></g>
+  <text x="222.0" y="552.0" font-size="12.5" fill="#1e293b" font-weight="600" text-anchor="middle">Fit the settings to the image</text>
+  <text x="222.0" y="568.0" font-size="10.5" fill="#64748b" text-anchor="middle" font-family="'SFMono-Regular', Menlo, Consolas, monospace">adaptToImage · checkSettings</text>
+  <path d="M222.0,580.0 L222.0,612.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow)"><polygon points="222,613.0 332.0,645 222,677.0 112.0,645" fill="#ffffff" stroke="#94a3b8" stroke-width="1.4"/></g>
+  <text x="222.0" y="649.0" font-size="12" fill="#1e293b" font-weight="600" text-anchor="middle">Settings valid?</text>
+  <path d="M332.0,645.0 L430.0,645.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <text x="344.0" y="636.0" font-size="11" fill="#64748b" font-weight="600">no</text>
+  <rect x="435.0" y="632" width="70.0" height="26" rx="13" fill="#fde8e8" stroke="#c23b3b" stroke-width="1.2"/>
+  <text x="470.0" y="649.0" font-size="11.5" fill="#c23b3b" font-weight="700" text-anchor="middle">Failed</text>
+  <text x="470.0" y="674.0" font-size="10.5" fill="#64748b" text-anchor="middle">recorded; next image</text>
+  <path d="M222.0,677.0 L222.0,708.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <text x="232.0" y="696.0" font-size="11" fill="#64748b" font-weight="600">yes</text>
+  <g filter="url(#shadow)"><rect x="77.0" y="710.0" width="290" height="50" rx="10" fill="#edf8f1" stroke="#b7e2c8" stroke-width="1.4"/></g>
+  <text x="222.0" y="732.0" font-size="12.5" fill="#1e293b" font-weight="600" text-anchor="middle">Start the analysis</text>
+  <text x="222.0" y="748.0" font-size="10.5" fill="#64748b" text-anchor="middle" font-family="'SFMono-Regular', Menlo, Consolas, monospace">POST /analyses · run in the table</text>
+  <path d="M222.0,760.0 L222.0,798.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow)"><rect x="77.0" y="800.0" width="290" height="50" rx="10" fill="#edf8f1" stroke="#b7e2c8" stroke-width="1.4"/></g>
+  <text x="222.0" y="822.0" font-size="12.5" fill="#1e293b" font-weight="600" text-anchor="middle">Wait for the final results</text>
+  <text x="222.0" y="838.0" font-size="10.5" fill="#64748b" text-anchor="middle" font-family="'SFMono-Regular', Menlo, Consolas, monospace">GET /analyses/{id}/results</text>
+  <path d="M367.0,825.0 L418.0,825.0" fill="none" stroke="#64748b" stroke-width="1.6" stroke-linejoin="round" stroke-dasharray="6 4" marker-end="url(#arrow-muted)"/>
+  <text x="378.0" y="816.0" font-size="11" fill="#64748b" font-weight="600">cancel</text>
+  <rect x="425.5" y="812" width="88.9" height="26" rx="13" fill="#eef1f5" stroke="#526074" stroke-width="1.2"/>
+  <text x="470.0" y="829.0" font-size="11.5" fill="#526074" font-weight="700" text-anchor="middle">Cancelled</text>
+  <text x="470.0" y="854.0" font-size="10.5" fill="#64748b" text-anchor="middle" font-family="'SFMono-Regular', Menlo, Consolas, monospace">DELETE /analyses/{id}</text>
+  <path d="M222.0,850.0 L222.0,888.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <rect x="193.3" y="890" width="57.3" height="26" rx="13" fill="#e3f5ea" stroke="#23794b" stroke-width="1.2"/>
+  <text x="222.0" y="907.0" font-size="11.5" fill="#23794b" font-weight="700" text-anchor="middle">Done</text>
+  <path d="M190.0,903.0 L52.0,903.0 L52.0,105.0 L69.0,105.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <text x="44.0" y="505.0" font-size="11" fill="#64748b" font-weight="600" text-anchor="middle" transform="rotate(-90 44 505)">next image</text>
+  <text x="620.0" y="50.0" font-size="10.5" fill="#64748b" font-weight="700" letter-spacing="0.08em">DOWNLOAD COMBINED CSV</text>
+  <g filter="url(#shadow)"><rect x="620.0" y="85.0" width="300" height="50" rx="10" fill="#edf8f1" stroke="#b7e2c8" stroke-width="1.4"/></g>
+  <text x="770.0" y="107.0" font-size="12.5" fill="#1e293b" font-weight="600" text-anchor="middle">Fetch each finished result</text>
+  <text x="770.0" y="123.0" font-size="10.5" fill="#64748b" text-anchor="middle" font-family="'SFMono-Regular', Menlo, Consolas, monospace">GET /analyses/{id}/results.csv</text>
+  <path d="M770.0,135.0 L770.0,170.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow)"><rect x="620.0" y="172.0" width="300" height="50" rx="10" fill="#eef4fe" stroke="#bcd2f7" stroke-width="1.4"/></g>
+  <text x="770.0" y="194.0" font-size="12.5" fill="#1e293b" font-weight="600" text-anchor="middle">Merge the CSV texts</text>
+  <text x="770.0" y="210.0" font-size="10.5" fill="#64748b" text-anchor="middle" font-family="'SFMono-Regular', Menlo, Consolas, monospace">mergeCsv.ts · same settings and header</text>
+  <path d="M770.0,222.0 L770.0,262.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow)"><polygon points="770,264.0 870.0,296 770,328.0 670.0,296" fill="#ffffff" stroke="#94a3b8" stroke-width="1.4"/></g>
+  <text x="770.0" y="300.0" font-size="12" fill="#1e293b" font-weight="600" text-anchor="middle">One group?</text>
+  <path d="M770.0,328.0 L770.0,373.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <text x="780.0" y="356.0" font-size="11" fill="#64748b" font-weight="600">yes</text>
+  <g filter="url(#shadow)"><rect x="650.0" y="375.0" width="240" height="50" rx="10" fill="#eef4fe" stroke="#bcd2f7" stroke-width="1.4"/></g>
+  <text x="770.0" y="397.0" font-size="12.5" fill="#1e293b" font-weight="600" text-anchor="middle">One CSV file</text>
+  <text x="770.0" y="413.0" font-size="10.5" fill="#64748b" text-anchor="middle" font-family="'SFMono-Regular', Menlo, Consolas, monospace"># images=N</text>
+  <path d="M870.0,296.0 L918.0,296.0 L918.0,490.0 L897.0,490.0" fill="none" stroke="#475569" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+  <text x="878.0" y="287.0" font-size="11" fill="#64748b" font-weight="600">no</text>
+  <g filter="url(#shadow)"><rect x="650.0" y="465.0" width="240" height="50" rx="10" fill="#eef4fe" stroke="#bcd2f7" stroke-width="1.4"/></g>
+  <text x="770.0" y="487.0" font-size="12.5" fill="#1e293b" font-weight="600" text-anchor="middle">ZIP, one CSV per group</text>
+  <text x="770.0" y="503.0" font-size="10.5" fill="#64748b" text-anchor="middle" font-family="'SFMono-Regular', Menlo, Consolas, monospace">zipped with fflate</text>
+  <text x="620.0" y="610.0" font-size="10.5" fill="#64748b" font-weight="700" letter-spacing="0.08em">LEGEND</text>
+  <rect x="620" y="632" width="22" height="16" rx="4" fill="#eef4fe" stroke="#bcd2f7" stroke-width="1.4"/>
+  <text x="652.0" y="644.0" font-size="11.5" fill="#334155">In the browser</text>
+  <rect x="620" y="658" width="22" height="16" rx="4" fill="#edf8f1" stroke="#b7e2c8" stroke-width="1.4"/>
+  <text x="652.0" y="670.0" font-size="11.5" fill="#334155">An API server call</text>
+  <rect x="620.0" y="687" width="57.3" height="26" rx="13" fill="#e3f5ea" stroke="#23794b" stroke-width="1.2"/>
+  <text x="648.6" y="704.0" font-size="11.5" fill="#23794b" font-weight="700" text-anchor="middle">Done</text>
+  <rect x="685.3" y="687" width="76.3" height="26" rx="13" fill="#fdf3dc" stroke="#9a6212" stroke-width="1.2"/>
+  <text x="723.4" y="704.0" font-size="11.5" fill="#9a6212" font-weight="700" text-anchor="middle">Skipped</text>
+  <rect x="769.6" y="687" width="70.0" height="26" rx="13" fill="#fde8e8" stroke="#c23b3b" stroke-width="1.2"/>
+  <text x="804.5" y="704.0" font-size="11.5" fill="#c23b3b" font-weight="700" text-anchor="middle">Failed</text>
+  <rect x="847.5" y="687" width="88.9" height="26" rx="13" fill="#eef1f5" stroke="#526074" stroke-width="1.2"/>
+  <text x="892.0" y="704.0" font-size="11.5" fill="#526074" font-weight="700" text-anchor="middle">Cancelled</text>
+</svg>

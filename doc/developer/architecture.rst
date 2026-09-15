@@ -255,51 +255,44 @@ Data flows
 
 .. rubric:: Opening an image
 
-.. code-block:: text
-
-   Browser                                   Server                               Addon / core
-   ───────                                   ──────                               ────────────
-   POST /images (multipart) ───────────────▶ stream to uploads/, hash SHA-256
-                                             decodeImageFile ───────────────────▶ LoadImageFile,
-                                                                                  display statistics
-                                             write images/<id>/ ◀──────────────── pixels, window, histogram
-   ImageInfo (transfer "raw"/"server") ◀──── 201
-   GET /images/{id}/raw ───────────────────▶ pixels.bin (gzip/zstd), ETag
-   WebGL2 texture, fit to window
+.. figure:: images/flow-open-image.svg
+   :alt: Sequence diagram of opening an image. 1: the browser sends POST /images (multipart); the server streams the file
+         to uploads/ and computes its SHA-256. 2: the server calls decodeImageFile, which checks the size from the header,
+         runs LoadImageFile and computes display statistics and the pixel spacing. 3: the addon returns the pixels, window
+         and histogram, and the server writes images/<id>/. 4: the server answers 201 with ImageInfo (transfer raw or
+         server). 5: the browser requests GET /images/{id}/raw. 6: the server sends pixels.bin, compressed with gzip or
+         zstd, with an ETag; the browser uploads a WebGL2 texture and fits the image to the window.
+   :width: 100%
 
 .. rubric:: Measuring
 
-.. code-block:: text
-
-   POST /images/{id}/roi-stats (debounced) ─▶ roiStats ──────────────────────────▶ RasterizeCroppedMask per ROI
-   pixel counts in the ROI Manager ◀─────────
-   POST /analyses {imageId, rois, settings} ▶ validateAnalysis ──────────────────▶ parse and validate
-   AnalysisInfo ◀─────────────────────────── 202; queue ROI × distance jobs
-   GET /analyses/{id}/events ──────────────▶ for each job: runAnalysis ─────────▶ RunAnalysis (one ROI,
-   event: result / progress ◀──────────────                                        one distance)
-   event: finished ◀──────────────────────── store results/<id>.json
-   GET /analyses/{id}/results ─────────────▶ ordered results
-   rows appended to the Results table
+.. figure:: images/flow-measure.svg
+   :alt: Sequence diagram of measuring, in two phases. While drawing: the browser sends debounced POST
+         /images/{id}/roi-stats requests, the server calls roiStats, which runs RasterizeCroppedMask per ROI, and the
+         pixel counts return to the ROI Manager. Measure: the browser sends POST /analyses with the ROIs and settings; the
+         server calls validateAnalysis, answers 202 with AnalysisInfo and queues ROI × distance jobs. The browser opens GET
+         /analyses/{id}/events; in a loop over the jobs, a few at a time, the server calls runAnalysis (RunAnalysis for one
+         ROI and one distance) and sends result and progress events. After the event finished and storing
+         results/<id>.json, the browser fetches the ordered results with GET /analyses/{id}/results and appends rows to the
+         Results table.
+   :width: 100%
 
 .. rubric:: Batch measurement
 
 *Analyze ▸ Batch Measure…* measures one ROI set on many images with the existing endpoints; the server has no batch
 concept. ``batch/runBatch.ts`` handles one image at a time and receives the API calls as dependencies, so its unit tests
-use fakes:
+use fakes.
 
-.. code-block:: text
-
-   for each image file:
-     SHA-256 in the browser (Web Crypto) ──▶ GET /images?sha256=      found: reuse the stored image
-                                             POST /images             otherwise: upload
-     prepareRoiImport: clip the ROIs to the image; none left → skipped
-     adaptToImage, checkSettings for its bit depth; invalid → failed
-     POST /analyses ───────────────────────▶ jobs as for Measure; the run is added to the Results table
-     GET /analyses/{id}/results (polled) ──▶ final results; cancel → DELETE /analyses/{id}
-   Download combined CSV:
-     GET /analyses/{id}/results.csv for each finished image
-     batch/mergeCsv.ts: files with equal settings comments and header become one CSV (# images=N);
-     several groups are zipped in the browser (fflate)
+.. figure:: images/flow-batch.svg
+   :alt: Flowchart of batch measurement. For each image file: compute the SHA-256 in the browser with Web Crypto; if GET
+         /images?sha256= finds a stored image, reuse it, otherwise upload the file with POST /images. Clip the ROIs to the
+         image with prepareRoiImport; without an ROI left the image is skipped. Fit the settings with adaptToImage and
+         checkSettings; invalid settings mark the image failed. Otherwise start the analysis with POST /analyses, which adds
+         a run to the Results table, and wait for the final results with GET /analyses/{id}/results; cancelling sends
+         DELETE /analyses/{id}. Done, skipped, failed and cancelled images continue with the next image. Download combined
+         CSV: fetch GET /analyses/{id}/results.csv for each finished result, merge the CSV texts with mergeCsv.ts (same
+         settings and header), and save one CSV file with # images=N, or a ZIP with one CSV per group, zipped with fflate.
+   :width: 100%
 
 A failure is recorded for its image and the batch goes on. Web Crypto needs a secure context (HTTPS or localhost);
 without it every image is uploaded.
@@ -316,15 +309,16 @@ without it every image is uploaded.
 
 .. rubric:: Pixel spacing
 
-.. code-block:: text
-
-   ReadImageSize (core/imaging/ImageHeader): pHYs, JFIF density, BMP pixels per metre, TIFF resolution
-     → LoadedImage.info.pixel_spacing (swapped when the EXIF orientation turns the image)
-     → decodeImageFile().pixelSpacing → ImageInfo.pixelSpacing (null without one)
-   web: viewerStore.pixelSpacing = the spacing chosen for this SHA-256 earlier (preferences), else the file's;
-        edited in Image Info; scale bar, ROI areas, note on non-square pixels
-   POST /analyses {…, pixelSpacing} → AnalysisInfo.pixelSpacing → results image.pixelSpacing
-     → ResultsToCsv: # pixelSpacingMm=x;y and areaMm2 = pixelCount × x × y
+.. figure:: images/flow-pixel-spacing.svg
+   :alt: Diagram of the pixel spacing in three rows. From the file: ReadImageSize reads PNG pHYs, JPEG JFIF, BMP and TIFF
+         resolutions; LoadedImage.info.pixel_spacing keeps it, swapped by the EXIF orientation; decodeImageFile returns
+         pixelSpacing; ImageInfo.pixelSpacing stores it, null if none. In the web app: the spacing of the open image,
+         viewerStore.pixelSpacing, is the one chosen for this image earlier (preferences, by SHA-256) or else the file's,
+         and is edited in the Image Info dialog; it drives the scale bar, ROI areas in mm² and the note on non-square
+         pixels. Into the results: POST /analyses sends pixelSpacing, AnalysisInfo.pixelSpacing stores it with the run, the
+         results document carries image.pixelSpacing, and ResultsToCsv writes # pixelSpacingMm=x;y and areaMm2 = pixelCount
+         × x × y.
+   :width: 100%
 
 The spacing only annotates results; the GLCM computation stays in pixels. Each run keeps the spacing it was measured
 with, so a later change does not alter existing rows or exports.
