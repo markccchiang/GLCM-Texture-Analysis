@@ -6,8 +6,9 @@ Developer guide
 This part of the documentation is for people who change or extend the application. It complements three other
 documents in the repository:
 
-- ``README.md``: what the application does and a short start.
-- ``DEVELOPMENT.md``: requirements, building, tests, running, configuration and the list of endpoints.
+- ``README.md``: what the application does.
+- ``INSTALL.md``: requirements, building the application, the C++ library and the documentation.
+- ``DEVELOPMENT.md``: tests, development commands, configuration, deployment and the list of endpoints.
 - ``doc/ui-design-plan.md``: the design plan the application was built from, with the decisions behind it and the
   status of each implementation phase.
 - ``doc/deployment.md``: running the server with Docker behind an HTTPS reverse proxy, and the security checklist.

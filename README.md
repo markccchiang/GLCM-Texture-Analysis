@@ -29,24 +29,9 @@ The features follow their published definitions and are tested against [PyRadiom
 
 ## Getting started
 
-You need [Node.js](https://nodejs.org/) 24 or newer, CMake, a C++ compiler, and the OpenCV, Eigen and nlohmann/json libraries. On macOS with [Homebrew](https://brew.sh/):
+Texture Workbench is built from source: install Node.js, CMake and a few C++ libraries, build it with four `npm` commands, and open it in your browser. [INSTALL.md](INSTALL.md) walks through it for macOS and Linux.
 
-```bash
-brew install cmake opencv eigen nlohmann-json node
-```
-
-Then, in the folder of this repository:
-
-```bash
-npm install
-npm run build:native
-npm run build:web
-npm start
-```
-
-Open http://127.0.0.1:8080/ in your browser and click **Open sample image**.
-
-For Linux, running the tests, and running the application as a shared server with Docker, see [DEVELOPMENT.md](DEVELOPMENT.md).
+Once it runs, open http://127.0.0.1:8080/ and click **Open sample image**. Running the application as a shared server, the tests and the programming interfaces are described in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Your first measurement
 
@@ -64,7 +49,7 @@ The documentation in [`doc/`](doc/) has three parts:
 - **Texture features:** the exact equations and the literature they come from.
 - **Developer guide:** how the application is built, its programming interfaces and file formats.
 
-Once it is built, the running application also serves it at http://127.0.0.1:8080/docs/. How to build it is described in [DEVELOPMENT.md](DEVELOPMENT.md#documentation).
+Once it is built, the running application also serves it at http://127.0.0.1:8080/docs/. How to build it is described in [INSTALL.md](INSTALL.md#4-build-the-documentation-optional).
 
 ## Sample images
 

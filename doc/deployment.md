@@ -1,6 +1,6 @@
 # Server deployment
 
-This guide runs the Texture Workbench server for several users, as in phase 5 of `doc/ui-design-plan.md`. For personal use on your own computer, `npm start` (local mode) is enough; see the README and `DEVELOPMENT.md`.
+This guide runs the Texture Workbench server for several users, as in phase 5 of `doc/ui-design-plan.md`. For personal use on your own computer, `npm start` (local mode) is enough; see `INSTALL.md`.
 
 ## Local mode and server mode
 

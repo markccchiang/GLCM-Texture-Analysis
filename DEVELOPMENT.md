@@ -1,6 +1,6 @@
 # Developing Texture Workbench
 
-This file covers building, testing, running and deploying Texture Workbench from source. For what the application does and a short start, see the [README](README.md). The Developer guide of the documentation (`doc/developer/`) describes the architecture, the APIs and the technologies in more detail.
+This file covers developing, testing, configuring and deploying Texture Workbench. To install the requirements and build it, see [INSTALL.md](INSTALL.md); for what the application does, see the [README](README.md). The Developer guide of the documentation (`doc/developer/`) describes the architecture, the APIs and the technologies in more detail.
 
 ## Architecture
 
@@ -13,43 +13,9 @@ The application has three parts:
   <img src="doc/developer/images/architecture-overview.svg" alt="Architecture: the web app in the browser calls the API server over HTTP (JSON, pixels, PNG, Server-Sent Events); the server calls the Node-API addon, which calls the glcm_core C++ library, and stores images, results and caches in the data directory; shared TypeBox schemas provide request validation, TypeScript types and the OpenAPI document." width="900">
 </p>
 
-## Requirements
+## Requirements and build
 
-- CMake 3.22 or newer
-- A C++17 compiler
-- [OpenCV](https://opencv.org/) (core, imgproc, imgcodecs). OpenCV 4 and 5 both work.
-- [Eigen](https://eigen.tuxfamily.org/) 3.3 or newer (5.x works)
-- [nlohmann/json](https://github.com/nlohmann/json) 3.11 or newer
-- [GoogleTest](https://github.com/google/googletest) (optional, for the unit tests)
-- [Node.js](https://nodejs.org/) 24 or newer (for the server and web app)
-
-On macOS with Homebrew:
-
-```bash
-brew install cmake opencv eigen nlohmann-json googletest node
-```
-
-On Debian or Ubuntu (install Node.js 24 separately, for example from [nodejs.org](https://nodejs.org/)):
-
-```bash
-sudo apt install cmake g++ libopencv-dev libeigen3-dev nlohmann-json3-dev libgtest-dev
-```
-
-## Build
-
-```bash
-cmake -S . -B build
-cmake --build build
-```
-
-This builds:
-
-| Target | Description |
-| --- | --- |
-| `glcm_core` | Texture analysis library (`core/`): features, ROI masks and ROI operations, image loading, quantization, analysis pipeline, feature maps, exports |
-| `glcm-tests` | Unit tests (only if GoogleTest is found) |
-
-To run the application, build the addon and web app and start the server; see [Web application](#web-application).
+The requirements, the build of the C++ library, the addon and the web app, and the documentation build are described in [INSTALL.md](INSTALL.md).
 
 ## Tests
 
@@ -108,13 +74,12 @@ The web application (`doc/ui-design-plan.md`) has three parts:
 - `server/` is the API server. It uses the C++ core through a Node-API addon (`bindings/node`), runs analyses and feature maps as jobs, and serves the built web app.
 - `packages/api` holds the request and response schemas shared by both.
 
-It needs Node.js 24 or newer, plus the C++ dependencies above.
+Build and start it as described in [INSTALL.md](INSTALL.md#2-build-and-start-the-application). The commands for development:
 
 ```bash
-npm install             # all workspaces
-npm run build:native    # build the addon with cmake-js (again after changing core/)
-npm run build:web       # build the web app into web/dist
-npm start               # open http://127.0.0.1:8080/
+npm run build:native    # rebuild the addon with cmake-js after changing core/
+npm run build:web       # rebuild the web app into web/dist
+npm start               # server and built web app on http://127.0.0.1:8080/
 npm test                # addon, server and web unit tests (Vitest)
 npm run test:e2e        # end-to-end tests in Chromium and WebKit (Playwright; run `npx playwright install chromium webkit` once)
 npm run typecheck       # TypeScript
@@ -209,26 +174,9 @@ The `doc/` folder contains a [Sphinx](https://www.sphinx-doc.org/) site (theme: 
 - **Texture features:** the equations of every feature family as implemented in `core/analysis/` (GLCM, first-order, GLRLM, GLSZM, NGTDM, LBP), and a list of references.
 - **Developer guide:** the architecture, the HTTP, Node.js addon and C++ APIs, the file formats, and the technologies and packages used.
 
-Build it in a Python virtual environment (requires Python 3):
-
-```bash
-cd doc
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-make html
-```
-
-Open the generated pages in a browser:
-
-```bash
-open _build/html/index.html        # macOS
-xdg-open _build/html/index.html    # Linux
-```
+How to build it is described in [INSTALL.md](INSTALL.md#4-build-the-documentation-optional).
 
 The screenshots of the user guide (`doc/user/images/`) are generated from the running application. After changing the user interface, regenerate them from the repository root with `npm run build:web && npm run docs:screenshots`.
-
-To rebuild later, activate the environment again with `source .venv/bin/activate` and run `make html`. Use `make clean` to remove the generated pages. The equations are rendered with MathJax, which is loaded from a CDN, so viewing them needs an internet connection.
 
 ## Project structure
 
