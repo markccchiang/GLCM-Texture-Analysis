@@ -118,6 +118,7 @@ function ImageInfoContent() {
           ['Dimensions', `${info.width} × ${info.height} px`],
           ['Bit depth', `${info.bitDepth}-bit`],
           ['Channels', info.sourceChannels > 1 ? `${info.sourceChannels} (converted to grayscale)` : '1 (grayscale)'],
+          ...(info.valueConversion ? [['Values', info.valueConversion.description] as [string, string]] : []),
           ['Default window', `${info.windowMin} – ${info.windowMax}`],
           ['Pixel transfer', info.transfer === 'raw' ? 'Raw samples, rendered in the browser' : 'Server-rendered display.png'],
           ['Renderer', rendererKind ?? '–'],

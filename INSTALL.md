@@ -11,6 +11,7 @@ You need:
 - [OpenCV](https://opencv.org/) (core, imgproc, imgcodecs). OpenCV 4 and 5 both work.
 - [Eigen](https://eigen.tuxfamily.org/) 3.3 or newer (5.x works)
 - [nlohmann/json](https://github.com/nlohmann/json) 3.11 or newer
+- [zlib](https://zlib.net/), for compressed NIfTI files (included with macOS)
 - [Node.js](https://nodejs.org/) 24 or newer, for the server and the web app
 - [GoogleTest](https://github.com/google/googletest), only to run the C++ unit tests
 - Python 3, only to build the documentation
@@ -24,7 +25,7 @@ brew install cmake opencv eigen nlohmann-json googletest node
 **Debian or Ubuntu** (install Node.js 24 separately, for example from [nodejs.org](https://nodejs.org/)):
 
 ```bash
-sudo apt install cmake g++ libopencv-dev libeigen3-dev nlohmann-json3-dev libgtest-dev
+sudo apt install cmake g++ libopencv-dev libeigen3-dev nlohmann-json3-dev zlib1g-dev libgtest-dev
 ```
 
 ## 2. Build and start the application
@@ -92,7 +93,7 @@ End-to-end tests and the other developer commands are described in [DEVELOPMENT.
 
 ## Troubleshooting
 
-- **`npm run build:native` cannot find OpenCV, Eigen or nlohmann/json:** install the requirements of step 1. On macOS, open a new terminal after installing with Homebrew so that CMake finds them.
+- **`npm run build:native` cannot find OpenCV, Eigen, nlohmann/json or zlib:** install the requirements of step 1. On macOS, open a new terminal after installing with Homebrew so that CMake finds them.
 - **`npm install` or `npm start` fails with a syntax or engine error:** check `node --version`; Node.js 24 or newer is needed.
 - **The browser shows "Not found" at http://127.0.0.1:8080/:** the web app was not built; run `npm run build:web` and reload.
 - **Port 8080 is already in use:** start the server on another port with `GLCM_PORT=8081 npm start`.

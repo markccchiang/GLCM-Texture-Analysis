@@ -183,7 +183,7 @@ std::map<std::string, std::vector<uchar>> ByName(const std::vector<ExportedFile>
     return by_name;
 }
 
-const ExportContext CONTEXT{"pattern.png", "sha-1", "2026-09-14T12:00:00Z", std::nullopt};
+const ExportContext CONTEXT{"pattern.png", "sha-1", "2026-09-14T12:00:00Z", std::nullopt, ""};
 
 } // namespace
 
@@ -665,6 +665,12 @@ TEST(ResultsCsvTest, WritesAreasWithAPixelSpacing) {
     const CsvTable plain = ParseCsv(ResultsToCsv(output.results, settings, CONTEXT));
     EXPECT_EQ(std::find(plain.header.begin(), plain.header.end(), "areaMm2"), plain.header.end());
     EXPECT_TRUE(std::none_of(plain.comments.begin(), plain.comments.end(), [](const std::string& line) { return line.rfind("# pixelSpacing", 0) == 0; }));
+    EXPECT_TRUE(std::none_of(
+        plain.comments.begin(), plain.comments.end(), [](const std::string& line) { return line.rfind("# valueConversion", 0) == 0; }));
+
+    context.value_conversion = "Rescale slope 1, intercept -1024; values stored + 1024; HU = stored value - 1024";
+    EXPECT_TRUE(Contains(ParseCsv(ResultsToCsv(output.results, settings, context)).comments,
+        "# valueConversion=Rescale slope 1, intercept -1024; values stored + 1024; HU = stored value - 1024"));
 }
 
 TEST(ResultsJsonTest, KeepsThePixelSpacing) {
@@ -673,12 +679,16 @@ TEST(ResultsJsonTest, KeepsThePixelSpacing) {
     const AnalysisOutput output = RunAnalysis(Pattern8(30, 30), {MakeRoi("r1", "A", RectangleRoi{2, 2, 20, 20})}, settings);
     ExportContext context = CONTEXT;
     context.pixel_spacing = PixelSpacing{0.703125, 1.3298};
+    context.value_conversion = "HU = stored value - 1024";
 
     const std::string text = ResultsToJson(output.results, settings, context);
     EXPECT_EQ(json::parse(text)["image"]["pixelSpacing"], (json{{"x", 0.703125}, {"y", 1.3298}}));
+    EXPECT_EQ(json::parse(text)["image"]["valueConversion"], "HU = stored value - 1024");
+    EXPECT_FALSE(json::parse(ResultsToJson(output.results, settings, CONTEXT))["image"].contains("valueConversion"));
     const ResultsDocument document = ResultsFromJson(text);
     ASSERT_TRUE(document.context.pixel_spacing.has_value());
     EXPECT_EQ(*document.context.pixel_spacing, *context.pixel_spacing);
+    EXPECT_EQ(document.context.value_conversion, context.value_conversion);
     EXPECT_EQ(ResultsToJson(document.results, document.settings, document.context), text);
     EXPECT_EQ(ResultsToCsv(document.results, document.settings, document.context), ResultsToCsv(output.results, settings, context));
     EXPECT_FALSE(ResultsFromJson(ResultsToJson(output.results, settings, CONTEXT)).context.pixel_spacing.has_value());
@@ -730,7 +740,7 @@ TEST(ResultsCsvTest, PrefixesFormulaTextButNotNumbers) {
     }
     rois.push_back(MakeRoi("-id", "a=b", RectangleRoi{2, 2, 20, 20}));
     const AnalysisOutput output = RunAnalysis(Pattern8(30, 30), rois, settings);
-    const ExportContext context{"=calc.png", "sha-1", "2026-09-14T12:00:00Z", std::nullopt};
+    const ExportContext context{"=calc.png", "sha-1", "2026-09-14T12:00:00Z", std::nullopt, ""};
     const CsvTable table = ParseCsv(ResultsToCsv(output.results, settings, context));
 
     std::string imc_header;

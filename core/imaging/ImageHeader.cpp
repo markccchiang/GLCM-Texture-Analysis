@@ -9,55 +9,15 @@
 #include <initializer_list>
 #include <stdexcept>
 
+#include "imaging/ByteSource.hpp"
+
 namespace glcm {
 
 namespace {
 
-// Random access to the encoded bytes; Read returns the number of bytes available at the offset (fewer at the end)
-class ByteSource {
-public:
-    virtual ~ByteSource() = default;
-    virtual size_t Read(uint64_t offset, uint8_t* out, size_t count) = 0;
-};
-
-class FileSource : public ByteSource {
-public:
-    explicit FileSource(const std::string& path) : _stream(path, std::ios::binary) {
-        if (!_stream) {
-            throw std::runtime_error("Cannot read the image: " + path);
-        }
-    }
-
-    size_t Read(uint64_t offset, uint8_t* out, size_t count) override {
-        _stream.clear();
-        _stream.seekg(static_cast<std::streamoff>(offset));
-        if (!_stream) {
-            return 0;
-        }
-        _stream.read(reinterpret_cast<char*>(out), static_cast<std::streamsize>(count));
-        return static_cast<size_t>(_stream.gcount());
-    }
-
-private:
-    std::ifstream _stream;
-};
-
-class MemorySource : public ByteSource {
-public:
-    explicit MemorySource(const std::vector<uchar>& bytes) : _bytes(bytes) {}
-
-    size_t Read(uint64_t offset, uint8_t* out, size_t count) override {
-        if (offset >= _bytes.size()) {
-            return 0;
-        }
-        const size_t available = std::min(count, static_cast<size_t>(_bytes.size() - offset));
-        std::memcpy(out, _bytes.data() + offset, available);
-        return available;
-    }
-
-private:
-    const std::vector<uchar>& _bytes;
-};
+using imaging_detail::ByteSource;
+using imaging_detail::FileSource;
+using imaging_detail::MemorySource;
 
 // Largest TIFF directory read; real files have a few dozen entries
 constexpr uint64_t MAX_TIFF_ENTRIES = 65536;

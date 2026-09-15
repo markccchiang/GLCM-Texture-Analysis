@@ -5,7 +5,8 @@ User guide
 
 Texture Workbench measures the texture of regions in grayscale images. A typical session has five steps:
 
-#. **Open an image** — PNG, JPEG, BMP or TIFF, 8 or 16 bits per pixel (:ref:`getting-started`).
+#. **Open an image** — PNG, JPEG, BMP or TIFF with 8 or 16 bits per pixel, a DICOM image or a slice of a NIfTI volume
+   (:ref:`getting-started`).
 #. **Look at it** — zoom, pan, adjust the display window and choose a colour table to see the structures you want to
    measure (:ref:`viewing`).
 #. **Draw regions of interest (ROIs)** — rectangles, ellipses, polygons or freehand outlines, or regions selected by

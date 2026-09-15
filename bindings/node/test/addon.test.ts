@@ -5,6 +5,7 @@ import { PNG } from 'pngjs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { windowLevel as windowLevelTs } from '@glcm/api';
 import * as native from '../index.js';
+import { encodeDicom, encodeNifti, rampVolume } from './medical.js';
 import { encodeTiff } from './tiff.js';
 
 let directory: string;
@@ -540,5 +541,85 @@ describe('edge detection', () => {
     expect(path.at(-1)).toEqual([29.5, 20.5]);
     expect(path.length).toBeGreaterThan(2);
     expect(await rejectionCode(native.livewirePath(pixels, size, size, 8, 0, 0, size, 0, 0))).toBe('INVALID_ARGUMENT');
+  });
+});
+
+describe('DICOM and NIfTI', () => {
+  it('decodes a CT DICOM file with its rescale, spacing and window', async () => {
+    const file = await writeFile(
+      'ct.dcm',
+      encodeDicom({
+        rows: 2,
+        columns: 2,
+        bitsAllocated: 16,
+        signed: true,
+        data: [-2000, 0, 1000, 3000],
+        modality: 'CT',
+        rescaleSlope: 1,
+        rescaleIntercept: -1024,
+        pixelSpacing: [0.8, 0.6],
+        windowCenter: 40,
+        windowWidth: 400,
+      }),
+    );
+    const image = await native.decodeImageFile(file, { maxPixels: 100 });
+    expect(image).toMatchObject({ width: 2, height: 2, bitDepth: 16, pixelSpacing: { x: 0.6, y: 0.8 }, windowMin: 864, windowMax: 1263 });
+    expect(image.valueConversion).toEqual({ scale: 1, offset: -1024, unit: 'HU', description: 'Rescale slope 1, intercept -1024; values stored + 1024; HU = stored value - 1024' });
+    // -2000 - 1024 HU is below -1024 and stored as 0
+    expect([...new Uint16Array(image.pixels.buffer, image.pixels.byteOffset, 4)]).toEqual([0, 0, 1000, 3000]);
+    expect(image.warnings).toEqual(['1 pixels below -1024 HU are stored as 0']);
+
+    const png = await native.decodeImageFile(await writeFile('plain.tif', encodeTiff({ width: 1, height: 1, bitsPerSample: 8, samplesPerPixel: 1, data: [5] })));
+    expect(png.valueConversion).toBeNull();
+  });
+
+  it('refuses compressed DICOM files as unsupported', async () => {
+    const file = await writeFile('jpeg.dcm', encodeDicom({ rows: 1, columns: 1, bitsAllocated: 8, data: [1], transferSyntax: '1.2.840.10008.1.2.4.50' }));
+    await expect(native.decodeImageFile(file)).rejects.toMatchObject({ code: 'UNSUPPORTED_IMAGE', message: expect.stringMatching(/^Compressed DICOM images/) });
+  });
+
+  it('inspects a NIfTI volume and extracts slices in RAS orientation', async () => {
+    const source = await writeFile(
+      'ramp.nii.gz',
+      encodeNifti({ dimensions: [4, 3, 2, 2], dataType: 'int16', data: rampVolume(4, 3, 2, 2), voxelSize: [2, 3, 4], gzip: true }),
+    );
+    const copy = path.join(directory, 'ramp-copy.nii');
+    const info = await native.inspectNiftiVolume(source, copy, { maxBytes: 1000 });
+    expect(info).toMatchObject({
+      version: 1,
+      dimensions: [4, 3, 2],
+      volumes: 2,
+      dataType: 'int16',
+      orientationSource: 'sform',
+      axisCodes: 'RAS',
+      acquisitionOrientation: 'axial',
+      slices: {
+        axial: { count: 2, width: 4, height: 3, pixelSpacing: { x: 2, y: 3 } },
+        coronal: { count: 3, width: 4, height: 2, pixelSpacing: { x: 2, y: 4 } },
+        sagittal: { count: 4, width: 3, height: 2, pixelSpacing: { x: 3, y: 4 } },
+      },
+      minimum: 0,
+      maximum: 1123,
+      storage: { kind: 'identity', bitDepth: 16, scale: 1, offset: 0 },
+      valueConversion: null,
+      windowMin: 0,
+      windowMax: 1123,
+      warnings: [],
+    });
+    expect((await fs.stat(copy)).size).toBe(352 + 48 * 2);
+
+    const slice = await native.extractNiftiSlice(copy, { orientation: 'coronal', slice: 1, volume: 1, storage: info.storage, encodePng: true });
+    expect(slice).toMatchObject({ width: 4, height: 2, bitDepth: 16, pixelSpacing: { x: 2, y: 4 }, valueConversion: null });
+    // Rows from superior: row 0 is k = 1
+    expect([...new Uint16Array(slice.pixels.buffer, slice.pixels.byteOffset, 8)]).toEqual([1110, 1111, 1112, 1113, 1010, 1011, 1012, 1013]);
+    const decoded = PNG.sync.read(slice.png!, { skipRescale: true });
+    expect([decoded.width, decoded.height]).toEqual([4, 2]);
+
+    await expect(native.extractNiftiSlice(copy, { orientation: 'axial', slice: 2, volume: 0, storage: info.storage })).rejects.toMatchObject({
+      code: 'INVALID_ARGUMENT',
+    });
+    await expect(native.inspectNiftiVolume(source, copy, { maxBytes: 95 })).rejects.toMatchObject({ code: 'IMAGE_TOO_LARGE' });
+    expect(() => native.extractNiftiSlice(copy, { orientation: 'oblique' as never, slice: 0, volume: 0, storage: info.storage })).toThrow(/orientation/);
+    expect(await rejectionCode(native.inspectNiftiVolume(await writeFile('not.nii', Buffer.alloc(400)), copy))).toBe('DECODE_FAILED');
   });
 });

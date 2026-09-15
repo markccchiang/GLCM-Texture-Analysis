@@ -52,6 +52,9 @@ C++ libraries
    * - `nlohmann/json <https://github.com/nlohmann/json>`_
      - 3.11 or newer
      - JSON of ROI sets, settings, results and manifests (used only inside ``.cpp`` files)
+   * - `zlib <https://zlib.net/>`_
+     - any recent
+     - Reading ``.nii.gz`` files; PNG chunk checksums
    * - `GoogleTest <https://github.com/google/googletest>`_
      - any recent
      - Unit tests of the core (optional)

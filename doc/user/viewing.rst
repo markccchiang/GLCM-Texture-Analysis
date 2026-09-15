@@ -66,7 +66,8 @@ sizes are also given as **areas in mm²**: in the ROI Manager, the status bar, t
 exported results.
 
 The spacing comes from the image file when it stores a resolution: the ``pHYs`` chunk of PNG files, the JFIF density of
-JPEG files, the pixels per metre of BMP files, or the resolution tags of TIFF files. Resolutions of 72 and 96 dots per
+JPEG files, the pixels per metre of BMP files, the resolution tags of TIFF files, PixelSpacing (or
+ImagerPixelSpacing) of DICOM files, or the voxel size of NIfTI slices. Resolutions of 72 and 96 dots per
 inch on both axes are ignored: image editors write them by default, and they do not describe the object. The medical
 samples store their real spacing, for example 1 × 1.33 mm for the MRI slice.
 

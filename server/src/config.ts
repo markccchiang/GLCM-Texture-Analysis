@@ -10,6 +10,8 @@ export interface ServerConfig {
   dataDir: string;
   maxUploadBytes: number;
   maxImagePixels: number;
+  /** Voxel data of one NIfTI volume, uncompressed (checked from the header) */
+  maxVolumeBytes: number;
   /** Images up to this many pixels are sent to the browser as raw data (GET /raw) */
   rawTransferMaxPixels: number;
   /** Largest long side of display.png */
@@ -58,6 +60,7 @@ export const DEFAULT_CONFIG: Defaults = {
   port: 8080,
   maxUploadBytes: 200 * MIB,
   maxImagePixels: 20_000 * 20_000,
+  maxVolumeBytes: 4096 * MIB,
   rawTransferMaxPixels: 4096 * 4096,
   displayMaxSize: 4096,
   displayCacheBytes: 512 * MIB,
@@ -77,6 +80,7 @@ export const DEFAULT_CONFIG: Defaults = {
 export const SERVER_MODE_DEFAULTS: Partial<Defaults> = {
   maxUploadBytes: 100 * MIB,
   maxImagePixels: 10_000 * 10_000,
+  maxVolumeBytes: 1024 * MIB,
   maxPendingJobs: 20_000,
   maxFeatureMapBands: 1024,
   pixelCacheBytes: 1024 * MIB,
@@ -129,6 +133,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     dataDir: path.resolve(env.GLCM_DATA_DIR || defaultDataDir),
     maxUploadBytes: integerSetting(env, 'GLCM_MAX_UPLOAD_BYTES', defaults.maxUploadBytes, 1),
     maxImagePixels: integerSetting(env, 'GLCM_MAX_IMAGE_PIXELS', defaults.maxImagePixels, 1),
+    maxVolumeBytes: integerSetting(env, 'GLCM_MAX_VOLUME_BYTES', defaults.maxVolumeBytes, 1),
     rawTransferMaxPixels: integerSetting(env, 'GLCM_RAW_TRANSFER_MAX_PIXELS', defaults.rawTransferMaxPixels, 0),
     displayMaxSize: integerSetting(env, 'GLCM_DISPLAY_MAX_SIZE', defaults.displayMaxSize, 1),
     displayCacheBytes: integerSetting(env, 'GLCM_DISPLAY_CACHE_BYTES', defaults.displayCacheBytes, 0),

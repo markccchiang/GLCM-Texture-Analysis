@@ -1,12 +1,15 @@
-// Retention (doc/ui-design-plan.md, section 8.2): uploaded images and results expire after a configurable time.
+// Retention (doc/ui-design-plan.md, section 8.2): uploaded images, volumes and results expire after a configurable time.
 
 import type { FastifyBaseLogger } from 'fastify';
 import type { JobManager } from '../analysis/JobManager.js';
 import type { ImageStore } from './ImageStore.js';
 import type { ResultStore } from './ResultStore.js';
+import type { VolumeStore } from './VolumeStore.js';
 
 export interface RetentionTargets {
   images: ImageStore;
+  /** NIfTI volumes left behind by imports that were never finished or cancelled */
+  volumes?: VolumeStore;
   results: ResultStore;
   jobs: JobManager;
 }
@@ -16,13 +19,18 @@ export interface PurgeSummary {
   analyses: number;
 }
 
-/** Deletes images uploaded and analyses finished more than maxAgeMs before now */
+/** Deletes images and volumes uploaded and analyses finished more than maxAgeMs before now */
 export async function purgeExpired(targets: RetentionTargets, maxAgeMs: number, now = Date.now()): Promise<PurgeSummary> {
   const cutoff = now - maxAgeMs;
   let images = 0;
   for (const info of await targets.images.list()) {
     if (Date.parse(info.createdAt) < cutoff && (await targets.images.remove(info.imageId))) {
       images += 1;
+    }
+  }
+  for (const volume of (await targets.volumes?.list()) ?? []) {
+    if (Date.parse(volume.info.createdAt) < cutoff) {
+      await targets.volumes?.remove(volume.info.volumeId);
     }
   }
   targets.jobs.forgetFinishedBefore(cutoff);

@@ -9,6 +9,7 @@ import { ScaleBar } from './ScaleBar';
 
 const PHASE_LABELS: Record<LoadingState['phase'], string> = {
   downloadingSample: 'Fetching sample',
+  openingSlice: 'Opening slice',
   uploading: 'Uploading',
   downloading: 'Loading pixel data',
 };

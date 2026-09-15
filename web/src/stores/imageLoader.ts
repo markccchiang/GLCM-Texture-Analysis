@@ -1,9 +1,10 @@
 // Opening images: upload, then download the raw samples when the server offers them (doc/ui-design-plan.md, 6.1).
 
-import type { ImageInfo } from '@glcm/api';
+import type { ImageInfo, SliceOrientation, VolumeInfo } from '@glcm/api';
 import { notifications } from '@mantine/notifications';
-import { ApiRequestError, downloadSample, fetchRawImage, uploadImage } from '../api/client';
+import { ApiRequestError, deleteVolume, downloadSample, fetchRawImage, openVolumeSliceImage, uploadImage, uploadVolume } from '../api/client';
 import type { RawImage } from '../image/raw';
+import { isVolumeFile, needsSliceChoice, useVolumeImport } from '../volumes/volumeImport';
 import { useViewer } from './viewerStore';
 
 let currentLoad: AbortController | null = null;
@@ -99,9 +100,43 @@ async function run(name: string, load: (controller: AbortController) => Promise<
   }
 }
 
-/** Uploads and opens a file; resolves to its info, or null if it failed or was cancelled */
+async function sliceAndShow(volume: VolumeInfo, orientation: SliceOrientation, slice: number, volumeIndex: number, controller: AbortController) {
+  if (currentLoad === controller) {
+    useViewer.getState().setLoading({ name: volume.name, phase: 'openingSlice', progress: null });
+  }
+  const info = await openVolumeSliceImage(volume.volumeId, { orientation, slice, volume: volumeIndex }, controller.signal);
+  return showImage(info, controller);
+}
+
+/** Uploads a NIfTI file: a single 2D image opens directly, a volume opens the slice dialog (resolving to null) */
+function uploadVolumeAndChoose(file: File): Promise<ImageInfo | null> {
+  return run(file.name, async (controller) => {
+    const setLoading = progressReporter(controller, file.name);
+    setLoading('uploading', 0);
+    const volume = await uploadVolume(file, (loaded, total) => setLoading('uploading', loaded / total), controller.signal);
+    if (needsSliceChoice(volume)) {
+      useVolumeImport.getState().open(volume);
+      return null;
+    }
+    try {
+      return await sliceAndShow(volume, volume.acquisitionOrientation, 0, 0, controller);
+    } finally {
+      void deleteVolume(volume.volumeId).catch(() => undefined);
+    }
+  });
+}
+
+/** Uploads and opens a file; resolves to its info, or null if it failed, was cancelled or waits for a slice to be chosen */
 export function openImageFile(file: File): Promise<ImageInfo | null> {
+  if (isVolumeFile(file.name)) {
+    return uploadVolumeAndChoose(file);
+  }
   return run(file.name, (controller) => uploadAndShow(file, controller));
+}
+
+/** Opens one slice of an uploaded volume as the image */
+export function openVolumeSlice(volume: VolumeInfo, orientation: SliceOrientation, slice: number, volumeIndex: number): Promise<ImageInfo | null> {
+  return run(volume.name, (controller) => sliceAndShow(volume, orientation, slice, volumeIndex, controller));
 }
 
 /** Opens an image the server already has */

@@ -20,6 +20,7 @@ import { openImageFile } from './stores/imageLoader';
 import { useUi, type FileKind } from './stores/uiStore';
 import { useViewer } from './stores/viewerStore';
 import { CanvasArea } from './viewer/CanvasArea';
+import { VolumeImportDialog } from './volumes/VolumeImportDialog';
 
 const ACCEPTED_TYPES: Record<FileKind, string> = {
   image: IMAGE_FILE_TYPES,
@@ -191,10 +192,11 @@ export function App() {
         }}
       />
       <AppModals />
+      <VolumeImportDialog />
       <TokenPrompt />
       {dragging && (
         <div className="drop-overlay">
-          <div>Drop an image, a project (.glcmproj) or an ROI set (.roi.json)</div>
+          <div>Drop an image (also DICOM or NIfTI), a project (.glcmproj) or an ROI set (.roi.json)</div>
         </div>
       )}
     </div>

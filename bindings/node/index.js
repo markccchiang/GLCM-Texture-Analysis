@@ -8,6 +8,8 @@ export const {
   coreVersion,
   catalog,
   decodeImageFile,
+  inspectNiftiVolume,
+  extractNiftiSlice,
   renderDisplay,
   roiStats,
   validateAnalysis,

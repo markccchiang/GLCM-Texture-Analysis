@@ -45,8 +45,9 @@ Endpoints
    * - Method and path
      - Description
    * - ``POST /images``
-     - Upload one file as ``multipart/form-data``; ``201`` with ``ImageInfo``. ``413`` too large, ``415`` not
-       multipart, ``422`` ``InvalidImage``, ``UnsupportedImage`` or ``ImageTooLarge``
+     - Upload one file as ``multipart/form-data``: PNG, JPEG, BMP, TIFF, uncompressed DICOM or a single-slice NIfTI file;
+       ``201`` with ``ImageInfo``. ``413`` too large, ``415`` not multipart, ``422`` ``InvalidImage``,
+       ``UnsupportedImage`` (for example compressed DICOM, or a NIfTI volume: use ``POST /volumes``) or ``ImageTooLarge``
    * - ``GET /images?sha256=``
      - Stored images, newest first, optionally only those whose uploaded file has this SHA-256
    * - ``GET /images/{id}``, ``DELETE /images/{id}``
@@ -108,6 +109,26 @@ Endpoints
    * - ``GET /analyses/{id}/results.csv``, ``.json``
      - The same results as a downloadable CSV or JSON file written by the core
 
+.. list-table:: Volumes
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Method and path
+     - Description
+   * - ``POST /volumes``
+     - Upload one NIfTI-1/2 file (``.nii`` or ``.nii.gz``) as ``multipart/form-data``; ``201`` with ``VolumeInfo``.
+       The volume is kept (uncompressed) until it is deleted. ``422`` ``InvalidImage`` (not NIfTI), ``UnsupportedImage``
+       (``.hdr``/``.img`` pairs, RGB or complex data, more than 4 dimensions) or ``ImageTooLarge`` (more voxel data than
+       ``GLCM_MAX_VOLUME_BYTES``)
+   * - ``GET /volumes/{id}``, ``DELETE /volumes/{id}``
+     - ``VolumeInfo``; delete the volume (``204``). Images opened from it are kept
+   * - ``GET /volumes/{id}/preview.png?orientation&slice&volume&maxSize``
+     - 8-bit PNG of one slice with the volume's default window; ``400`` for a slice or volume out of range
+   * - ``POST /volumes/{id}/images``
+     - ``{orientation: "axial"|"coronal"|"sagittal", slice, volume?}`` → ``201`` with the ``ImageInfo`` of a new image
+       named ``<file> [<orientation> <slice>]`` (``, volume <n>`` for 4D files), whose original file is a PNG of the
+       slice with its pixel spacing
+
 .. list-table:: Feature maps
    :header-rows: 1
    :widths: 35 65
@@ -147,7 +168,22 @@ Main schemas
 
 **ImageInfo** — ``imageId``, ``name``, ``sizeBytes``, ``width``, ``height``, ``bitDepth`` (8 or 16),
 ``sourceChannels``, ``sha256``, ``transfer`` (``"raw"`` or ``"server"``), ``windowMin``, ``windowMax`` (0.5 and 99.5
-percentiles), ``histogram`` (256 bins), ``pixelSpacing``, ``warnings``, ``createdAt``.
+percentiles, or the first DICOM window), ``histogram`` (256 bins), ``pixelSpacing``, ``valueConversion`` (DICOM and
+NIfTI only), ``warnings``, ``createdAt``.
+
+**Value conversion** — ``{scale, offset, unit, description}``: the file's value (after its rescale slope and intercept)
+is ``stored sample × scale + offset``; ``unit`` is ``HU`` for CT. Values are stored unchanged when they are integers
+within 0–65 535, + 1024 when they are integers with a negative minimum, and mapped linearly from their minimum–maximum
+otherwise; DICOM MONOCHROME1 is inverted (``scale`` −1). ``AnalysisInfo.valueConversion`` and the results document's
+``image.valueConversion`` carry the description, which exports write as ``# valueConversion=…``.
+
+**VolumeInfo** — ``volumeId``, ``name``, ``sizeBytes``, ``niftiVersion``, ``dimensions`` (voxels along i, j, k),
+``volumes``, ``dataType``, ``axisCodes`` (e.g. ``LAS``), ``orientationSource`` (``sform``, ``qform`` or ``none``),
+``acquisitionOrientation``, ``slices`` (``count``, ``width``, ``height`` and ``pixelSpacing`` per orientation),
+``minimum``, ``maximum``, ``bitDepth``, ``valueConversion`` (or ``null``), ``windowMin``, ``windowMax``, ``warnings``,
+``createdAt``. Slices are laid out in RAS orientation: axial columns towards the patient's right and rows from anterior,
+coronal columns towards the right and rows from superior, sagittal columns towards anterior and rows from superior;
+slice 0 is the most inferior, posterior or left one.
 
 **Pixel spacing** — ``{x, y}`` in millimetres per pixel. ``ImageInfo.pixelSpacing`` comes from the file's resolution
 (PNG ``pHYs``, JPEG JFIF, BMP, TIFF; ``null`` without one, or for 72/96 dpi on both axes). An ``AnalysisRequest`` may
@@ -329,7 +365,13 @@ functions throw, with an ``Error`` whose ``code`` is ``INVALID_ARGUMENT``, ``UNS
    * - ``decodeImageFile(path, {maxPixels}?): Promise<DecodedImage>``
      - Size, bit depth, channels, warnings, default window, histogram and pixels of an image file. With ``maxPixels``,
        the size is read from the header first: larger images reject with ``IMAGE_TOO_LARGE`` before decoding, and
-       files that are not PNG, JPEG, BMP or TIFF with ``DECODE_FAILED``
+       files that are not PNG, JPEG, BMP, TIFF, DICOM or NIfTI with ``DECODE_FAILED``. Also ``valueConversion`` (or
+       ``null``); DICOM files give their window as ``windowMin``/``windowMax``
+   * - ``inspectNiftiVolume(path, copyPath, {maxBytes}?): Promise<NativeVolumeInfo>``
+     - Header, RAS axes, slice geometry, value range, ``storage`` (``{kind, bitDepth, scale, offset}``), conversion and
+       window of a NIfTI file, written uncompressed to ``copyPath`` (``glcm::InspectNiftiVolume``)
+   * - ``extractNiftiSlice(path, {orientation, slice, volume, storage, maxPixels?, encodePng?}): Promise<DecodedImage & {png}>``
+     - One slice as a decoded image (``glcm::ExtractNiftiSlice``), optionally also as a PNG with its pixel spacing
    * - ``renderDisplay(pixels, width, height, bitDepth, min, max, maxSize): Promise<Buffer>``
      - PNG with window/level, downscaled to ``maxSize``
    * - ``roiStats(pixels, width, height, bitDepth, roisJson): Promise<NativeRoiStatistics[]>``
@@ -395,7 +437,12 @@ paths are relative to ``core/``. The main entry points:
    * - Header
      - Functions and types
    * - ``imaging/ImageLoader.hpp``
-     - ``LoadImageFile``, ``LoadImageBytes`` → ``LoadedImage{gray, info, warnings}``
+     - ``LoadImageFile``, ``LoadImageBytes`` → ``LoadedImage{gray, info, warnings, window}``
+   * - ``imaging/DicomReader.hpp``, ``imaging/NiftiReader.hpp``
+     - ``LoadDicomFile``, ``LoadDicomBytes``; ``InspectNiftiVolume`` → ``NiftiVolumeInfo``, ``ExtractNiftiSlice``,
+       ``LoadNiftiFile``, ``SliceOrientation``
+   * - ``imaging/ValueConversion.hpp``, ``imaging/PngEncoder.hpp``
+     - ``ChooseStorage``, ``StoredSample``, ``ValueConversion``; ``EncodePng`` (with ``pHYs``)
    * - ``roi/Roi.hpp``
      - ``RectangleRoi``, ``EllipseRoi``, ``PolygonRoi``, ``Roi``; ``RasterizeMask``, ``RasterizeCroppedMask``, ``MaskBoundingBox``,
        ``CountMaskPixels``
@@ -462,8 +509,8 @@ paths are relative to ``core/``. The main entry points:
 
    glcm::AnalysisOutput output = glcm::RunAnalysis(image.gray, {roi}, settings);
    double contrast_0_deg = output.results[0].values.at(glcm::Type::Contrast).H;
-   // Image name, SHA-256, timestamp and pixel spacing (std::nullopt: no areas in mm²)
-   std::string csv = glcm::ResultsToCsv(output.results, settings, {"camera.png", "", "2026-09-14T12:00:00Z", std::nullopt});
+   // Image name, SHA-256, timestamp, pixel spacing (std::nullopt: no areas in mm²) and value conversion (none)
+   std::string csv = glcm::ResultsToCsv(output.results, settings, {"camera.png", "", "2026-09-14T12:00:00Z", std::nullopt, ""});
 
 Functions throw ``std::invalid_argument`` for invalid input (for example invalid settings); ``RunAnalysis`` reports
 problems with a single ROI as a ``Skipped`` or ``Failed`` result instead.

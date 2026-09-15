@@ -131,7 +131,22 @@ Namespace ``glcm``; include paths are relative to ``core/``.
        they add no crossings under the even-odd rule of ``RasterizeMask``. The web app draws polygons with the even-odd
        fill rule for the same reason.
    * - ``imaging/ImageLoader``
-     - Decodes PNG, JPEG, BMP and 8/16-bit TIFF with OpenCV and converts color to grayscale (with a warning).
+     - Decodes PNG, JPEG, BMP and 8/16-bit TIFF with OpenCV and converts color to grayscale (with a warning); DICOM and
+       2D NIfTI files, recognized by their content, go to the readers below.
+   * - ``imaging/DicomReader``
+     - ``LoadDicomFile``: the first frame of an uncompressed DICOM file (implicit or explicit VR little endian; sequences
+       are skipped), with the rescale, MONOCHROME1 inversion, PixelSpacing/ImagerPixelSpacing and the first window.
+       Compressed, deflated and big-endian transfer syntaxes throw ``std::invalid_argument``.
+   * - ``imaging/NiftiReader``
+     - ``InspectNiftiVolume`` reads a NIfTI-1/2 header (through zlib, so ``.nii.gz`` too), finds the RAS direction of
+       each axis from the sform, else the qform, scans all voxels for their minimum and maximum, chooses the storage
+       and writes an uncompressed copy. ``ExtractNiftiSlice`` reads one plane of one volume and lays it out in RAS
+       orientation.
+   * - ``imaging/ValueConversion``
+     - ``ChooseStorage``: identity for integers within 0–65 535, + 1024 for integers with a negative minimum, linear
+       min–max otherwise; ``value = stored × scale + offset``.
+   * - ``imaging/PngEncoder``
+     - ``EncodePng`` with a ``pHYs`` chunk for the pixel spacing: the original file of an image made from a NIfTI slice.
    * - ``imaging/Quantizer``
      - Maps intensities to ``[0, Ng)`` with integer arithmetic: fixed range, ROI min–max, fixed bin width or none.
    * - ``imaging/DisplayRenderer``

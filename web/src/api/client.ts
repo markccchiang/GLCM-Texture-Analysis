@@ -31,6 +31,9 @@ import {
   type ImageInfo,
   type PixelResponse,
   type SamplesResponse,
+  type VolumeInfo,
+  type VolumePreviewQuery,
+  type VolumeSliceRequest,
 } from '@glcm/api';
 import { fileNameFromDisposition } from '../files/download';
 import { decodeRawSamples, rawFormatFromHeaders, type RawImage } from '../image/raw';
@@ -97,10 +100,11 @@ export function getImageInfo(imageId: string, signal?: AbortSignal): Promise<Ima
 }
 
 /** Uploads with XMLHttpRequest, which (unlike fetch) reports upload progress */
-export function uploadImage(file: File, onProgress?: ProgressCallback, signal?: AbortSignal): Promise<ImageInfo> {
+/** Multipart upload with progress (XHR: fetch cannot report upload progress) */
+function uploadFile<T>(url: string, file: File, onProgress?: ProgressCallback, signal?: AbortSignal): Promise<T> {
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
-    request.open('POST', `${API_PREFIX}/images`);
+    request.open('POST', url);
     request.responseType = 'json';
     request.setRequestHeader('accept', 'application/json');
     for (const [name, value] of Object.entries(authHeaders())) {
@@ -113,7 +117,7 @@ export function uploadImage(file: File, onProgress?: ProgressCallback, signal?: 
       }
     };
     request.onload = () => {
-      const body = request.response as (ImageInfo & Partial<ErrorResponse>) | null;
+      const body = request.response as (T & Partial<ErrorResponse>) | null;
       if (request.status === 201 && body) {
         resolve(body);
         return;
@@ -131,6 +135,39 @@ export function uploadImage(file: File, onProgress?: ProgressCallback, signal?: 
     form.append('file', file, file.name);
     request.send(form);
   });
+}
+
+export function uploadImage(file: File, onProgress?: ProgressCallback, signal?: AbortSignal): Promise<ImageInfo> {
+  return uploadFile(`${API_PREFIX}/images`, file, onProgress, signal);
+}
+
+/** Uploads a NIfTI volume (.nii, .nii.gz), kept on the server until deleteVolume */
+export function uploadVolume(file: File, onProgress?: ProgressCallback, signal?: AbortSignal): Promise<VolumeInfo> {
+  return uploadFile(`${API_PREFIX}/volumes`, file, onProgress, signal);
+}
+
+export async function fetchVolumePreview(volumeId: string, query: VolumePreviewQuery, signal?: AbortSignal): Promise<Blob> {
+  const parameters = new URLSearchParams({ orientation: query.orientation, slice: String(query.slice), volume: String(query.volume ?? 0) });
+  if (query.maxSize !== undefined) {
+    parameters.set('maxSize', String(query.maxSize));
+  }
+  const response = await apiFetch(`${API_PREFIX}/volumes/${volumeId}/preview.png?${parameters}`, { signal });
+  if (!response.ok) {
+    throw await errorFromResponse(response);
+  }
+  return response.blob();
+}
+
+/** Stores one slice of a volume as an image */
+export function openVolumeSliceImage(volumeId: string, request: VolumeSliceRequest, signal?: AbortSignal): Promise<ImageInfo> {
+  return sendJson('POST', `${API_PREFIX}/volumes/${volumeId}/images`, request, signal);
+}
+
+export async function deleteVolume(volumeId: string): Promise<void> {
+  const response = await apiFetch(`${API_PREFIX}/volumes/${volumeId}`, { method: 'DELETE' });
+  if (!response.ok && response.status !== 404) {
+    throw await errorFromResponse(response);
+  }
 }
 
 export async function deleteImage(imageId: string): Promise<void> {

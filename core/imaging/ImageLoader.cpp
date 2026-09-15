@@ -6,7 +6,9 @@
 #include <stdexcept>
 #include <utility>
 
+#include "imaging/DicomReader.hpp"
 #include "imaging/ImageHeader.hpp"
+#include "imaging/NiftiReader.hpp"
 
 namespace glcm {
 
@@ -22,7 +24,8 @@ void CheckHeaderSize(const std::optional<ImageSize>& size, int64_t max_pixels) {
     }
     if (!size) {
         // Not recognized as an image whose size can be checked; reported like a file that cannot be decoded
-        throw std::runtime_error("Unknown image format: only PNG, JPEG, BMP and TIFF images can be checked against the pixel limit");
+        throw std::runtime_error(
+            "Unknown image format: only PNG, JPEG, BMP, TIFF, DICOM and NIfTI images can be checked against the pixel limit");
     }
     // width * height > max_pixels, without overflowing for absurd sizes
     if (size->width > max_pixels / size->height) {
@@ -97,6 +100,12 @@ ImageTooLargeError::ImageTooLargeError(int64_t width, int64_t height, int64_t ma
                          std::to_string(max_pixels) + " pixels") {}
 
 LoadedImage LoadImageFile(const std::string& path, int64_t max_pixels) {
+    if (IsDicomFile(path)) {
+        return LoadDicomFile(path, max_pixels);
+    }
+    if (IsNiftiFile(path)) {
+        return LoadNiftiFile(path, max_pixels);
+    }
     std::optional<ImageSize> header;
     if (max_pixels > 0) {
         header = ReadImageSize(path);
@@ -116,6 +125,9 @@ LoadedImage LoadImageFile(const std::string& path, int64_t max_pixels) {
 LoadedImage LoadImageBytes(const std::vector<uchar>& bytes, int64_t max_pixels) {
     if (bytes.empty()) {
         throw std::runtime_error("Cannot decode an empty image buffer");
+    }
+    if (IsDicomBytes(bytes)) {
+        return LoadDicomBytes(bytes, max_pixels);
     }
     std::optional<ImageSize> header;
     if (max_pixels > 0) {

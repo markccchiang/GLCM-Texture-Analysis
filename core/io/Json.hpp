@@ -43,6 +43,8 @@ struct ExportContext {
     std::string timestamp; // ISO 8601, supplied by the caller
     // Millimetres per pixel; when present, exports also give ROI areas in mm²
     std::optional<PixelSpacing> pixel_spacing;
+    // How the stored samples relate to the file's values (DICOM, NIfTI), e.g. "HU = stored value - 1024"; empty for none
+    std::string value_conversion;
 };
 
 // A "glcm-results" document read back by ResultsFromJson

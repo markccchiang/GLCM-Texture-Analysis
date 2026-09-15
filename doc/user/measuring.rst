@@ -106,7 +106,7 @@ Measuring many images
 
 1. Choose where the ROIs come from: the **ROI Manager** (the ROIs of the open image) or an **ROI set file**
    (``.roi.json``, see :doc:`files`).
-2. Choose the **Images** (PNG, JPEG, BMP or TIFF; several at once).
+2. Choose the **Images** (PNG, JPEG, BMP, TIFF, DICOM or 2D NIfTI; several at once).
 3. Click **Measure N images**.
 
 The images are measured one after another. For each image the dialog lists its status (*Uploading*, *Measuring*,

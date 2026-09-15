@@ -143,6 +143,9 @@ std::string ResultsToCsv(const std::vector<MeasurementResult>& results, const An
     if (context.pixel_spacing) {
         out << "# pixelSpacingMm=" << FormatNumber(context.pixel_spacing->x_mm) << ";" << FormatNumber(context.pixel_spacing->y_mm) << "\n";
     }
+    if (!context.value_conversion.empty()) {
+        out << "# valueConversion=" << OneLine(context.value_conversion) << "\n";
+    }
     out << "# grayLevels=" << settings.gray_levels << "\n";
     out << "# quantization=" << QuantizationDescription(settings.quantization) << "\n";
     out << "# distances=" << Join(distances, ";") << "\n";

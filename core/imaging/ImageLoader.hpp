@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include "imaging/ValueConversion.hpp"
+
 namespace glcm {
 
 struct ImageInfo {
@@ -18,7 +20,16 @@ struct ImageInfo {
     int bit_depth = 0;       // 8 or 16
     int source_channels = 0; // channels of the decoded file before grayscale conversion (1 or 3)
     // Millimetres per pixel from the file's resolution (see ImageSize::pixel_spacing), after the EXIF orientation
+    // DICOM: PixelSpacing or ImagerPixelSpacing; NIfTI: the in-plane voxel size
     std::optional<PixelSpacing> pixel_spacing;
+    // DICOM and NIfTI: how the file's values became the stored samples; absent when they are stored unchanged
+    std::optional<ValueConversion> value_conversion;
+};
+
+// A display window of stored samples, min <= max
+struct DisplayWindow {
+    int min = 0;
+    int max = 0;
 };
 
 // A decoded image, ready for analysis: single-channel CV_8UC1 or CV_16UC1
@@ -26,6 +37,8 @@ struct LoadedImage {
     cv::Mat gray;
     ImageInfo info;
     std::vector<std::string> warnings; // e.g. "Color image converted to grayscale"
+    // The window the file asks for (DICOM WindowCenter/WindowWidth, or the percentiles of a whole NIfTI volume)
+    std::optional<DisplayWindow> window;
 };
 
 // Thrown when an image has more pixels than allowed. When the limit is checked from the header (see LoadImageFile), the
@@ -35,7 +48,8 @@ public:
     ImageTooLargeError(int64_t width, int64_t height, int64_t max_pixels);
 };
 
-// Reads an image file (PNG, JPEG, BMP, 8/16-bit TIFF, ...). The bit depth is kept, color images are converted to
+// Reads an image file (PNG, JPEG, BMP, 8/16-bit TIFF, ...; uncompressed DICOM with imaging/DicomReader.hpp and 2D NIfTI
+// with imaging/NiftiReader.hpp, recognized by their content). The bit depth is kept, color images are converted to
 // grayscale, an alpha channel is ignored and the EXIF orientation is applied.
 // Throws std::runtime_error if the file cannot be read or decoded, and std::invalid_argument for bit depths other than
 // 8 and 16.

@@ -78,6 +78,10 @@ describe('system routes', () => {
       '/api/v1/images/{id}/wand-roi',
       '/api/v1/samples',
       '/api/v1/samples/file',
+      '/api/v1/volumes',
+      '/api/v1/volumes/{id}',
+      '/api/v1/volumes/{id}/images',
+      '/api/v1/volumes/{id}/preview.png',
     ]);
     expect(Object.keys(spec.paths['/api/v1/images/{id}']).sort()).toEqual(['delete', 'get']);
   });

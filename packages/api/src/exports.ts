@@ -30,6 +30,7 @@ export const ResultsDocument = Type.Object(
       name: Type.String(),
       sha256: Type.String(),
       pixelSpacing: Type.Optional(Type.Unsafe<PixelSpacing>({ ...PixelSpacing, description: 'Adds ROI areas in mm² to the export' })),
+      valueConversion: Type.Optional(Type.String({ description: 'How the stored samples relate to the values of a DICOM or NIfTI file' })),
     }),
     settings: AnalysisSettings,
     results: Type.Array(MeasurementResult),

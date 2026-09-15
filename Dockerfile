@@ -12,7 +12,7 @@
 FROM node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0 AS build
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends cmake g++ make libopencv-dev libeigen3-dev nlohmann-json3-dev \
+    && apt-get install -y --no-install-recommends cmake g++ make libopencv-dev libeigen3-dev nlohmann-json3-dev zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

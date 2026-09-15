@@ -12,6 +12,7 @@ import path from 'node:path';
 import { chromium, expect, type Browser, type Locator, type Page } from '@playwright/test';
 import { chooseMenuItem, clickAt, drag, toPage, waitForImage } from '../e2e/helpers.js';
 import { E2E_API_TOKEN } from '../e2e/token.js';
+import { encodeNifti } from '../bindings/node/test/medical.js';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const OUTPUT = path.join(ROOT, 'doc', 'user', 'images');
@@ -150,6 +151,39 @@ async function removeCallouts(page: Page): Promise<void> {
 /** Toasts would cover parts of the screenshots */
 async function hideNotifications(page: Page): Promise<void> {
   await page.addStyleTag({ content: '.mantine-Notifications-root { display: none !important; }' });
+}
+
+/** 128 × 128 × 96 int16 voxels of 1.5 mm: a skull, brain with ventricles and a textured lesion, in RAS order */
+function headPhantom(): Buffer {
+  const [nx, ny, nz] = [128, 128, 96];
+  const data = new Array<number>(nx * ny * nz);
+  let seed = 7;
+  const random = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+  for (let k = 0; k < nz; k += 1) {
+    for (let j = 0; j < ny; j += 1) {
+      for (let i = 0; i < nx; i += 1) {
+        const x = (i - nx / 2) / 52;
+        const y = (j - ny / 2 - 4) / 62;
+        const z = (k - nz / 2) / 44;
+        const r = Math.hypot(x, y, z);
+        let value = 0;
+        if (r < 1) {
+          value = r > 0.9 ? 1400 : 700 + 120 * Math.sin(i / 3) * Math.cos(j / 4) * Math.sin(k / 5);
+          if (Math.hypot(x / 0.18, (y - 0.05) / 0.35, z / 0.3) < 1 && Math.abs(x) > 0.04) {
+            value = 250;
+          }
+          if (Math.hypot(x - 0.35, y + 0.3, z - 0.1) < 0.18) {
+            value = 1000 + 250 * random();
+          }
+        }
+        data[i + nx * (j + ny * k)] = Math.round(value + (value > 0 ? 30 * random() : 0));
+      }
+    }
+  }
+  return encodeNifti({ dimensions: [nx, ny, nz], dataType: 'int16', data, voxelSize: [1.5, 1.5, 1.5], gzip: true });
 }
 
 async function main(): Promise<void> {
@@ -355,6 +389,14 @@ async function main(): Promise<void> {
     await dialogShot(page, 'preferences', page.getByRole('dialog', { name: 'Preferences' }));
     await page.keyboard.press('Escape');
     await page.getByRole('dialog').waitFor({ state: 'hidden' });
+
+    // Slice dialog of a NIfTI volume: a synthetic head phantom
+    await page.getByTestId('file-input').setInputFiles({ name: 'phantom.nii.gz', mimeType: 'application/gzip', buffer: headPhantom() });
+    const sliceDialog = page.getByRole('dialog', { name: 'Open Slice of phantom.nii.gz' });
+    await sliceDialog.getByTestId('volume-preview').and(page.locator('[data-shows="axial:47:0"]')).waitFor();
+    await dialogShot(page, 'volume-import', sliceDialog);
+    await sliceDialog.getByRole('button', { name: 'Cancel' }).click();
+    await sliceDialog.waitFor({ state: 'hidden' });
 
     // Edge map over the image, with its card
     await page.mouse.move(5, VIEWPORT.height - 5);

@@ -48,8 +48,8 @@ There are three ways to open an image:
 - **Open sample image** opens ``textures/camera.png``, the cameraman photograph; **More sample images…** (or *File ▸ Open Sample Image…*) lists synthetic
   test patterns, natural textures and medical images (chest and abdominal CT slices, a brain MRI slice, a chest X-ray and a mammogram, all 16-bit).
 
-Supported files are PNG, JPEG, BMP and TIFF with 8 or 16 bits per pixel. The image is uploaded to the server, which
-decodes it:
+Supported files are PNG, JPEG, BMP and TIFF with 8 or 16 bits per pixel, uncompressed DICOM images and NIfTI files
+(see :ref:`medical-files`). The image is uploaded to the server, which decodes it:
 
 - **Color images** are converted to grayscale, and a notification says so.
 - **Multi-page TIFF files** open with their first page only, and a notification says so.
@@ -59,8 +59,57 @@ decodes it:
   10 000 × 10 000 pixels on a shared server). Larger files are rejected with a message.
 
 Opening another image replaces the current one, together with its ROIs; the results table keeps its rows. *File ▸
-Close Image* closes the image. *Image ▸ Image Info* shows the file name, size, bit depth, channels, default display
-window and SHA-256 checksum of the open image.
+Close Image* closes the image. *Image ▸ Image Info* shows the file name, size, bit depth, channels, the value
+conversion of DICOM and NIfTI files, default display window and SHA-256 checksum of the open image.
+
+.. _medical-files:
+
+DICOM and NIfTI files
+~~~~~~~~~~~~~~~~~~~~~
+
+**DICOM** files (``.dcm``, or any name) open like other images when they are uncompressed (implicit or explicit VR
+little endian). Compressed DICOM files (JPEG, JPEG-LS, JPEG 2000 or RLE) are refused with a message; convert them first,
+for example with ``dcmdjpeg`` or ``gdcmconv --raw``. A file with several frames opens with its first frame.
+
+**NIfTI** files (``.nii`` or ``.nii.gz``, NIfTI-1 or NIfTI-2) hold volumes. When a 3D or 4D file opens, a dialog asks
+which slice to open:
+
+.. figure:: images/volume-import.png
+   :alt: The Open Slice dialog with the orientation buttons, a preview of an axial slice and the slice slider.
+   :width: 60%
+
+   Choosing a slice of a NIfTI volume.
+
+- **Orientation**: *Axial*, *Coronal* or *Sagittal*. Slices are shown in RAS orientation, whatever the order of the
+  axes in the file: axial slices with the patient's right on the right and anterior at the top; coronal slices with
+  superior at the top; sagittal slices with anterior on the right. The letters on the edges of the preview give the
+  directions. The dialog starts in the plane of the file's first two axes, at the middle slice.
+- **Slice** (0 is the most inferior, posterior or left slice) and, for 4D files, **Volume** (for example a time point).
+  The arrow keys move the focused slider one step.
+- **Open Slice** opens the slice as a normal 2D image named like ``brain.nii.gz [axial 120]`` (with ``, volume 3``
+  for 4D files). Its pixel spacing is the in-plane voxel size. Open the file again to choose another slice.
+
+A NIfTI file with a single slice opens directly.
+
+**Values.** Measurements use 8- or 16-bit samples, so the values of DICOM and NIfTI files are converted, and the
+conversion is shown in *Image Info* and written into exported results (``valueConversion``):
+
+- The rescale is applied first: RescaleSlope and RescaleIntercept (DICOM), or ``scl_slope`` and ``scl_inter`` (NIfTI).
+- Integer values between 0 and 65 535 are stored unchanged.
+- Integer values with a negative minimum are stored + 1024. For CT this is HU + 1024, as in the CT samples: air
+  (−1000 HU) is stored as 24 and water as 1024. In CT files, lower values (outside the scan field) are stored as 0,
+  and a notification says so. For NIfTI files, whose modality is not known, this applies when the minimum is at
+  least −1024.
+- Other values (for example floating-point data) are mapped linearly from their minimum–maximum to 0–65 535; for
+  NIfTI files the minimum and maximum of the whole file, so all slices are stored alike.
+- DICOM **MONOCHROME1** images, where low values are bright, are inverted so that bright means dense.
+
+For example, *Rescale slope 1, intercept -1024; values stored + 1024; HU = stored value - 1024*. Texture features
+are computed from the stored samples.
+
+**Metadata.** DICOM PixelSpacing (or ImagerPixelSpacing, the spacing at the detector) gives the pixel spacing, and
+the first WindowCenter/WindowWidth the initial display window. NIfTI slices open with the window of the whole file
+(its 0.5th and 99.5th percentiles). By default a volume can have up to 4 GB of voxel data (1 GB on a shared server).
 
 .. _main-window:
 

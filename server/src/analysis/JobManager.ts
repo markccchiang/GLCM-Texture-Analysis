@@ -149,6 +149,7 @@ export class JobManager {
         settings: request.settings,
         // Image infos saved before pixel spacing existed have no field
         pixelSpacing: request.pixelSpacing === undefined ? (image.pixelSpacing ?? null) : request.pixelSpacing,
+        ...(image.valueConversion ? { valueConversion: image.valueConversion.description } : {}),
       },
       results: new Array<MeasurementResult | undefined>(jobs.length),
       events,
@@ -199,6 +200,7 @@ export class JobManager {
         name: state.info.imageName,
         sha256: state.info.imageSha256,
         ...(state.info.pixelSpacing ? { pixelSpacing: state.info.pixelSpacing } : {}),
+        ...(state.info.valueConversion ? { valueConversion: state.info.valueConversion } : {}),
       },
       settings: state.info.settings,
       results: state.results.filter((result): result is MeasurementResult => result !== undefined),

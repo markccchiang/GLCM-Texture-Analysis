@@ -117,6 +117,17 @@ export const PixelSpacing = Type.Object(
 );
 export type PixelSpacing = Static<typeof PixelSpacing>;
 
+export const ValueConversion = Type.Object(
+  {
+    scale: Type.Number(),
+    offset: Type.Number(),
+    unit: Type.String({ description: 'HU for CT; empty when the file does not say' }),
+    description: Type.String({ description: 'e.g. "Rescale slope 1, intercept -1024; values stored + 1024; HU = stored value - 1024"' }),
+  },
+  { description: "DICOM and NIfTI: how the file's values became the stored samples; value = stored sample × scale + offset" },
+);
+export type ValueConversion = Static<typeof ValueConversion>;
+
 export const ImageInfo = Type.Object({
   imageId: Type.String({ pattern: IMAGE_ID_PATTERN }),
   name: Type.String({ description: 'File name of the upload' }),
@@ -126,13 +137,15 @@ export const ImageInfo = Type.Object({
   bitDepth: Type.Union([Type.Literal(8), Type.Literal(16)]),
   sourceChannels: Type.Integer({ description: 'Channels before grayscale conversion (1 or 3)' }),
   pixelSpacing: Type.Union([PixelSpacing, Type.Null()], {
-    description: "From the file's resolution metadata (PNG pHYs, JPEG JFIF, BMP, TIFF); null when the file has none, or only the 72/96 dpi default of image editors",
+    description:
+      "From the file's metadata (PNG pHYs, JPEG JFIF, BMP, TIFF resolution, DICOM PixelSpacing or ImagerPixelSpacing, NIfTI voxel size); null when the file has none, or only the 72/96 dpi default of image editors",
   }),
+  valueConversion: Type.Optional(Type.Unsafe<ValueConversion>({ ...ValueConversion, description: 'Absent when the stored samples are the file\'s values' })),
   sha256: Type.String({ description: 'SHA-256 of the uploaded file (hex)' }),
   transfer: Type.Union([Type.Literal('raw'), Type.Literal('server')], {
     description: '"raw": GET /raw is available and the browser renders the image; "server": use display.png and /pixel',
   }),
-  windowMin: Type.Integer({ description: 'Default display window: 0.5th percentile' }),
+  windowMin: Type.Integer({ description: "Default display window: 0.5th percentile, or the DICOM file's WindowCenter/WindowWidth" }),
   windowMax: Type.Integer({ description: 'Default display window: 99.5th percentile' }),
   histogram: Type.Array(Type.Integer(), { minItems: 256, maxItems: 256, description: '256 equal bins over 0-255 or 0-65535' }),
   warnings: Type.Array(Type.String()),

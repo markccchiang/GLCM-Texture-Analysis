@@ -7,6 +7,7 @@ import { windowLevel, type ImageInfo } from '@glcm/api';
 import { PNG } from 'pngjs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ImageStore, newImageId } from '../src/storage/ImageStore.js';
+import { encodeDicom, encodeNifti, rampVolume } from '../../bindings/node/test/medical.js';
 import { createTestApp, encodeTiff, sixteenBitPattern, uploadImage, type TestApp } from './helpers.js';
 
 const WIDTH = 50;
@@ -26,6 +27,52 @@ describe('POST /images', () => {
 
   afterEach(async () => {
     await t.close();
+  });
+
+  it('stores a DICOM image with its value conversion, pixel spacing and window', async () => {
+    const file = encodeDicom({
+      rows: 2,
+      columns: 3,
+      bitsAllocated: 16,
+      data: [0, 100, 200, 300, 400, 4095],
+      modality: 'CT',
+      rescaleSlope: 1,
+      rescaleIntercept: -1024,
+      pixelSpacing: [0.5, 0.25],
+      windowCenter: -600,
+      windowWidth: 1500,
+    });
+    const response = await uploadImage(t.app, 'slice.dcm', file);
+    expect(response.statusCode).toBe(201);
+    const info = response.json<ImageInfo>();
+    expect(info).toMatchObject({
+      name: 'slice.dcm',
+      width: 3,
+      height: 2,
+      bitDepth: 16,
+      pixelSpacing: { x: 0.25, y: 0.5 },
+      valueConversion: { scale: 1, offset: -1024, unit: 'HU', description: 'Rescale slope 1, intercept -1024; values stored + 1024; HU = stored value - 1024' },
+      // Center -600, width 1500: -1350 to 149 HU
+      windowMin: 0,
+      windowMax: 1173,
+      warnings: [],
+    });
+    expect((await t.app.inject({ method: 'GET', url: `/api/v1/images/${info.imageId}` })).json()).toEqual(info);
+  });
+
+  it('refuses NIfTI volumes, which need a slice to be chosen', async () => {
+    const volume = encodeNifti({ dimensions: [4, 3, 2], dataType: 'int16', data: rampVolume(4, 3, 2) });
+    const response = await uploadImage(t.app, 'ramp.nii', volume);
+    expect(response.statusCode).toBe(422);
+    expect(response.json()).toEqual({
+      error: 'UnsupportedImage',
+      message: 'The NIfTI file holds a 4 × 3 × 2 volume; open it in Texture Workbench to choose a slice',
+    });
+
+    const flat = encodeNifti({ dimensions: [4, 3, 1], dataType: 'uint8', data: rampVolume(4, 3, 1).map((v) => v % 256), voxelSize: [0.5, 0.5, 1] });
+    const image = (await uploadImage(t.app, 'flat.nii', flat)).json<ImageInfo>();
+    expect(image).toMatchObject({ width: 4, height: 3, bitDepth: 8, pixelSpacing: { x: 0.5, y: 0.5 } });
+    expect(image).not.toHaveProperty('valueConversion');
   });
 
   it('stores a 16-bit TIFF and returns its info', async () => {

@@ -320,7 +320,12 @@ export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = 
         const { timestamp, image, settings, results: measurements } = jobs.results(await requireAnalysis(request.params.id));
         const document = {
           timestamp,
-          image: { name: image.name, sha256: image.sha256, ...(image.pixelSpacing ? { pixelSpacing: image.pixelSpacing } : {}) },
+          image: {
+            name: image.name,
+            sha256: image.sha256,
+            ...(image.pixelSpacing ? { pixelSpacing: image.pixelSpacing } : {}),
+            ...(image.valueConversion ? { valueConversion: image.valueConversion } : {}),
+          },
           settings,
           results: measurements,
         };

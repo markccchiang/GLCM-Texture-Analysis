@@ -23,6 +23,8 @@
 #include "imaging/DisplayRenderer.hpp"
 #include "imaging/EdgeDetection.hpp"
 #include "imaging/ImageLoader.hpp"
+#include "imaging/NiftiReader.hpp"
+#include "imaging/PngEncoder.hpp"
 #include "io/Identifiers.hpp"
 #include "io/Json.hpp"
 #include "io/ResultsCsv.hpp"
@@ -232,6 +234,68 @@ private:
     int _bit_depth;
 };
 
+Napi::Value ValueConversionValue(Napi::Env env, const std::optional<glcm::ValueConversion>& conversion) {
+    if (!conversion) {
+        return env.Null();
+    }
+    Napi::Object object = Napi::Object::New(env);
+    object.Set("scale", Napi::Number::New(env, conversion->scale));
+    object.Set("offset", Napi::Number::New(env, conversion->offset));
+    object.Set("unit", Napi::String::New(env, conversion->unit));
+    object.Set("description", Napi::String::New(env, conversion->description));
+    return object;
+}
+
+Napi::Value PixelSpacingValue(Napi::Env env, const std::optional<glcm::PixelSpacing>& spacing) {
+    if (!spacing) {
+        return env.Null();
+    }
+    Napi::Object object = Napi::Object::New(env);
+    object.Set("x", Napi::Number::New(env, spacing->x_mm));
+    object.Set("y", Napi::Number::New(env, spacing->y_mm));
+    return object;
+}
+
+// A decoded image for JavaScript (DecodedImage in index.d.ts)
+struct DecodedResult {
+    glcm::ImageInfo info;
+    std::vector<std::string> warnings;
+    glcm::DisplayStatistics statistics;
+    std::vector<uint8_t> pixels;
+
+    void Take(const glcm::LoadedImage& image) {
+        info = image.info;
+        warnings = image.warnings;
+        statistics = glcm::ComputeDisplayStatistics(image.gray);
+        if (image.window) {
+            statistics.window_min = image.window->min;
+            statistics.window_max = image.window->max;
+        }
+        pixels = ToLittleEndianBytes(image.gray);
+    }
+
+    Napi::Object ToObject(Napi::Env env) const {
+        Napi::Object result = Napi::Object::New(env);
+        result.Set("width", Napi::Number::New(env, info.width));
+        result.Set("height", Napi::Number::New(env, info.height));
+        result.Set("bitDepth", Napi::Number::New(env, info.bit_depth));
+        result.Set("sourceChannels", Napi::Number::New(env, info.source_channels));
+        result.Set("pixelSpacing", PixelSpacingValue(env, info.pixel_spacing));
+        result.Set("valueConversion", ValueConversionValue(env, info.value_conversion));
+        result.Set("warnings", StringArray(env, warnings));
+        result.Set("windowMin", Napi::Number::New(env, statistics.window_min));
+        result.Set("windowMax", Napi::Number::New(env, statistics.window_max));
+
+        Napi::Array histogram = Napi::Array::New(env, statistics.histogram.size());
+        for (size_t i = 0; i < statistics.histogram.size(); ++i) {
+            histogram.Set(static_cast<uint32_t>(i), Napi::Number::New(env, static_cast<double>(statistics.histogram[i])));
+        }
+        result.Set("histogram", histogram);
+        result.Set("pixels", Napi::Buffer<uint8_t>::Copy(env, pixels.data(), pixels.size()));
+        return result;
+    }
+};
+
 class DecodeImageWorker : public PromiseWorker {
 public:
     DecodeImageWorker(Napi::Env env, std::string path, int64_t max_pixels)
@@ -239,12 +303,47 @@ public:
 
     void Execute() override {
         try {
-            glcm::LoadedImage image = glcm::LoadImageFile(_path, _max_pixels);
-            _info = image.info;
-            _warnings = image.warnings;
-            _statistics = glcm::ComputeDisplayStatistics(image.gray);
-            _pixels = ToLittleEndianBytes(image.gray);
+            _result.Take(glcm::LoadImageFile(_path, _max_pixels));
         } catch (const glcm::ImageTooLargeError& error) {
+            Fail(CODE_IMAGE_TOO_LARGE, error.what());
+        } catch (const std::invalid_argument& error) {
+            Fail(CODE_UNSUPPORTED_IMAGE, error.what());
+        } catch (const std::exception& error) {
+            Fail(CODE_DECODE_FAILED, error.what());
+        }
+    }
+
+    void OnOK() override {
+        Resolve(_result.ToObject(Env()));
+    }
+
+private:
+    std::string _path;
+    int64_t _max_pixels;
+    DecodedResult _result;
+};
+
+const char* StorageKindId(glcm::StorageKind kind) {
+    switch (kind) {
+        case glcm::StorageKind::Identity:
+            return "identity";
+        case glcm::StorageKind::Offset:
+            return "offset";
+        case glcm::StorageKind::Linear:
+            return "linear";
+    }
+    return "identity";
+}
+
+class InspectNiftiVolumeWorker : public PromiseWorker {
+public:
+    InspectNiftiVolumeWorker(Napi::Env env, std::string path, std::string copy_path, uint64_t max_bytes)
+        : PromiseWorker(env), _path(std::move(path)), _copy_path(std::move(copy_path)), _max_bytes(max_bytes) {}
+
+    void Execute() override {
+        try {
+            _info = glcm::InspectNiftiVolume(_path, _copy_path, _max_bytes);
+        } catch (const glcm::VolumeTooLargeError& error) {
             Fail(CODE_IMAGE_TOO_LARGE, error.what());
         } catch (const std::invalid_argument& error) {
             Fail(CODE_UNSUPPORTED_IMAGE, error.what());
@@ -256,38 +355,93 @@ public:
     void OnOK() override {
         Napi::Env env = Env();
         Napi::Object result = Napi::Object::New(env);
-        result.Set("width", Napi::Number::New(env, _info.width));
-        result.Set("height", Napi::Number::New(env, _info.height));
-        result.Set("bitDepth", Napi::Number::New(env, _info.bit_depth));
-        result.Set("sourceChannels", Napi::Number::New(env, _info.source_channels));
-        if (_info.pixel_spacing) {
-            Napi::Object spacing = Napi::Object::New(env);
-            spacing.Set("x", Napi::Number::New(env, _info.pixel_spacing->x_mm));
-            spacing.Set("y", Napi::Number::New(env, _info.pixel_spacing->y_mm));
-            result.Set("pixelSpacing", spacing);
-        } else {
-            result.Set("pixelSpacing", env.Null());
+        result.Set("version", Napi::Number::New(env, _info.version));
+        Napi::Array dimensions = Napi::Array::New(env, 3);
+        for (uint32_t axis = 0; axis < 3; ++axis) {
+            dimensions.Set(axis, Napi::Number::New(env, static_cast<double>(_info.dimensions[axis])));
         }
-        result.Set("warnings", StringArray(env, _warnings));
-        result.Set("windowMin", Napi::Number::New(env, _statistics.window_min));
-        result.Set("windowMax", Napi::Number::New(env, _statistics.window_max));
-
-        Napi::Array histogram = Napi::Array::New(env, _statistics.histogram.size());
-        for (size_t i = 0; i < _statistics.histogram.size(); ++i) {
-            histogram.Set(static_cast<uint32_t>(i), Napi::Number::New(env, static_cast<double>(_statistics.histogram[i])));
+        result.Set("dimensions", dimensions);
+        result.Set("volumes", Napi::Number::New(env, static_cast<double>(_info.volumes)));
+        result.Set("dataType", Napi::String::New(env, _info.data_type));
+        result.Set("orientationSource", Napi::String::New(env, _info.orientation_source));
+        result.Set("axisCodes", Napi::String::New(env, _info.axis_codes));
+        result.Set("acquisitionOrientation", Napi::String::New(env, glcm::SliceOrientationId(_info.acquisition_orientation)));
+        Napi::Object slices = Napi::Object::New(env);
+        for (int orientation = 0; orientation < 3; ++orientation) {
+            const glcm::SliceGeometry& geometry = _info.slices[orientation];
+            Napi::Object slice = Napi::Object::New(env);
+            slice.Set("count", Napi::Number::New(env, static_cast<double>(geometry.count)));
+            slice.Set("width", Napi::Number::New(env, static_cast<double>(geometry.width)));
+            slice.Set("height", Napi::Number::New(env, static_cast<double>(geometry.height)));
+            slice.Set("pixelSpacing", PixelSpacingValue(env, geometry.pixel_spacing));
+            slices.Set(glcm::SliceOrientationId(static_cast<glcm::SliceOrientation>(orientation)), slice);
         }
-        result.Set("histogram", histogram);
-        result.Set("pixels", Napi::Buffer<uint8_t>::Copy(env, _pixels.data(), _pixels.size()));
+        result.Set("slices", slices);
+        result.Set("minimum", Napi::Number::New(env, _info.minimum));
+        result.Set("maximum", Napi::Number::New(env, _info.maximum));
+        Napi::Object storage = Napi::Object::New(env);
+        storage.Set("kind", Napi::String::New(env, StorageKindId(_info.storage.kind)));
+        storage.Set("bitDepth", Napi::Number::New(env, _info.storage.bit_depth));
+        storage.Set("scale", Napi::Number::New(env, _info.storage.scale));
+        storage.Set("offset", Napi::Number::New(env, _info.storage.offset));
+        result.Set("storage", storage);
+        result.Set("valueConversion", ValueConversionValue(env, _info.value_conversion));
+        result.Set("windowMin", Napi::Number::New(env, _info.window.min));
+        result.Set("windowMax", Napi::Number::New(env, _info.window.max));
+        result.Set("warnings", StringArray(env, _info.warnings));
         Resolve(result);
     }
 
 private:
     std::string _path;
-    int64_t _max_pixels;
-    glcm::ImageInfo _info;
-    std::vector<std::string> _warnings;
-    glcm::DisplayStatistics _statistics;
-    std::vector<uint8_t> _pixels;
+    std::string _copy_path;
+    uint64_t _max_bytes;
+    glcm::NiftiVolumeInfo _info;
+};
+
+struct SliceRequest {
+    glcm::SliceOrientation orientation = glcm::SliceOrientation::Axial;
+    int64_t slice = 0;
+    int64_t volume = 0;
+    glcm::StorageChoice storage;
+    int64_t max_pixels = 0;
+    bool encode_png = false;
+};
+
+class ExtractNiftiSliceWorker : public PromiseWorker {
+public:
+    ExtractNiftiSliceWorker(Napi::Env env, std::string path, SliceRequest request)
+        : PromiseWorker(env), _path(std::move(path)), _request(request) {}
+
+    void Execute() override {
+        try {
+            const glcm::LoadedImage image = glcm::ExtractNiftiSlice(
+                _path, _request.orientation, _request.slice, _request.volume, _request.storage, _request.max_pixels);
+            _result.Take(image);
+            if (_request.encode_png) {
+                _png = glcm::EncodePng(image.gray, image.info.pixel_spacing);
+            }
+        } catch (const glcm::ImageTooLargeError& error) {
+            Fail(CODE_IMAGE_TOO_LARGE, error.what());
+        } catch (const std::invalid_argument& error) {
+            Fail(CODE_INVALID_ARGUMENT, error.what());
+        } catch (const std::exception& error) {
+            Fail(CODE_DECODE_FAILED, error.what());
+        }
+    }
+
+    void OnOK() override {
+        Napi::Env env = Env();
+        Napi::Object result = _result.ToObject(env);
+        result.Set("png", _request.encode_png ? Napi::Buffer<uint8_t>::Copy(env, _png.data(), _png.size()).As<Napi::Value>() : env.Null());
+        Resolve(result);
+    }
+
+private:
+    std::string _path;
+    SliceRequest _request;
+    DecodedResult _result;
+    std::vector<uchar> _png;
 };
 
 class RenderDisplayWorker : public PixelWorker {
@@ -579,6 +733,101 @@ int64_t MaxPixelsOption(const Napi::CallbackInfo& info, size_t index) {
 // decodeImageFile(path: string, options?: {maxPixels?: number}): Promise<DecodedImage>
 Napi::Value DecodeImageFile(const Napi::CallbackInfo& info) {
     auto* worker = new DecodeImageWorker(info.Env(), StringArgument(info, 0, "path"), MaxPixelsOption(info, 1));
+    const Napi::Promise promise = worker->Promise();
+    worker->Queue();
+    return promise;
+}
+
+double OptionalNumberField(const Napi::Env& env, const Napi::Object& object, const char* name, double fallback) {
+    const Napi::Value value = object.Get(name);
+    if (value.IsUndefined()) {
+        return fallback;
+    }
+    if (!value.IsNumber() || !std::isfinite(value.As<Napi::Number>().DoubleValue())) {
+        throw Napi::TypeError::New(env, std::string(name) + " must be a finite number");
+    }
+    return value.As<Napi::Number>().DoubleValue();
+}
+
+int64_t IntegerField(const Napi::Env& env, const Napi::Object& object, const char* name) {
+    const double value = OptionalNumberField(env, object, name, std::nan(""));
+    if (!std::isfinite(value) || std::floor(value) != value || value < 0 || value > 9007199254740991.0) {
+        throw Napi::TypeError::New(env, std::string(name) + " must be a non-negative integer");
+    }
+    return static_cast<int64_t>(value);
+}
+
+// inspectNiftiVolume(path, copyPath, options?: {maxBytes?}): Promise<NativeVolumeInfo>
+Napi::Value InspectNiftiVolume(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    uint64_t max_bytes = 0;
+    if (info.Length() > 2 && !info[2].IsUndefined()) {
+        if (!info[2].IsObject()) {
+            throw Napi::TypeError::New(env, "options must be an object");
+        }
+        if (!info[2].As<Napi::Object>().Get("maxBytes").IsUndefined()) {
+            max_bytes = static_cast<uint64_t>(IntegerField(env, info[2].As<Napi::Object>(), "maxBytes"));
+        }
+    }
+    auto* worker = new InspectNiftiVolumeWorker(env, StringArgument(info, 0, "path"), StringArgument(info, 1, "copyPath"), max_bytes);
+    const Napi::Promise promise = worker->Promise();
+    worker->Queue();
+    return promise;
+}
+
+// extractNiftiSlice(path, {orientation, slice, volume, storage, maxPixels?, encodePng?}): Promise<DecodedImage & {png}>
+Napi::Value ExtractNiftiSlice(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    const std::string path = StringArgument(info, 0, "path");
+    if (info.Length() <= 1 || !info[1].IsObject()) {
+        throw Napi::TypeError::New(env, "request must be an object");
+    }
+    const Napi::Object object = info[1].As<Napi::Object>();
+    SliceRequest request;
+    const Napi::Value orientation = object.Get("orientation");
+    const std::string orientation_id = orientation.IsString() ? orientation.As<Napi::String>().Utf8Value() : "";
+    if (orientation_id == "axial") {
+        request.orientation = glcm::SliceOrientation::Axial;
+    } else if (orientation_id == "coronal") {
+        request.orientation = glcm::SliceOrientation::Coronal;
+    } else if (orientation_id == "sagittal") {
+        request.orientation = glcm::SliceOrientation::Sagittal;
+    } else {
+        throw Napi::TypeError::New(env, "orientation must be axial, coronal or sagittal");
+    }
+    request.slice = IntegerField(env, object, "slice");
+    request.volume = IntegerField(env, object, "volume");
+    if (!object.Get("storage").IsObject()) {
+        throw Napi::TypeError::New(env, "storage must be an object");
+    }
+    const Napi::Object storage = object.Get("storage").As<Napi::Object>();
+    const Napi::Value kind = storage.Get("kind");
+    const std::string kind_id = kind.IsString() ? kind.As<Napi::String>().Utf8Value() : "";
+    if (kind_id == "identity") {
+        request.storage.kind = glcm::StorageKind::Identity;
+    } else if (kind_id == "offset") {
+        request.storage.kind = glcm::StorageKind::Offset;
+    } else if (kind_id == "linear") {
+        request.storage.kind = glcm::StorageKind::Linear;
+    } else {
+        throw Napi::TypeError::New(env, "storage.kind must be identity, offset or linear");
+    }
+    request.storage.bit_depth = static_cast<int>(IntegerField(env, storage, "bitDepth"));
+    if (request.storage.bit_depth != 8 && request.storage.bit_depth != 16) {
+        throw Napi::TypeError::New(env, "storage.bitDepth must be 8 or 16");
+    }
+    request.storage.scale = OptionalNumberField(env, storage, "scale", 1);
+    request.storage.offset = OptionalNumberField(env, storage, "offset", 0);
+    if (request.storage.scale == 0) {
+        throw Napi::TypeError::New(env, "storage.scale must not be 0");
+    }
+    if (!object.Get("maxPixels").IsUndefined()) {
+        request.max_pixels = IntegerField(env, object, "maxPixels");
+    }
+    const Napi::Value encode = object.Get("encodePng");
+    request.encode_png = encode.IsBoolean() && encode.As<Napi::Boolean>().Value();
+
+    auto* worker = new ExtractNiftiSliceWorker(env, path, request);
     const Napi::Promise promise = worker->Promise();
     worker->Queue();
     return promise;
@@ -1185,6 +1434,8 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set("coreVersion", Napi::Function::New(env, CoreVersion, "coreVersion"));
     exports.Set("catalog", Napi::Function::New(env, Catalog, "catalog"));
     exports.Set("decodeImageFile", Napi::Function::New(env, DecodeImageFile, "decodeImageFile"));
+    exports.Set("inspectNiftiVolume", Napi::Function::New(env, InspectNiftiVolume, "inspectNiftiVolume"));
+    exports.Set("extractNiftiSlice", Napi::Function::New(env, ExtractNiftiSlice, "extractNiftiSlice"));
     exports.Set("renderDisplay", Napi::Function::New(env, RenderDisplay, "renderDisplay"));
     exports.Set("roiStats", Napi::Function::New(env, RoiStats, "roiStats"));
     exports.Set("validateAnalysis", Napi::Function::New(env, ValidateAnalysis, "validateAnalysis"));

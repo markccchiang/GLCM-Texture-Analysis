@@ -638,6 +638,9 @@ std::string ResultsToJson(const std::vector<MeasurementResult>& results, const A
     if (context.pixel_spacing) {
         document["image"]["pixelSpacing"] = {{"x", context.pixel_spacing->x_mm}, {"y", context.pixel_spacing->y_mm}};
     }
+    if (!context.value_conversion.empty()) {
+        document["image"]["valueConversion"] = context.value_conversion;
+    }
     document["settings"] = json_detail::SettingsToJsonValue(settings);
     document["results"] = items;
     return document.dump(2);
@@ -680,6 +683,9 @@ ResultsDocument ResultsFromJson(const std::string& text) {
                     }
                 }
                 result.context.pixel_spacing = parsed;
+            }
+            if (image.contains("valueConversion")) {
+                result.context.value_conversion = Text(image.at("valueConversion"), "image.valueConversion");
             }
         }
 

@@ -44,10 +44,12 @@ export interface DecodedImage {
   bitDepth: 8 | 16;
   /** Channels of the file before grayscale conversion (1 or 3) */
   sourceChannels: number;
-  /** Millimetres per pixel from the file's resolution metadata; null when the file has none */
+  /** Millimetres per pixel from the file's resolution metadata (DICOM PixelSpacing, NIfTI voxel size); null when the file has none */
   pixelSpacing: { x: number; y: number } | null;
+  /** DICOM and NIfTI: how the file's values became the stored samples; null when they are stored unchanged */
+  valueConversion: NativeValueConversion | null;
   warnings: string[];
-  /** 0.5th and 99.5th percentiles (nearest rank) */
+  /** 0.5th and 99.5th percentiles (nearest rank); DICOM: the file's first WindowCenter/WindowWidth when present */
   windowMin: number;
   windowMax: number;
   /** 256 equal bins over the full range of the bit depth */
@@ -85,6 +87,77 @@ export interface DecodeOptions {
 
 /** Decodes an image file (PNG, JPEG, BMP, 8/16-bit TIFF, ...); color is converted to grayscale. */
 export function decodeImageFile(path: string, options?: DecodeOptions): Promise<DecodedImage>;
+
+/** value = stored sample × scale + offset, in the file's values after its rescale slope and intercept */
+export interface NativeValueConversion {
+  scale: number;
+  offset: number;
+  /** "HU" for CT; empty when the file does not say */
+  unit: string;
+  description: string;
+}
+
+export type SliceOrientation = 'axial' | 'coronal' | 'sagittal';
+
+/** How every slice of a volume is stored (glcm::StorageChoice); value = stored × scale + offset */
+export interface NativeStorage {
+  kind: 'identity' | 'offset' | 'linear';
+  bitDepth: 8 | 16;
+  scale: number;
+  offset: number;
+}
+
+export interface NativeSliceGeometry {
+  count: number;
+  width: number;
+  height: number;
+  pixelSpacing: { x: number; y: number } | null;
+}
+
+export interface NativeVolumeInfo {
+  version: 1 | 2;
+  /** Voxels along the file's axes i, j, k */
+  dimensions: [number, number, number];
+  volumes: number;
+  dataType: string;
+  orientationSource: 'sform' | 'qform' | 'none';
+  /** Directions of the i, j and k axes, e.g. "RAS" */
+  axisCodes: string;
+  /** The orientation of the plane of the i and j axes */
+  acquisitionOrientation: SliceOrientation;
+  slices: Record<SliceOrientation, NativeSliceGeometry>;
+  /** After scl_slope and scl_inter, over the finite voxels of all volumes */
+  minimum: number;
+  maximum: number;
+  storage: NativeStorage;
+  valueConversion: NativeValueConversion | null;
+  /** 0.5th and 99.5th percentiles of the stored samples of all volumes */
+  windowMin: number;
+  windowMax: number;
+  warnings: string[];
+}
+
+/**
+ * Reads a NIfTI-1 or NIfTI-2 file (.nii or .nii.gz), writes it uncompressed to copyPath and chooses how its values are
+ * stored. Rejects with IMAGE_TOO_LARGE when the voxel data exceeds maxBytes (checked from the header), UNSUPPORTED_IMAGE
+ * or DECODE_FAILED.
+ */
+export function inspectNiftiVolume(path: string, copyPath: string, options?: { maxBytes?: number }): Promise<NativeVolumeInfo>;
+
+export interface SliceRequest {
+  orientation: SliceOrientation;
+  /** 0-based, from inferior, posterior or left */
+  slice: number;
+  /** 0-based */
+  volume: number;
+  storage: NativeStorage;
+  maxPixels?: number;
+  /** Also encode the slice as a PNG with its pixel spacing */
+  encodePng?: boolean;
+}
+
+/** One slice of a NIfTI volume in RAS orientation; rejects with INVALID_ARGUMENT when the slice or volume is out of range. */
+export function extractNiftiSlice(path: string, request: SliceRequest): Promise<DecodedImage & { png: Buffer | null }>;
 
 /** 8-bit PNG of the pixels with the window/level mapping, downscaled so the long side is at most maxSize (0 = no limit). */
 export function renderDisplay(
@@ -282,6 +355,8 @@ declare const native: {
   coreVersion: typeof coreVersion;
   catalog: typeof catalog;
   decodeImageFile: typeof decodeImageFile;
+  inspectNiftiVolume: typeof inspectNiftiVolume;
+  extractNiftiSlice: typeof extractNiftiSlice;
   renderDisplay: typeof renderDisplay;
   roiStats: typeof roiStats;
   validateAnalysis: typeof validateAnalysis;

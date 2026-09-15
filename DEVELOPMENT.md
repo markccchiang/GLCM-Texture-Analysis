@@ -118,6 +118,7 @@ The server is configured with environment variables:
 | `GLCM_DATA_DIR` | `~/.glcm-texture-analysis`; `/data` in server mode | Uploaded images, results and caches |
 | `GLCM_MAX_UPLOAD_BYTES` | 209,857,600 (200 MiB); 100 MiB in server mode | Largest upload |
 | `GLCM_MAX_IMAGE_PIXELS` | 400,000,000; 100,000,000 in server mode | Largest image; checked from the file header before decoding |
+| `GLCM_MAX_VOLUME_BYTES` | 4 GiB; 1 GiB in server mode | Largest NIfTI volume (uncompressed voxel data); checked from the file header |
 | `GLCM_RAW_TRANSFER_MAX_PIXELS` | 16,777,216 (4096²) | Images up to this size are sent to the browser as raw data |
 | `GLCM_DISPLAY_MAX_SIZE` | `4096` | Largest long side of `display.png` |
 | `GLCM_DISPLAY_CACHE_BYTES` | 536,870,912 (512 MiB) | Disk space for cached `display.png` renderings |

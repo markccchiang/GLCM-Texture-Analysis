@@ -25,7 +25,7 @@ export interface LoadedImage {
 
 export interface LoadingState {
   name: string;
-  phase: 'downloadingSample' | 'uploading' | 'downloading';
+  phase: 'downloadingSample' | 'uploading' | 'downloading' | 'openingSlice';
   /** 0..1, or null when unknown */
   progress: number | null;
 }

@@ -17,11 +17,13 @@ import { featureMapRoutes } from './routes/featureMaps.js';
 import { healthRoutes } from './routes/health.js';
 import { imageRoutes } from './routes/images.js';
 import { sampleRoutes } from './routes/samples.js';
+import { volumeRoutes } from './routes/volumes.js';
 import { registerAuthentication, registerCors, registerRateLimit } from './security.js';
 import { DisplayCache } from './storage/DisplayCache.js';
 import { ImageStore } from './storage/ImageStore.js';
 import { ResultStore } from './storage/ResultStore.js';
 import { startRetention } from './storage/retention.js';
+import { VolumeStore } from './storage/VolumeStore.js';
 import { hasDocs, hasWebApp, registerDocs, registerWebApp, sendWebApp, wantsWebApp } from './web.js';
 
 export interface BuildAppOptions {
@@ -46,6 +48,8 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
 
   const store = new ImageStore(config.dataDir, config.pixelCacheBytes);
   await store.init();
+  const volumes = new VolumeStore(config.dataDir);
+  await volumes.init();
   const results = new ResultStore(config.dataDir);
   await results.init();
   const displayCache = new DisplayCache(path.join(config.dataDir, 'cache', 'display'), config.displayCacheBytes);
@@ -147,13 +151,14 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
       await api.register(analysisRoutes, { store, jobs, results });
       await api.register(featureMapRoutes, { store, maps });
       await api.register(exportRoutes, { store });
+      await api.register(volumeRoutes, { config, store, volumes });
       await api.register(sampleRoutes, { samplesDir: config.samplesDir });
     },
     { prefix: API_PREFIX },
   );
 
   if (options.retention && config.retentionHours > 0) {
-    const stop = startRetention({ images: store, results, jobs }, config.retentionHours * 60 * 60_000, app.log);
+    const stop = startRetention({ images: store, volumes, results, jobs }, config.retentionHours * 60 * 60_000, app.log);
     app.addHook('onClose', async () => stop());
   }
 

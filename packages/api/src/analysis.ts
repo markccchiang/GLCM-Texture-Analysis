@@ -302,6 +302,7 @@ export const AnalysisInfo = Type.Object({
   coreVersion: Type.String(),
   settings: AnalysisSettings,
   pixelSpacing: Type.Union([PixelSpacing, Type.Null()], { description: 'Spacing of the analysis: from the request, else from the image' }),
+  valueConversion: Type.Optional(Type.String({ description: "The image's value conversion (DICOM, NIfTI), written into exports" })),
 });
 export type AnalysisInfo = Static<typeof AnalysisInfo>;
 
@@ -317,6 +318,7 @@ export const AnalysisResults = Type.Object({
     name: Type.String(),
     sha256: Type.String(),
     pixelSpacing: Type.Optional(PixelSpacing),
+    valueConversion: Type.Optional(Type.String()),
   }),
   settings: AnalysisSettings,
   results: Type.Array(MeasurementResult, { description: 'Ordered by ROI, then distance; only finished jobs' }),
