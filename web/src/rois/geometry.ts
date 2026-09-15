@@ -194,3 +194,25 @@ export function isDrawableShape(shape: RoiShape): boolean {
 export function shapeKey(shape: RoiShape): string {
   return JSON.stringify(shape);
 }
+
+/**
+ * For each polygon edge (vertex i to i + 1, wrapping), whether it is a cut: the polygon also runs the same segment the
+ * other way. The brush, eraser, union and subtract join separate parts and holes into one polygon with such zero-width
+ * cuts, which cover no pixels under the even-odd rule and are not drawn. Zero-length edges are not cuts.
+ */
+export function cutEdges(points: ReadonlyArray<readonly [number, number]>): boolean[] {
+  const count = points.length;
+  const key = (a: readonly [number, number], b: readonly [number, number]) => `${a[0]},${a[1]};${b[0]},${b[1]}`;
+  const edges = new Set<string>();
+  points.forEach((point, i) => edges.add(key(point, points[(i + 1) % count])));
+  return points.map((point, i) => {
+    const next = points[(i + 1) % count];
+    const degenerate = point[0] === next[0] && point[1] === next[1];
+    return !degenerate && edges.has(key(next, point));
+  });
+}
+
+/** Whether a polygon joins several parts or holes with cuts; such polygons are changed as a whole, not vertex by vertex */
+export function hasCuts(points: ReadonlyArray<readonly [number, number]>): boolean {
+  return cutEdges(points).some(Boolean);
+}

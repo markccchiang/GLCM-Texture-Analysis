@@ -13,6 +13,7 @@ import { sampleAt } from '../image/raw';
 import {
   ellipseFromDrag,
   freehandFromPath,
+  hasCuts,
   insertVertex,
   isDrawableShape,
   moveVertex,
@@ -23,7 +24,9 @@ import {
   translateShape,
 } from '../rois/geometry';
 import { useRois } from '../rois/roiStore';
+import { applyBrushStroke } from '../rois/editActions';
 import { wandAt } from '../rois/regionActions';
+import { BrushStrokeLayer, type BrushStroke } from './BrushStrokeLayer';
 import { roiProblem, useRoiStatistics } from '../rois/useRoiStatistics';
 import { usePreferences } from '../stores/preferences';
 import { useViewer } from '../stores/viewerStore';
@@ -58,7 +61,8 @@ type Gesture =
   | { kind: 'freehand'; pointerId: number; path: Array<[number, number]> }
   | { kind: 'move'; pointerId: number; start: Point; shapes: Map<string, RoiShape> }
   | { kind: 'vertex'; pointerId: number; roiId: string; index: number }
-  | { kind: 'ruler'; pointerId: number; start: Point };
+  | { kind: 'ruler'; pointerId: number; start: Point }
+  | { kind: 'brush'; pointerId: number; erase: boolean; path: Array<[number, number]> };
 
 type Hit = { kind: 'roi'; roiId: string } | { kind: 'vertex'; roiId: string; index: number } | { kind: 'transformer' };
 
@@ -96,11 +100,13 @@ export function ImageCanvas() {
   const [spaceHeld, setSpaceHeld] = useState(false);
   const [gestureKind, setGestureKind] = useState<Gesture['kind'] | null>(null);
   const [tooltip, setTooltip] = useState<{ roiId: string; x: number; y: number } | null>(null);
+  const [brushStroke, setBrushStroke] = useState<BrushStroke | null>(null);
 
   const image = useViewer((state) => state.image);
   const viewport = useViewer((state) => state.viewport);
   const viewSize = useViewer((state) => state.viewSize);
   const tool = useViewer((state) => state.tool);
+  const brushSize = useViewer((state) => state.brushSize);
   const displaySource = useViewer((state) => state.displaySource);
   const displayVersion = useViewer((state) => state.displayVersion);
   const hoveredId = useRois((state) => state.hoveredId);
@@ -438,6 +444,14 @@ export function ImageCanvas() {
         setDraft({ points: [...current.points, [point.x, point.y]], cursor: point });
         return;
       }
+      case 'brush':
+      case 'eraser': {
+        capture();
+        const path: Array<[number, number]> = [[point.x, point.y]];
+        setGesture({ kind: 'brush', pointerId: event.pointerId, erase: tool === 'eraser', path });
+        setBrushStroke({ path, erase: tool === 'eraser' });
+        return;
+      }
       case 'wand': {
         const pixel = pixelAt(state.viewport, local, state.image.info);
         if (pixel) {
@@ -545,6 +559,15 @@ export function ImageCanvas() {
         case 'ruler':
           state.setRuler({ start: gesture.start, end: event.shiftKey ? snapRuler(gesture.start, point) : point });
           break;
+        case 'brush': {
+          const [lastX, lastY] = gesture.path[gesture.path.length - 1];
+          // Points closer than a quarter pixel add nothing to the stroke
+          if (Math.hypot(point.x - lastX, point.y - lastY) >= 0.25) {
+            gesture.path.push([point.x, point.y]);
+            setBrushStroke({ path: [...gesture.path], erase: gesture.erase });
+          }
+          break;
+        }
       }
       return;
     }
@@ -582,6 +605,12 @@ export function ImageCanvas() {
       case 'vertex':
         roiStore.endEdit();
         break;
+      case 'brush': {
+        const { path } = gesture;
+        // The stroke stays visible until the changed ROI arrives
+        void applyBrushStroke(path, gesture.erase).finally(() => setBrushStroke((current) => (current?.path[0] === path[0] ? null : current)));
+        break;
+      }
       case 'ruler': {
         // A click without a drag removes the ruler
         const { ruler, setRuler } = useViewer.getState();
@@ -609,7 +638,7 @@ export function ImageCanvas() {
       const hit = hitTest(local);
       const roiStore = useRois.getState();
       const roi = hit?.kind === 'roi' ? roiStore.rois.find((candidate) => candidate.id === hit.roiId) : undefined;
-      if (roi?.shape.type === 'polygon' && roiStore.selectedIds.length === 1 && roiStore.selectedIds[0] === roi.id) {
+      if (roi?.shape.type === 'polygon' && !hasCuts(roi.shape.points) && roiStore.selectedIds.length === 1 && roiStore.selectedIds[0] === roi.id) {
         roiStore.replaceShape(roi.id, insertVertex(roi.shape, screenToImage(state.viewport, local)));
       }
     }
@@ -676,6 +705,7 @@ export function ImageCanvas() {
           </Layer>
           {info && <FeatureMapLayer viewport={viewport} imageWidth={info.width} imageHeight={info.height} />}
           {info && <RoiLayer viewport={viewport} draft={draft} interactive={tool === 'pointer' && !spaceHeld} />}
+          {info && brushStroke && <BrushStrokeLayer viewport={viewport} stroke={brushStroke} size={brushSize} />}
           {info && <RulerLayer viewport={viewport} />}
         </Stage>
       )}

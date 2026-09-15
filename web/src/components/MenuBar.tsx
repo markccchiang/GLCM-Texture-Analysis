@@ -8,6 +8,7 @@ import { measure } from '../analysis/measure';
 import { applyPreset, matchingPreset } from '../analysis/settings';
 import { useAnalysisSettings } from '../analysis/settingsStore';
 import { renameSelectedRoi } from '../app/actions';
+import { combineSelectedRois } from '../rois/editActions';
 import { exportResultsFile, exportRoiSetFile } from '../files/actions';
 import { clearStoredLayouts } from '../layout/layoutStorage';
 import { useResults } from '../results/resultsStore';
@@ -45,6 +46,8 @@ const TOOL_ITEMS: Array<{ tool: Tool; label: string; key: string }> = [
   { tool: 'polygon', label: 'Polygon', key: 'P' },
   { tool: 'freehand', label: 'Freehand', key: 'F' },
   { tool: 'wand', label: 'Magic Wand', key: 'W' },
+  { tool: 'brush', label: 'Brush', key: 'B' },
+  { tool: 'eraser', label: 'Eraser', key: 'X' },
 ];
 
 export function MenuBar() {
@@ -201,6 +204,13 @@ export function MenuBar() {
         ))}
         <Menu.Item disabled={!hasImage} onClick={() => ui().setModal('thresholdRoi')}>
           Threshold ROI…
+        </Menu.Item>
+        <Menu.Divider />
+        <Menu.Item disabled={selectedCount < 2} onClick={() => void combineSelectedRois('union')}>
+          Union
+        </Menu.Item>
+        <Menu.Item disabled={selectedCount < 2} onClick={() => void combineSelectedRois('subtract')}>
+          Subtract
         </Menu.Item>
         <Menu.Divider />
         <Menu.Item disabled={!hasActive} rightSection={<Shortcut>T</Shortcut>} onClick={() => rois().addActiveRoi()}>

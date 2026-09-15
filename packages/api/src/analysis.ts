@@ -122,6 +122,40 @@ export const WandRoiResponse = Type.Object({
 export type WandRoiResponse = Static<typeof WandRoiResponse>;
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Editing ROIs on the pixel grid (brush, eraser, union and subtract)
+// ---------------------------------------------------------------------------------------------------------------------
+
+export const RoiOperation = Type.Union([Type.Literal('union'), Type.Literal('subtract')]);
+export type RoiOperation = Static<typeof RoiOperation>;
+
+export const CombineRoisRequest = Type.Object({
+  operation: RoiOperation,
+  shapes: Type.Array(RoiShape, {
+    minItems: 2,
+    maxItems: MAX_ROIS_PER_REQUEST,
+    description: 'union: the pixels of any shape; subtract: the pixels of the first shape that no other shape covers',
+  }),
+});
+export type CombineRoisRequest = Static<typeof CombineRoisRequest>;
+
+export const BrushRoiRequest = Type.Object({
+  shape: Type.Union([RoiShape, Type.Null()], { description: 'The ROI to paint into or erase from; null paints a new shape' }),
+  path: Type.Array(Type.Tuple([Coordinate, Coordinate]), { minItems: 1, maxItems: MAX_POLYGON_VERTICES, description: 'The stroke; one point paints a disc' }),
+  radius: Type.Number({ exclusiveMinimum: 0, maximum: 1000, description: 'Pixels whose centres lie within this distance of the path are painted' }),
+  erase: Type.Boolean(),
+});
+export type BrushRoiRequest = Static<typeof BrushRoiRequest>;
+
+export const RoiShapeResult = Type.Object({
+  shape: Type.Union([PolygonShape, Type.Null()], {
+    description: 'One polygon along the pixel edges whose pixels are exactly the result, with separate parts and holes joined by zero-width cuts (even-odd rule); null when no pixel is left',
+  }),
+  pixelCount: Type.Integer(),
+  boundingBox: Type.Union([Type.Object({ x: Type.Integer(), y: Type.Integer(), width: Type.Integer(), height: Type.Integer() }), Type.Null()]),
+});
+export type RoiShapeResult = Static<typeof RoiShapeResult>;
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Analysis settings
 // ---------------------------------------------------------------------------------------------------------------------
 

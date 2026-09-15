@@ -1,7 +1,9 @@
 import { ActionIcon, Button, Divider, Menu, NumberInput, Tooltip } from '@mantine/core';
 import {
   IconArrowsMaximize,
+  IconBrush,
   IconChevronDown,
+  IconEraser,
   IconHandStop,
   IconOvalVertical,
   IconPlayerPlay,
@@ -38,11 +40,14 @@ const ROI_TOOLS: Array<{ tool: Tool; label: string; icon: ReactNode }> = [
   { tool: 'polygon', label: 'Polygon (P): click vertices, double-click or Enter to close', icon: <IconPolygon size={18} /> },
   { tool: 'freehand', label: 'Freehand (F)', icon: <IconScribble size={18} /> },
   { tool: 'wand', label: 'Magic wand (W): click a region; pixels connected to it within the tolerance', icon: <IconWand size={18} /> },
+  { tool: 'brush', label: 'Brush (B): paint into the selected ROI, or a new ROI when none is selected', icon: <IconBrush size={18} /> },
+  { tool: 'eraser', label: 'Eraser (X): remove a stroke from the selected ROI', icon: <IconEraser size={18} /> },
 ];
 
 export function Toolbar() {
   const tool = useViewer((state) => state.tool);
   const wandTolerance = useViewer((state) => state.wandTolerance);
+  const brushSize = useViewer((state) => state.brushSize);
   const scale = useViewer((state) => state.viewport.scale);
   const hasImage = useViewer((state) => state.image !== null);
   const running = useResults((state) => state.runs.some(isRunning));
@@ -76,6 +81,21 @@ export function Toolbar() {
             aria-label="Wand tolerance"
             value={wandTolerance}
             onChange={(value) => typeof value === 'number' && viewer().setWandTolerance(value)}
+          />
+        </Tooltip>
+      )}
+      {(tool === 'brush' || tool === 'eraser') && (
+        <Tooltip label="Brush and eraser diameter in image pixels" openDelay={400}>
+          <NumberInput
+            size="xs"
+            w={76}
+            min={1}
+            max={2000}
+            allowDecimal={false}
+            leftSection="⌀"
+            aria-label="Brush size"
+            value={brushSize}
+            onChange={(value) => typeof value === 'number' && viewer().setBrushSize(value)}
           />
         </Tooltip>
       )}

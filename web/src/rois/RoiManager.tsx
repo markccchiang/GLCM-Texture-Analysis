@@ -11,6 +11,7 @@ import { ROI_COLORS, SHAPE_LABELS, shapeBounds, shapeKind } from './geometry';
 import { useRois, type ManagedRoi } from './roiStore';
 import { roiProblem, useRoiStatistics } from './useRoiStatistics';
 import { areaMm2, formatArea } from '../image/spacing';
+import { combineSelectedRois } from './editActions';
 
 function RoiRow({ roi, pixelCount, problem }: { roi: ManagedRoi; pixelCount: number | undefined; problem: string | null }) {
   const pixelSpacing = useViewer((state) => state.pixelSpacing);
@@ -145,6 +146,7 @@ function RoiRow({ roi, pixelCount, problem }: { roi: ManagedRoi; pixelCount: num
 export function RoiManager() {
   const rois = useRois((state) => state.rois);
   const hasSelection = useRois((state) => state.selectedIds.length > 0);
+  const selectedCount = useRois((state) => state.selectedIds.length);
   const hasActive = useRois((state) => state.activeShape !== null);
   const hasImage = useViewer((state) => state.image !== null);
   const statistics = useRoiStatistics();
@@ -167,6 +169,13 @@ export function RoiManager() {
             </Menu.Item>
             <Menu.Item disabled={rois.length === 0} onClick={() => store().setAllVisible(false)}>
               Hide all
+            </Menu.Item>
+            <Menu.Divider />
+            <Menu.Item disabled={selectedCount < 2} onClick={() => void combineSelectedRois('union')}>
+              Union
+            </Menu.Item>
+            <Menu.Item disabled={selectedCount < 2} onClick={() => void combineSelectedRois('subtract')}>
+              Subtract
             </Menu.Item>
             <Menu.Divider />
             <Menu.Item disabled={!hasImage} onClick={() => useUi.getState().requestFile('roiSet')}>

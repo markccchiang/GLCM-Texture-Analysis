@@ -7,6 +7,8 @@
 #include <tuple>
 #include <utility>
 
+#include "roi/Outline.hpp"
+
 namespace glcm {
 
 namespace {
@@ -35,45 +37,6 @@ cv::Mat FillHoles(const cv::Mat& mask) {
     cv::floodFill(padded, cv::Point(0, 0), cv::Scalar(FLOODED), nullptr, cv::Scalar(0), cv::Scalar(0), 4);
     cv::Mat filled = padded(cv::Rect(1, 1, mask.cols, mask.rows)) != FLOODED;
     return filled;
-}
-
-// Outline along the pixel edges of the region containing pixel (start_x, start_y), which must be the region's first
-// pixel in raster order. `inside(x, y)` tells whether a pixel belongs to the region (false outside the image). The region
-// must have no holes. The walk keeps the region on its right and prefers turning left, which joins parts that touch only
-// at a corner.
-template <typename Inside>
-std::vector<std::array<double, 2>> TraceOutline(int start_x, int start_y, Inside inside) {
-    // Directions clockwise on screen (y down): right, down, left, up
-    static const int STEP_X[4] = {1, 0, -1, 0};
-    static const int STEP_Y[4] = {0, 1, 0, -1};
-    // Offsets from a vertex to the pixel ahead on the left and ahead on the right of each direction
-    static const int LEFT_X[4] = {0, 0, -1, -1};
-    static const int LEFT_Y[4] = {-1, 0, 0, -1};
-    static const int RIGHT_X[4] = {0, -1, -1, 0};
-    static const int RIGHT_Y[4] = {0, 0, -1, -1};
-
-    std::vector<std::array<double, 2>> outline{{static_cast<double>(start_x), static_cast<double>(start_y)}};
-    int x = start_x;
-    int y = start_y;
-    int direction = 0; // along the top edge of the first pixel, whose upper and left neighbours are outside
-    do {
-        x += STEP_X[direction];
-        y += STEP_Y[direction];
-        int next = (direction + 1) % 4;
-        if (inside(x + LEFT_X[direction], y + LEFT_Y[direction])) {
-            next = (direction + 3) % 4;
-        } else if (inside(x + RIGHT_X[direction], y + RIGHT_Y[direction])) {
-            next = direction;
-        }
-        if (next != direction) {
-            const bool closing = x == start_x && y == start_y;
-            if (!closing) {
-                outline.push_back({static_cast<double>(x), static_cast<double>(y)});
-            }
-            direction = next;
-        }
-    } while (x != start_x || y != start_y || direction != 0);
-    return outline;
 }
 
 int PixelValue(const cv::Mat& gray, int x, int y) {
@@ -129,9 +92,11 @@ ThresholdSelection SelectThresholdRegions(const cv::Mat& gray, int min_value, in
         while (top_row[start_x] != label) {
             ++start_x;
         }
-        region.outline = TraceOutline(start_x, region.box.y, [&labels, label](int x, int y) {
-            return x >= 0 && y >= 0 && x < labels.cols && y < labels.rows && labels.at<int>(y, x) == label;
-        });
+        region.outline = outline_detail::TraceOutline(
+            start_x, region.box.y,
+            [&labels, label](
+                int x, int y) { return x >= 0 && y >= 0 && x < labels.cols && y < labels.rows && labels.at<int>(y, x) == label; },
+            true);
         selection.regions.push_back(std::move(region));
     }
     return selection;
@@ -160,12 +125,13 @@ std::optional<SelectedRegion> SelectWandRegion(const cv::Mat& gray, int x, int y
     while (top_row[start_x] != INSIDE) {
         ++start_x;
     }
-    result.outline = TraceOutline(start_x + box.x, box.y, [&region, &box](int px, int py) {
+    const auto inside = [&region, &box](int px, int py) {
         const int local_x = px - box.x;
         const int local_y = py - box.y;
         return local_x >= 0 && local_y >= 0 && local_x < region.cols && local_y < region.rows &&
                region.at<uchar>(local_y, local_x) == INSIDE;
-    });
+    };
+    result.outline = outline_detail::TraceOutline(start_x + box.x, box.y, inside, true);
     return result;
 }
 

@@ -41,6 +41,8 @@ export interface RoiState {
   /** Sets a colour "#RRGGBB"; undoable. Other values are ignored. */
   recolorRoi(id: string, color: string): void;
   replaceShape(id: string, shape: RoiShape): void;
+  /** Gives one ROI a new shape and deletes others, as one undo step (Union); the kept ROI is selected */
+  mergeRois(targetId: string, shape: RoiShape, removeIds: readonly string[]): void;
   nudgeRois(ids: readonly string[], dx: number, dy: number): void;
   setVisible(id: string, visible: boolean): void;
   setAllVisible(visible: boolean): void;
@@ -164,6 +166,14 @@ export const useRois = create<RoiState>()((set, get) => {
 
     replaceShape: (id, shape) => {
       commit(get().rois.map((roi) => (roi.id === id ? { ...roi, shape } : roi)));
+    },
+
+    mergeRois: (targetId, shape, removeIds) => {
+      const remove = new Set(removeIds.filter((id) => id !== targetId));
+      const rois = get()
+        .rois.filter((roi) => !remove.has(roi.id))
+        .map((roi) => (roi.id === targetId ? { ...roi, shape } : roi));
+      commit(rois, { selectedIds: rois.some((roi) => roi.id === targetId) ? [targetId] : [] });
     },
 
     nudgeRois: (ids, dx, dy) => {

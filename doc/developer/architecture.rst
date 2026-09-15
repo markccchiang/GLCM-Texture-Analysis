@@ -117,6 +117,12 @@ Namespace ``glcm``; include paths are relative to ``core/``.
        seed within a tolerance): 8-connected regions whose holes (background not 4-connected to the border) are filled,
        each outlined by walking its pixel edges, so that ``RasterizeMask`` of the outline gives exactly the region.
        Threshold regions come from ``connectedComponentsWithStats`` on the filled mask, largest first.
+   * - ``roi/RoiOperations``
+     - ``CombineShapes`` and ``PaintStroke`` work on masks (``RasterizeCroppedMask`` of each shape, or the pixels within a
+       radius of a stroke) and return ``MaskOutline`` of the result: the outline of every 8-connected part and of every
+       4-connected hole along the pixel edges, joined into one polygon by cuts that are walked in both directions, so
+       they add no crossings under the even-odd rule of ``RasterizeMask``. The web app draws polygons with the even-odd
+       fill rule for the same reason.
    * - ``imaging/ImageLoader``
      - Decodes PNG, JPEG, BMP and 8/16-bit TIFF with OpenCV and converts color to grayscale (with a warning).
    * - ``imaging/Quantizer``

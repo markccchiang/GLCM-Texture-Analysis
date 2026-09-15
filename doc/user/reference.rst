@@ -23,6 +23,8 @@ Keyboard
      - Preferences
    * - :kbd:`R` :kbd:`E` :kbd:`P` :kbd:`F` :kbd:`W`
      - Rectangle, ellipse, polygon, freehand, magic wand tool
+   * - :kbd:`B` / :kbd:`X`
+     - Brush / eraser: paint into or erase from the selected ROI
    * - :kbd:`L`
      - Ruler: measure a distance (:kbd:`Shift` for 45° steps)
    * - :kbd:`T`
@@ -102,7 +104,7 @@ Menus
        Inverted, Viridis, Magma, Hot), Ruler,
        Image Info
    * - ROI
-     - Rectangle, Ellipse, Polygon, Freehand, Magic Wand, Threshold ROI…, Add to Manager, Duplicate, Rename, Import ROI Set…, Export ROI Set…,
+     - Rectangle, Ellipse, Polygon, Freehand, Magic Wand, Brush, Eraser, Threshold ROI…, Union, Subtract, Add to Manager, Duplicate, Rename, Import ROI Set…, Export ROI Set…,
        Export ROI Images…
    * - Analyze
      - Measure Selected, Measure All, Batch Measure…, Feature Map…, Presets (the feature presets of the Analysis Settings panel), Clear Results

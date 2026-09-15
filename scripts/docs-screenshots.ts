@@ -354,6 +354,37 @@ async function main(): Promise<void> {
     await chooseMenuItem(page, 'Edit', /^Preferences…/);
     await dialogShot(page, 'preferences', page.getByRole('dialog', { name: 'Preferences' }));
     await page.keyboard.press('Escape');
+    await page.getByRole('dialog').waitFor({ state: 'hidden' });
+
+    // An ROI with a hole, made with Subtract
+    const cutId = await page.evaluate(() => {
+      const rois = (
+        window as unknown as {
+          __glcm: { rois: { getState(): { importRois(list: Array<{ name: string; color: string; shape: unknown }>): string[]; select(ids: string[]): void } } };
+        }
+      ).__glcm.rois.getState();
+      const ids = rois.importRois([
+        { name: 'Ring', color: '', shape: { type: 'rectangle', x: 300, y: 330, width: 150, height: 120 } },
+        { name: 'Cut', color: '', shape: { type: 'ellipse', cx: 375, cy: 390, rx: 42, ry: 30 } },
+      ]);
+      rois.select(ids);
+      return ids[1];
+    });
+    await chooseMenuItem(page, 'ROI', 'Subtract');
+    await page.waitForFunction(() =>
+      (window as unknown as { __glcm: { rois: { getState(): { rois: Array<{ name: string; shape: { type: string } }> } } } }).__glcm.rois
+        .getState()
+        .rois.some((roi) => roi.name === 'Ring' && roi.shape.type === 'polygon'),
+    );
+    await page.evaluate(
+      (id) => (window as unknown as { __glcm: { rois: { getState(): { deleteRois(ids: string[]): void } } } }).__glcm.rois.getState().deleteRois([id]),
+      cutId,
+    );
+    await page.mouse.move(5, VIEWPORT.height - 5);
+    await page.waitForTimeout(400);
+    const topLeft = await toPage(page, 270, 300);
+    const bottomRight = await toPage(page, 480, 480);
+    await shot(page, 'roi-editing', { x: topLeft.x, y: topLeft.y, width: bottomRight.x - topLeft.x, height: bottomRight.y - topLeft.y });
     await context.close();
 
     // Access token prompt of a server that requires a token

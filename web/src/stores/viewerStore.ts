@@ -70,6 +70,8 @@ export interface ViewerState {
   colorTable: ColorTableId;
   /** Largest difference from the clicked pixel value that the magic wand includes; reset for each image */
   wandTolerance: number;
+  /** Diameter of the brush and eraser in image pixels; kept when another image opens */
+  brushSize: number;
 
   setLoading(loading: LoadingState | null): void;
   openImage(image: LoadedImage): void;
@@ -92,6 +94,7 @@ export interface ViewerState {
   setRuler(ruler: RulerLine | null): void;
   setColorTable(colorTable: ColorTableId): void;
   setWandTolerance(tolerance: number): void;
+  setBrushSize(size: number): void;
   toggleNavigator(): void;
   setHover(hover: HoverState | null): void;
   setDisplaySource(source: CanvasImageSource | null, kind: RendererKind | null): void;
@@ -132,6 +135,7 @@ export const useViewer = create<ViewerState>()((set, get) => ({
   ruler: null,
   colorTable: 'gray',
   wandTolerance: defaultWandTolerance(0, 255),
+  brushSize: 10,
 
   setLoading: (loading) => set({ loading }),
 
@@ -252,6 +256,8 @@ export const useViewer = create<ViewerState>()((set, get) => ({
   setRuler: (ruler) => set({ ruler }),
 
   setColorTable: (colorTable) => set({ colorTable }),
+
+  setBrushSize: (size) => set({ brushSize: Math.min(2000, Math.max(1, Math.round(size))) }),
 
   setWandTolerance: (tolerance) => set({ wandTolerance: Math.min(65535, Math.max(0, Math.round(tolerance))) }),
 

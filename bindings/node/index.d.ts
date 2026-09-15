@@ -181,6 +181,22 @@ export function selectWandRegion(
   tolerance: number,
 ): Promise<NativeSelectedRegion | null>;
 
+export interface NativeRoiShapeResult {
+  /** One polygon along the pixel edges whose pixels are exactly the result: parts and holes joined by zero-width cuts; empty when no pixel is left */
+  points: Array<[number, number]>;
+  pixelCount: number;
+  boundingBox: { x: number; y: number; width: number; height: number } | null;
+}
+
+/** Union of the ROIs' pixels, or the first ROI's pixels without those of the others (glcm::CombineShapes) */
+export function combineRois(roisJson: string, operation: 'union' | 'subtract', width: number, height: number): Promise<NativeRoiShapeResult>;
+
+/**
+ * A brush stroke of the given radius along path ([x0, y0, x1, y1, ...]) added to, or with erase removed from, the ROI in
+ * roisJson (an array with at most one ROI; empty: the stroke alone) (glcm::PaintStroke)
+ */
+export function brushRoi(roisJson: string, path: Float64Array, radius: number, erase: boolean, width: number, height: number): Promise<NativeRoiShapeResult>;
+
 /**
  * Measures every ROI at every distance (glcm::RunAnalysis).
  * @returns the "glcm-results" JSON document (without image name, SHA-256 or timestamp)
@@ -239,5 +255,7 @@ declare const native: {
   CancelToken: typeof CancelToken;
   selectThresholdRegions: typeof selectThresholdRegions;
   selectWandRegion: typeof selectWandRegion;
+  combineRois: typeof combineRois;
+  brushRoi: typeof brushRoi;
 };
 export default native;

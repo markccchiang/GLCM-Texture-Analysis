@@ -5,7 +5,8 @@
 import type { RoiShape } from '@glcm/api';
 import type Konva from 'konva';
 import { useEffect, useRef } from 'react';
-import { Circle, Ellipse, Group, Layer, Line, Rect, Text, Transformer } from 'react-konva';
+import { Circle, Ellipse, Group, Layer, Line, Rect, Shape, Text, Transformer } from 'react-konva';
+import { cutEdges, hasCuts } from '../rois/geometry';
 import { useRois } from '../rois/roiStore';
 import { useUi } from '../stores/uiStore';
 import { imageToScreen, type Point, type Viewport } from './viewport';
@@ -61,8 +62,37 @@ function ShapeNode({ shape, color, id, name, strokeWidth, dash, fill, listening,
       );
     case 'ellipse':
       return <Ellipse ref={nodeRef} x={shape.cx} y={shape.cy} radiusX={shape.rx} radiusY={shape.ry} rotation={shape.angle ?? 0} {...common} />;
-    case 'polygon':
-      return <Line ref={nodeRef} points={shape.points.flat()} closed {...common} />;
+    case 'polygon': {
+      const cuts = cutEdges(shape.points);
+      if (!cuts.some(Boolean)) {
+        return <Line ref={nodeRef} points={shape.points.flat()} closed {...common} />;
+      }
+      // Parts and holes joined by cuts (brush, eraser, union, subtract): the whole outline is filled with the even-odd rule,
+      // which leaves the holes clear, and only the edges that are not cuts are stroked
+      const { points } = shape;
+      return (
+        <Shape
+          ref={nodeRef}
+          fillRule="evenodd"
+          {...common}
+          sceneFunc={(context, node) => {
+            context.beginPath();
+            points.forEach(([x, y], i) => (i === 0 ? context.moveTo(x, y) : context.lineTo(x, y)));
+            context.closePath();
+            context.fillShape(node);
+            context.beginPath();
+            points.forEach(([x, y], i) => {
+              if (!cuts[i]) {
+                const [nextX, nextY] = points[(i + 1) % points.length];
+                context.moveTo(x, y);
+                context.lineTo(nextX, nextY);
+              }
+            });
+            context.strokeShape(node);
+          }}
+        />
+      );
+    }
   }
 }
 
@@ -78,7 +108,8 @@ export function RoiLayer({ viewport, draft, interactive }: { viewport: Viewport;
 
   const single = selectedIds.length === 1 ? rois.find((roi) => roi.id === selectedIds[0] && roi.visible) : undefined;
   const transformable = interactive && single && single.shape.type !== 'polygon' ? single : undefined;
-  const editablePolygon = interactive && single?.shape.type === 'polygon' ? single : undefined;
+  // Polygons joined by cuts change as a whole (brush, eraser), so they get no vertex handles
+  const editablePolygon = interactive && single?.shape.type === 'polygon' && !hasCuts(single.shape.points) ? single : undefined;
 
   useEffect(() => {
     const transformer = transformerRef.current;

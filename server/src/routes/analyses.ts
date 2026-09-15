@@ -6,6 +6,9 @@ import {
   AnalysisInfo,
   AnalysisRequest,
   AnalysisResults,
+  BrushRoiRequest,
+  CombineRoisRequest,
+  RoiShapeResult,
   ErrorResponse,
   ImageIdParams,
   RoiStatsRequest,
@@ -137,6 +140,55 @@ export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = 
       const { x, y, tolerance } = request.body;
       const pixels = await store.pixels(info.imageId);
       return { region: await native.selectWandRegion(pixels, info.width, info.height, info.bitDepth, x, y, tolerance).catch(nativeError) };
+    },
+  );
+
+  /** ROI objects as the addon reads them */
+  const roisJson = (shapes: unknown[]) => JSON.stringify(shapes.map((shape, i) => ({ id: `shape-${i}`, name: `shape-${i}`, shape })));
+  const shapeResult = (result: native.NativeRoiShapeResult) => ({
+    shape: result.pixelCount > 0 ? { type: 'polygon' as const, points: result.points } : null,
+    pixelCount: result.pixelCount,
+    boundingBox: result.boundingBox,
+  });
+
+  app.post(
+    '/images/:id/combine-rois',
+    {
+      schema: {
+        summary: 'Unite or subtract ROIs',
+        description:
+          'Rasterizes the shapes on the image grid (pixel-centre rule) and returns the union, or the first shape without the others, as one polygon along the pixel edges; separate parts and holes are joined by zero-width cuts, so the polygon covers exactly the resulting pixels.',
+        tags: ['rois'],
+        params: ImageIdParams,
+        body: CombineRoisRequest,
+        response: { 200: RoiShapeResult, 400: ErrorResponse, 404: ErrorResponse },
+      },
+    },
+    async (request) => {
+      const info = await requireImage(request.params.id);
+      const { operation, shapes } = request.body;
+      return shapeResult(await native.combineRois(roisJson(shapes), operation, info.width, info.height).catch(nativeError));
+    },
+  );
+
+  app.post(
+    '/images/:id/brush-roi',
+    {
+      schema: {
+        summary: 'Paint or erase a brush stroke',
+        description:
+          'The pixels whose centres lie within radius of the path, added to the shape (or a new shape when it is null), or removed from it with erase. The result is outlined like combine-rois; shape is null when no pixel is left.',
+        tags: ['rois'],
+        params: ImageIdParams,
+        body: BrushRoiRequest,
+        response: { 200: RoiShapeResult, 400: ErrorResponse, 404: ErrorResponse },
+      },
+    },
+    async (request) => {
+      const info = await requireImage(request.params.id);
+      const { shape, path, radius, erase } = request.body;
+      const flat = Float64Array.from(path.flat());
+      return shapeResult(await native.brushRoi(roisJson(shape ? [shape] : []), flat, radius, erase, info.width, info.height).catch(nativeError));
     },
   );
 

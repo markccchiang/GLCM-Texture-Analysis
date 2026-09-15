@@ -6,6 +6,7 @@
 
 #include <napi.h>
 
+#include <array>
 #include <atomic>
 #include <climits>
 #include <cmath>
@@ -13,8 +14,8 @@
 #include <cstring>
 #include <initializer_list>
 #include <memory>
-#include <optional>
 #include <opencv2/imgcodecs.hpp>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -32,6 +33,7 @@
 #include "pipeline/Version.hpp"
 #include "roi/RegionSelection.hpp"
 #include "roi/Roi.hpp"
+#include "roi/RoiOperations.hpp"
 
 namespace {
 
@@ -879,8 +881,153 @@ Napi::Value SelectThresholdRegions(const Napi::CallbackInfo& info) {
 // selectWandRegion(pixels, width, height, bitDepth, x, y, tolerance): Promise<region | null> (glcm::SelectWandRegion)
 Napi::Value SelectWandRegion(const Napi::CallbackInfo& info) {
     const PixelArguments pixels = ReadPixelArguments(info, 0);
-    auto* worker =
-        new WandRegionWorker(info.Env(), pixels, IntegerArgument(info, 4, "x"), IntegerArgument(info, 5, "y"), IntegerArgument(info, 6, "tolerance"));
+    auto* worker = new WandRegionWorker(
+        info.Env(), pixels, IntegerArgument(info, 4, "x"), IntegerArgument(info, 5, "y"), IntegerArgument(info, 6, "tolerance"));
+    const Napi::Promise promise = worker->Promise();
+    worker->Queue();
+    return promise;
+}
+
+// {points, pixelCount, boundingBox} of a shape computed on the pixel grid; boundingBox is null when no pixel is left
+Napi::Object OperationResultToJs(Napi::Env env, const glcm::OperationResult& result) {
+    Napi::Array points = Napi::Array::New(env, result.polygon.points.size());
+    for (size_t i = 0; i < result.polygon.points.size(); ++i) {
+        Napi::Array point = Napi::Array::New(env, 2);
+        point.Set(uint32_t{0}, result.polygon.points[i][0]);
+        point.Set(uint32_t{1}, result.polygon.points[i][1]);
+        points.Set(static_cast<uint32_t>(i), point);
+    }
+    Napi::Object object = Napi::Object::New(env);
+    object.Set("points", points);
+    object.Set("pixelCount", result.pixel_count);
+    if (result.pixel_count > 0) {
+        Napi::Object box = Napi::Object::New(env);
+        box.Set("x", result.box.x);
+        box.Set("y", result.box.y);
+        box.Set("width", result.box.width);
+        box.Set("height", result.box.height);
+        object.Set("boundingBox", box);
+    } else {
+        object.Set("boundingBox", env.Null());
+    }
+    return object;
+}
+
+cv::Size ImageSizeArguments(const Napi::CallbackInfo& info, size_t first) {
+    const int width = IntegerArgument(info, first, "width");
+    const int height = IntegerArgument(info, first + 1, "height");
+    if (width <= 0 || height <= 0) {
+        throw Napi::TypeError::New(info.Env(), "width and height must be positive");
+    }
+    return {width, height};
+}
+
+class CombineRoisWorker : public PromiseWorker {
+public:
+    CombineRoisWorker(Napi::Env env, std::string rois_json, glcm::RoiOperation operation, cv::Size image_size)
+        : PromiseWorker(env), _rois_json(std::move(rois_json)), _operation(operation), _image_size(image_size) {}
+
+    void Execute() override {
+        try {
+            std::vector<glcm::RoiShape> shapes;
+            for (const glcm::Roi& roi : ParseRois(_rois_json)) {
+                shapes.push_back(roi.shape);
+            }
+            _result = glcm::CombineShapes(shapes, _operation, _image_size);
+        } catch (const std::invalid_argument& error) {
+            Fail(CODE_INVALID_ARGUMENT, error.what());
+        } catch (const std::exception& error) {
+            Fail(CODE_INTERNAL, error.what());
+        }
+    }
+
+    void OnOK() override {
+        Resolve(OperationResultToJs(Env(), _result));
+    }
+
+private:
+    std::string _rois_json;
+    glcm::RoiOperation _operation;
+    cv::Size _image_size;
+    glcm::OperationResult _result;
+};
+
+class BrushRoiWorker : public PromiseWorker {
+public:
+    BrushRoiWorker(
+        Napi::Env env, std::string rois_json, std::vector<std::array<double, 2>> path, double radius, bool erase, cv::Size image_size)
+        : PromiseWorker(env),
+          _rois_json(std::move(rois_json)),
+          _path(std::move(path)),
+          _radius(radius),
+          _erase(erase),
+          _image_size(image_size) {}
+
+    void Execute() override {
+        try {
+            const std::vector<glcm::Roi> rois = ParseRois(_rois_json);
+            if (rois.size() > 1) {
+                throw std::invalid_argument("A brush stroke changes at most one ROI");
+            }
+            const std::optional<glcm::RoiShape> shape = rois.empty() ? std::nullopt : std::optional<glcm::RoiShape>(rois[0].shape);
+            _result = glcm::PaintStroke(shape, _path, _radius, _erase, _image_size);
+        } catch (const std::invalid_argument& error) {
+            Fail(CODE_INVALID_ARGUMENT, error.what());
+        } catch (const std::exception& error) {
+            Fail(CODE_INTERNAL, error.what());
+        }
+    }
+
+    void OnOK() override {
+        Resolve(OperationResultToJs(Env(), _result));
+    }
+
+private:
+    std::string _rois_json;
+    std::vector<std::array<double, 2>> _path;
+    double _radius;
+    bool _erase;
+    cv::Size _image_size;
+    glcm::OperationResult _result;
+};
+
+// combineRois(roisJson, operation, width, height): Promise<{points, pixelCount, boundingBox}> (glcm::CombineShapes);
+// operation is "union" or "subtract"
+Napi::Value CombineRois(const Napi::CallbackInfo& info) {
+    const std::string rois_json = StringArgument(info, 0, "roisJson");
+    const std::string operation = StringArgument(info, 1, "operation");
+    if (operation != "union" && operation != "subtract") {
+        throw Napi::TypeError::New(info.Env(), "operation must be \"union\" or \"subtract\"");
+    }
+    auto* worker = new CombineRoisWorker(info.Env(), rois_json,
+        operation == "union" ? glcm::RoiOperation::Union : glcm::RoiOperation::Subtract, ImageSizeArguments(info, 2));
+    const Napi::Promise promise = worker->Promise();
+    worker->Queue();
+    return promise;
+}
+
+// brushRoi(roisJson, path, radius, erase, width, height): Promise<{points, pixelCount, boundingBox}> (glcm::PaintStroke);
+// roisJson holds the ROI to change or none, path is a Float64Array [x0, y0, x1, y1, ...]
+Napi::Value BrushRoi(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    const std::string rois_json = StringArgument(info, 0, "roisJson");
+    if (info.Length() <= 1 || !info[1].IsTypedArray() || info[1].As<Napi::TypedArray>().TypedArrayType() != napi_float64_array) {
+        throw Napi::TypeError::New(env, "path must be a Float64Array");
+    }
+    const Napi::Float64Array flat = info[1].As<Napi::Float64Array>();
+    if (flat.ElementLength() == 0 || flat.ElementLength() % 2 != 0) {
+        throw Napi::TypeError::New(env, "path must hold x, y pairs");
+    }
+    std::vector<std::array<double, 2>> path(flat.ElementLength() / 2);
+    for (size_t i = 0; i < path.size(); ++i) {
+        path[i] = {flat[i * 2], flat[i * 2 + 1]};
+    }
+    if (info.Length() <= 2 || !info[2].IsNumber()) {
+        throw Napi::TypeError::New(env, "radius must be a number");
+    }
+    const double radius = info[2].As<Napi::Number>().DoubleValue();
+    const bool erase = BooleanArgument(info, 3, "erase");
+    auto* worker = new BrushRoiWorker(env, rois_json, std::move(path), radius, erase, ImageSizeArguments(info, 4));
     const Napi::Promise promise = worker->Promise();
     worker->Queue();
     return promise;
@@ -902,6 +1049,8 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set("CancelToken", CancelToken::Define(env));
     exports.Set("selectThresholdRegions", Napi::Function::New(env, SelectThresholdRegions, "selectThresholdRegions"));
     exports.Set("selectWandRegion", Napi::Function::New(env, SelectWandRegion, "selectWandRegion"));
+    exports.Set("combineRois", Napi::Function::New(env, CombineRois, "combineRois"));
+    exports.Set("brushRoi", Napi::Function::New(env, BrushRoi, "brushRoi"));
     return exports;
 }
 

@@ -6,6 +6,9 @@ import {
   type AnalysisInfo,
   type AnalysisRequest,
   type AnalysisResults,
+  type BrushRoiRequest,
+  type CombineRoisRequest,
+  type RoiShapeResult,
   type FeatureMapInfo,
   type FeatureMapRequest,
   type RoiStatsRequest,
@@ -221,6 +224,16 @@ export function selectThresholdRois(imageId: string, request: ThresholdRoisReque
 /** The connected region around a pixel within a tolerance of its value */
 export function selectWandRoi(imageId: string, request: WandRoiRequest, signal?: AbortSignal): Promise<WandRoiResponse> {
   return sendJson('POST', `${API_PREFIX}/images/${imageId}/wand-roi`, request, signal);
+}
+
+/** Union of ROIs, or the first ROI without the others, computed on the pixel grid */
+export function combineRois(imageId: string, request: CombineRoisRequest): Promise<RoiShapeResult> {
+  return sendJson('POST', `${API_PREFIX}/images/${imageId}/combine-rois`, request);
+}
+
+/** A brush stroke painted into (or erased from) a shape, computed on the pixel grid */
+export function brushRoi(imageId: string, request: BrushRoiRequest): Promise<RoiShapeResult> {
+  return sendJson('POST', `${API_PREFIX}/images/${imageId}/brush-roi`, request);
 }
 
 export function startAnalysis(request: AnalysisRequest): Promise<AnalysisInfo> {

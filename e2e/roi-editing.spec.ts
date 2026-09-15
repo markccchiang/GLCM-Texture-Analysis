@@ -1,0 +1,97 @@
+// End-to-end test of Union, Subtract, the brush and the eraser: the ROIs equal the addon's results for the same shapes
+
+import path from 'node:path';
+import type { RoiShape } from '@glcm/api';
+import * as native from '@glcm/native';
+import { expect, test, type Page } from '@playwright/test';
+import { chooseMenuItem, openSample, ROOT, storedRois, toPage } from './helpers.js';
+
+interface EditingHooks {
+  __glcm: {
+    rois: {
+      getState(): {
+        importRois(rois: Array<{ name: string; color: string; shape: RoiShape }>): string[];
+        select(ids: string[]): void;
+      };
+    };
+  };
+}
+
+const IMAGE_SIZE = 512;
+const roisJson = (...shapes: RoiShape[]) => JSON.stringify(shapes.map((shape, i) => ({ id: `r${i}`, name: `R${i}`, shape })));
+
+async function addAndSelect(page: Page, shapes: RoiShape[]): Promise<void> {
+  await page.evaluate((list) => {
+    const rois = (window as unknown as EditingHooks).__glcm.rois.getState();
+    rois.select(rois.importRois(list.map((shape, i) => ({ name: `Shape ${i + 1}`, color: '', shape }))));
+  }, shapes);
+}
+
+async function pixelCount(shape: RoiShape): Promise<number> {
+  const camera = await native.decodeImageFile(path.join(ROOT, 'samples', 'textures', 'camera.png'));
+  const [statistics] = await native.roiStats(camera.pixels, camera.width, camera.height, camera.bitDepth, JSON.stringify([{ id: 'p', shape }]));
+  return statistics.pixelCount;
+}
+
+async function stroke(page: Page, points: Array<[number, number]>): Promise<void> {
+  const [first, ...rest] = await Promise.all(points.map(([x, y]) => toPage(page, x, y)));
+  await page.mouse.move(first.x, first.y);
+  await page.mouse.down();
+  for (const point of rest) {
+    await page.mouse.move(point.x, point.y, { steps: 8 });
+  }
+  await page.mouse.up();
+}
+
+const rectangle: RoiShape = { type: 'rectangle', x: 100, y: 100, width: 120, height: 80 };
+
+test('Union merges the selected ROIs and Subtract cuts the others out of the first', async ({ page }) => {
+  await openSample(page);
+  const ellipse: RoiShape = { type: 'ellipse', cx: 210, cy: 170, rx: 50, ry: 30 };
+  await addAndSelect(page, [rectangle, ellipse]);
+  await chooseMenuItem(page, 'ROI', 'Union');
+  await expect.poll(async () => (await storedRois(page)).length).toBe(1);
+  const union = await native.combineRois(roisJson(rectangle, ellipse), 'union', IMAGE_SIZE, IMAGE_SIZE);
+  const [merged] = await storedRois(page);
+  expect(merged.name).toBe('Shape 1');
+  expect(merged.shape).toEqual({ type: 'polygon', points: union.points });
+
+  // A hole in the middle of a new rectangle
+  const inner: RoiShape = { type: 'rectangle', x: 300, y: 300, width: 40, height: 30 };
+  const outer: RoiShape = { type: 'rectangle', x: 280, y: 280, width: 100, height: 80 };
+  await addAndSelect(page, [outer, inner]);
+  await chooseMenuItem(page, 'ROI', 'Subtract');
+  const subtract = await native.combineRois(roisJson(outer, inner), 'subtract', IMAGE_SIZE, IMAGE_SIZE);
+  await expect.poll(async () => (await storedRois(page))[1].shape).toEqual({ type: 'polygon', points: subtract.points });
+  expect(subtract.pixelCount).toBe(100 * 80 - 40 * 30);
+  expect(await storedRois(page)).toHaveLength(3);
+  await expect(page.getByTestId('roi-manager')).toContainText('6,800 px');
+});
+
+test('the brush paints a new ROI and the eraser removes a stroke from it', async ({ page }) => {
+  await openSample(page);
+  await page.getByTestId('image-canvas').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('b');
+  await expect(page.getByRole('button', { name: /^Brush \(B\)/ })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('textbox', { name: 'Brush size' }).fill('24');
+
+  await stroke(page, [
+    [150, 150],
+    [300, 200],
+  ]);
+  await expect.poll(async () => (await storedRois(page)).length).toBe(1);
+  const painted = (await storedRois(page))[0].shape;
+  expect(painted.type).toBe('polygon');
+  const paintedPixels = await pixelCount(painted);
+  // A 24 px wide band about 158 px long, with round ends
+  expect(paintedPixels).toBeGreaterThan(3500);
+  expect(paintedPixels).toBeLessThan(4600);
+
+  await page.keyboard.press('x');
+  await stroke(page, [
+    [225, 100],
+    [225, 260],
+  ]);
+  await expect.poll(async () => pixelCount((await storedRois(page))[0].shape)).toBeLessThan(paintedPixels - 200);
+  expect(await storedRois(page)).toHaveLength(1);
+});

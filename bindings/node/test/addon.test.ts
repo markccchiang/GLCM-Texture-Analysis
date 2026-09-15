@@ -461,3 +461,42 @@ describe('region selection', () => {
     expect(await rejectionCode(native.selectWandRegion(pixels, width, height, 8, 0, 0, -1))).toBe('INVALID_ARGUMENT');
   });
 });
+
+describe('ROI editing', () => {
+  const roisJson = (...shapes: object[]) => JSON.stringify(shapes.map((shape, i) => ({ id: `r${i}`, name: `R${i}`, shape })));
+  const pixelCount = async (points: Array<[number, number]>) => {
+    const pixels = Buffer.alloc(40 * 30);
+    const [statistics] = await native.roiStats(pixels, 40, 30, 8, JSON.stringify([{ id: 'p', shape: { type: 'polygon', points } }]));
+    return statistics.pixelCount;
+  };
+  const outer = { type: 'rectangle', x: 2, y: 3, width: 20, height: 15 };
+  const inner = { type: 'rectangle', x: 8, y: 7, width: 6, height: 5 };
+
+  it('unites and subtracts ROIs into one polygon', async () => {
+    const union = await native.combineRois(roisJson(outer, { type: 'rectangle', x: 10, y: 10, width: 20, height: 10 }), 'union', 40, 30);
+    expect(union.pixelCount).toBe(300 + 200 - 96);
+    expect(await pixelCount(union.points)).toBe(union.pixelCount);
+
+    // A hole: the polygon joins the outer outline and the hole's outline with a cut
+    const hole = await native.combineRois(roisJson(outer, inner), 'subtract', 40, 30);
+    expect(hole).toMatchObject({ pixelCount: 270, boundingBox: { x: 2, y: 3, width: 20, height: 15 } });
+    expect(await pixelCount(hole.points)).toBe(270);
+
+    expect(await native.combineRois(roisJson(inner, outer), 'subtract', 40, 30)).toEqual({ points: [], pixelCount: 0, boundingBox: null });
+    expect(() => native.combineRois(roisJson(outer, inner), 'xor' as 'union', 40, 30)).toThrow(TypeError);
+  });
+
+  it('paints and erases brush strokes', async () => {
+    // Only pixel (5, 5) has its centre within 0.6 of (5.5, 5.5)
+    const dot = await native.brushRoi('[]', new Float64Array([5.5, 5.5]), 0.6, false, 40, 30);
+    expect(dot).toEqual({ points: [[5, 5], [6, 5], [6, 6], [5, 6]], pixelCount: 1, boundingBox: { x: 5, y: 5, width: 1, height: 1 } });
+
+    const erased = await native.brushRoi(roisJson(outer), new Float64Array([12, 0, 12, 29]), 1.5, true, 40, 30);
+    // Pixel centres 10.5 to 13.5 lie within 1.5 of x = 12: four columns
+    expect(erased.pixelCount).toBe(300 - 4 * 15);
+    expect(await pixelCount(erased.points)).toBe(erased.pixelCount);
+
+    expect(await rejectionCode(native.brushRoi('[]', new Float64Array([1, 1]), 0, false, 40, 30))).toBe('INVALID_ARGUMENT');
+    expect(() => native.brushRoi('[]', new Float64Array([1]), 1, false, 40, 30)).toThrow(TypeError);
+  });
+});

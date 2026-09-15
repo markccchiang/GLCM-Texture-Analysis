@@ -20,5 +20,7 @@ export const {
   CancelToken,
   selectThresholdRegions,
   selectWandRegion,
+  combineRois,
+  brushRoi,
 } = native;
 export default native;

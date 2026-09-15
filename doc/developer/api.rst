@@ -76,6 +76,13 @@ Endpoints
    * - ``POST /images/{id}/wand-roi``
      - ``{x, y, tolerance}`` → ``{region}``: the 8-connected region around pixel ``(x, y)`` whose values differ from its
        value by at most ``tolerance``, outlined the same way; ``null`` outside the image
+   * - ``POST /images/{id}/combine-rois``
+     - ``{operation: "union"|"subtract", shapes}`` → ``{shape, pixelCount, boundingBox}``: the shapes rasterized on the
+       image grid and combined; ``shape`` is one polygon along the pixel edges whose parts and holes are joined by
+       zero-width cuts (even-odd rule), ``null`` when no pixel is left
+   * - ``POST /images/{id}/brush-roi``
+     - ``{shape, path, radius, erase}`` → the same result: the pixels whose centres lie within ``radius`` of ``path``,
+       added to ``shape`` (a new shape when ``null``) or removed from it
    * - ``POST /analyses``
      - ``{imageId, rois, settings}`` → ``202`` with ``AnalysisInfo``; ``400`` for invalid settings or ROIs; ``422``
        ``TooManyJobs`` when ROIs × distances exceed ``GLCM_MAX_PENDING_JOBS``; ``503`` ``ServerBusy`` (with
@@ -322,6 +329,10 @@ functions throw, with an ``Error`` whose ``code`` is ``INVALID_ARGUMENT``, ``UNS
      - ``glcm::SelectThresholdRegions``; each region is ``{points, pixelCount, boundingBox}``
    * - ``selectWandRegion(pixels, width, height, bitDepth, x, y, tolerance): Promise<region | null>``
      - ``glcm::SelectWandRegion``
+   * - ``combineRois(roisJson, operation, width, height): Promise<{points, pixelCount, boundingBox}>``
+     - ``glcm::CombineShapes``
+   * - ``brushRoi(roisJson, path, radius, erase, width, height): Promise<{points, pixelCount, boundingBox}>``
+     - ``glcm::PaintStroke``; ``path`` is a ``Float64Array`` of x, y pairs and ``roisJson`` holds at most one ROI
    * - ``validateAnalysis(roisJson, settingsJson): void``
      - Parses and validates an analysis request
    * - ``runAnalysis(pixels, width, height, bitDepth, roisJson, settingsJson): Promise<string>``
@@ -376,6 +387,9 @@ paths are relative to ``core/``. The main entry points:
    * - ``roi/RegionSelection.hpp``
      - ``SelectThresholdRegions`` and ``SelectWandRegion``: connected regions of pixel values, with holes filled, as
        polygon outlines along the pixel edges
+   * - ``roi/RoiOperations.hpp``
+     - ``MaskOutline`` (an exact polygon for any mask), ``CombineShapes`` (union, subtract) and ``PaintStroke`` (brush,
+       eraser)
    * - ``imaging/ImageHeader.hpp``
      - ``ReadImageSize``, ``ReadImageSizeFromBytes`` → ``ImageSize{width, height, more_images, pixel_spacing}``;
        ``PixelSpacing``, ``SpacingFromDensity``

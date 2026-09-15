@@ -1,8 +1,10 @@
 import type { PolygonShape } from '@glcm/api';
 import { describe, expect, it } from 'vitest';
 import {
+  cutEdges,
   ellipseFromDrag,
   freehandFromPath,
+  hasCuts,
   insertVertex,
   isDrawableShape,
   moveVertex,
@@ -84,5 +86,38 @@ describe('polygons', () => {
     expect(removeVertex(square, 0).points).toEqual([[10, 0], [10, 10], [0, 10]]);
     const triangle = removeVertex(square, 0);
     expect(removeVertex(triangle, 0)).toBe(triangle);
+  });
+});
+
+describe('cut edges', () => {
+  it('marks the segments a polygon runs both ways', () => {
+    // A square with a square hole, joined by a cut from (0, 0) to (2, 2) and back
+    const points: Array<[number, number]> = [
+      [0, 0],
+      [6, 0],
+      [6, 6],
+      [0, 6],
+      [0, 0],
+      [2, 2],
+      [4, 2],
+      [4, 4],
+      [2, 4],
+      [2, 2],
+    ];
+    expect(cutEdges(points)).toEqual([false, false, false, false, true, false, false, false, false, true]);
+    expect(hasCuts(points)).toBe(true);
+  });
+
+  it('finds no cuts in ordinary polygons, including repeated vertices', () => {
+    expect(
+      hasCuts([
+        [0, 0],
+        [4, 0],
+        [4, 4],
+        [4, 4],
+        [0, 4],
+      ]),
+    ).toBe(false);
+    expect(cutEdges([[1, 1]])).toEqual([false]);
   });
 });

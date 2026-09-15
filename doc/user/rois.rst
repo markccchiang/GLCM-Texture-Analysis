@@ -42,6 +42,12 @@ Choose a tool in the toolbar, in the *ROI* menu or with its key, then draw on th
      - :kbd:`W`
      - Click a region. The pixels connected to the clicked pixel whose values are within the tolerance become the ROI;
        see :ref:`rois-by-intensity`.
+   * - Brush
+     - :kbd:`B`
+     - Press and drag to paint into the selected ROI, or into a new ROI when none is selected; see :ref:`editing-rois`.
+   * - Eraser
+     - :kbd:`X`
+     - Press and drag to remove a stroke from the selected ROI.
 
 A newly drawn shape has a **dashed white outline**: it is the *active* ROI and not yet part of the ROI Manager. Press
 :kbd:`T` (or **Add (T)** in the ROI Manager, or *ROI ▸ Add to Manager*) to add it. It then gets a name ("ROI 1",
@@ -80,6 +86,39 @@ Holes inside a region are filled: they belong to the ROI, and so does anything l
 
 An ROI may have at most 10,000 vertices. A longer outline, for example around a large noisy region, is simplified to
 fit, and a message says so; its edges then no longer follow the pixels exactly.
+
+.. _editing-rois:
+
+Painting and combining ROIs
+---------------------------
+
+The brush, the eraser and the *Union* and *Subtract* commands change ROIs pixel by pixel, with the same rule that decides
+which pixels an ROI contains (see below). The result is again one polygon ROI whose outline follows the pixel edges.
+
+- **Brush** (:kbd:`B`): with one ROI selected, press and drag over the image to add the stroke to that ROI. With no ROI
+  selected, the stroke becomes a new ROI in the ROI Manager, which is then selected, so further strokes add to it. The
+  stroke covers the pixels whose centres lie within half the **brush size** of the path; set the size (a diameter in
+  image pixels, 10 by default) in the **⌀** field next to the tool buttons.
+- **Eraser** (:kbd:`X`): removes a stroke of the same size from the selected ROI. Erasing across an ROI can split it
+  into parts, and erasing inside it leaves a hole. An ROI erased completely is deleted.
+- **Union** (*ROI ▸ Union*, or in the ROI Manager's **⋯** menu): merges the selected ROIs into one. It keeps the name and
+  colour of the ROI you selected first; the others are removed.
+- **Subtract** (*ROI ▸ Subtract*, or the ROI Manager's menu): removes the pixels of the other selected ROIs from the ROI
+  you selected first. The other ROIs stay.
+
+.. figure:: images/roi-editing.png
+   :alt: A selected rectangle ROI with an elliptical hole, made by subtracting an ellipse; the tinted fill leaves the hole clear.
+   :width: 45%
+
+   A rectangle with an ellipse subtracted: one ROI with a hole.
+
+Each stroke and each command is one undo step. The canvas shows the stroke while it is drawn, and the ROI changes a
+moment later.
+
+An ROI with several parts or holes is still a single polygon: its outline runs around each part and each hole, and
+zero-width cuts join them into one. The cuts cover no pixels and are not drawn, so pixel counts and measurements include
+exactly the painted pixels. Such an ROI has no vertex handles; change it with the brush and the eraser, or move it as a
+whole.
 
 Which pixels belong to an ROI
 -----------------------------
