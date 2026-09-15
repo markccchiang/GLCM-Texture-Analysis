@@ -175,6 +175,7 @@ const SHORTCUTS: [string, string][] = [
   [`${MOD_KEY}S`, 'Save project'],
   ['R / E / P / F / W', 'Rectangle, ellipse, polygon, freehand, magic wand tool'],
   ['B / X', 'Brush, eraser (change the selected ROI)'],
+  ['I', 'Livewire: outline that follows edges'],
   ['L', 'Ruler: drag to measure a distance (Shift: 45° steps)'],
   ['T', 'Add the drawn ROI to the ROI Manager'],
   ['M / ⇧M', 'Measure selected / all ROIs'],

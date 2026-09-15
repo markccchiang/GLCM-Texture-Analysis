@@ -125,7 +125,7 @@ For web development, run `npm start` and `npm run dev:web` side by side, then op
 
 Images up to 4096 × 4096 px are sent to the browser as raw samples and rendered there with a WebGL2 shader, which falls back to a lookup table. Its output is identical to the server's `display.png` rendering. Larger images are shown through `display.png`, and their pixel values come from `/pixel`.
 
-The ROI Manager's pixel counts come from the core, with the same pixel-centre rule the analysis uses. The magic wand, Threshold ROI, the brush, the eraser, Union and Subtract are computed on the pixel grid by the core too, so an ROI always contains exactly the pixels that are measured.
+The ROI Manager's pixel counts come from the core, with the same pixel-centre rule the analysis uses. The edge map, the livewire, the magic wand, Threshold ROI, the brush, the eraser, Union and Subtract are computed on the pixel grid by the core too, so an ROI always contains exactly the pixels that are measured.
 
 ## Local mode, server mode and deployment
 
@@ -180,8 +180,11 @@ Endpoints (full details in `packages/api/openapi.json` and the Developer guide):
 | `GET /api/v1/images/{id}/display.png?min&max&maxSize` | 8-bit rendering with window/level |
 | `GET /api/v1/images/{id}/raw` | Raw little-endian samples, zstd or gzip compressed, for images up to 4096 × 4096 |
 | `GET /api/v1/images/{id}/pixel?x&y` | One pixel value |
+| `GET /api/v1/images/{id}/edges.png?method&sigma&low&high` | Sobel or Canny edge map as an 8-bit PNG |
+| `GET /api/v1/images/{id}/gradient-stats?sigma` | Percentiles of the gradient magnitude, for choosing edge map limits |
 | `POST /api/v1/images/{id}/roi-stats` | Pixel count, bounding box, min/max/mean/STD of ROIs |
 | `POST /api/v1/images/{id}/threshold-rois` | ROIs of the connected regions in an intensity range (Threshold ROI) |
+| `POST /api/v1/images/{id}/livewire` | Livewire path between two pixels along strong edges |
 | `POST /api/v1/images/{id}/wand-roi` | ROI of the connected region around a pixel within a tolerance (magic wand) |
 | `POST /api/v1/images/{id}/combine-rois` | Union or subtraction of ROIs, as one polygon |
 | `POST /api/v1/images/{id}/brush-roi` | A brush or eraser stroke applied to an ROI |

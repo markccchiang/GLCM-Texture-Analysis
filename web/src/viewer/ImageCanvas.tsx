@@ -27,6 +27,8 @@ import { useRois } from '../rois/roiStore';
 import { applyBrushStroke } from '../rois/editActions';
 import { wandAt } from '../rois/regionActions';
 import { BrushStrokeLayer, type BrushStroke } from './BrushStrokeLayer';
+import { EdgeMapLayer } from './EdgeMapLayer';
+import { livewireDraftPoints, useLivewire } from './useLivewire';
 import { roiProblem, useRoiStatistics } from '../rois/useRoiStatistics';
 import { usePreferences } from '../stores/preferences';
 import { useViewer } from '../stores/viewerStore';
@@ -107,6 +109,7 @@ export function ImageCanvas() {
   const viewSize = useViewer((state) => state.viewSize);
   const tool = useViewer((state) => state.tool);
   const brushSize = useViewer((state) => state.brushSize);
+  const livewire = useLivewire(image?.info.imageId ?? null);
   const displaySource = useViewer((state) => state.displaySource);
   const displayVersion = useViewer((state) => state.displayVersion);
   const hoveredId = useRois((state) => state.hoveredId);
@@ -138,10 +141,12 @@ export function ImageCanvas() {
     imageNodeRef.current?.getLayer()?.batchDraw();
   }, [displayVersion]);
 
-  // Switching tools or images abandons a polygon being drawn
+  // Switching tools or images abandons a polygon or livewire outline being drawn
+  const cancelLivewire = livewire.cancel;
   useEffect(() => {
     setDraft(null);
-  }, [tool, image, setDraft]);
+    cancelLivewire();
+  }, [tool, image, setDraft, cancelLivewire]);
 
   const localPoint = (clientX: number, clientY: number): Point => {
     const rect = containerRef.current!.getBoundingClientRect();
@@ -322,6 +327,8 @@ export function ImageCanvas() {
     }
   }, [setDraft]);
 
+  const { draftRef: livewireRef, finish: finishLivewire, removeLast: removeLastLivewire } = livewire;
+
   // Keyboard shortcuts of the canvas; menus, dialogs and text fields keep their own keys
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -341,13 +348,18 @@ export function ImageCanvas() {
         finishPolygon();
         return;
       }
+      if (event.key === 'Enter' && livewireRef.current) {
+        event.preventDefault();
+        finishLivewire();
+        return;
+      }
       const state = useViewer.getState();
       if (!state.image) {
         return;
       }
       const action = keyToAction(event, {
         hasSelection: useRois.getState().selectedIds.length > 0,
-        drawing: draftRef.current !== null,
+        drawing: draftRef.current !== null || livewireRef.current !== null,
         view: state.viewSize,
       });
       if (!action) {
@@ -355,7 +367,11 @@ export function ImageCanvas() {
       }
       event.preventDefault();
       const current = draftRef.current;
-      if (action.kind === 'cancel' && current) {
+      if (action.kind === 'cancel' && livewireRef.current) {
+        cancelLivewire();
+      } else if (action.kind === 'removeLastVertex' && livewireRef.current) {
+        removeLastLivewire();
+      } else if (action.kind === 'cancel' && current) {
         setDraft(null);
       } else if (action.kind === 'removeLastVertex' && current) {
         const points = current.points.slice(0, -1);
@@ -378,7 +394,7 @@ export function ImageCanvas() {
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
     };
-  }, [finishPolygon, setDraft]);
+  }, [finishPolygon, setDraft, finishLivewire, cancelLivewire, removeLastLivewire, livewireRef]);
 
   // Cancel a pending pixel lookup when the image changes
   useEffect(() => {
@@ -450,6 +466,29 @@ export function ImageCanvas() {
         const path: Array<[number, number]> = [[point.x, point.y]];
         setGesture({ kind: 'brush', pointerId: event.pointerId, erase: tool === 'eraser', path });
         setBrushStroke({ path, erase: tool === 'eraser' });
+        return;
+      }
+      case 'livewire': {
+        const pixel = pixelAt(state.viewport, local, state.image.info);
+        if (!pixel) {
+          return;
+        }
+        const current = livewire.draftRef.current;
+        if (!current) {
+          const closed = polygonClosedRef.current;
+          if (closed && event.timeStamp - closed.time < DOUBLE_CLICK_MS && Math.hypot(closed.x - local.x, closed.y - local.y) <= CLOSE_DISTANCE) {
+            return;
+          }
+          livewire.addPoint(pixel);
+          return;
+        }
+        const first = imageToScreen(state.viewport, { x: current.anchors[0].x + 0.5, y: current.anchors[0].y + 0.5 });
+        if (current.anchors.length >= 3 && Math.hypot(first.x - local.x, first.y - local.y) <= CLOSE_DISTANCE) {
+          polygonClosedRef.current = { x: local.x, y: local.y, time: event.timeStamp };
+          livewire.finish();
+          return;
+        }
+        livewire.addPoint(pixel);
         return;
       }
       case 'wand': {
@@ -575,6 +614,9 @@ export function ImageCanvas() {
     if (draftRef.current) {
       setDraft({ ...draftRef.current, cursor: point });
     }
+    if (tool === 'livewire' && livewire.draftRef.current) {
+      livewire.move(pixelAt(state.viewport, local, state.image.info));
+    }
     if (tool === 'pointer') {
       const hit = hitTest(local);
       updateRoiHover(hit && hit.kind !== 'transformer' ? hit.roiId : null, local);
@@ -631,6 +673,10 @@ export function ImageCanvas() {
     }
     if (tool === 'polygon') {
       finishPolygon();
+      return;
+    }
+    if (tool === 'livewire') {
+      livewire.finish();
       return;
     }
     if (tool === 'pointer') {
@@ -703,8 +749,9 @@ export function ImageCanvas() {
               />
             )}
           </Layer>
+          {info && <EdgeMapLayer viewport={viewport} imageId={info.imageId} width={info.width} height={info.height} />}
           {info && <FeatureMapLayer viewport={viewport} imageWidth={info.width} imageHeight={info.height} />}
-          {info && <RoiLayer viewport={viewport} draft={draft} interactive={tool === 'pointer' && !spaceHeld} />}
+          {info && <RoiLayer viewport={viewport} draft={draft ?? (livewire.draft ? { ...livewireDraftPoints(livewire.draft), cursor: null } : null)} interactive={tool === 'pointer' && !spaceHeld} />}
           {info && brushStroke && <BrushStrokeLayer viewport={viewport} stroke={brushStroke} size={brushSize} />}
           {info && <RulerLayer viewport={viewport} />}
         </Stage>

@@ -19,6 +19,8 @@ const ACTIVE_COLOR = '#FFFFFF';
 export interface PolygonDraft {
   points: Array<[number, number]>;
   cursor: Point | null;
+  /** Points marked with dots; the points themselves when absent (livewire drafts mark only the clicked anchors) */
+  anchors?: Array<[number, number]>;
 }
 
 interface ShapeNodeProps {
@@ -181,7 +183,7 @@ export function RoiLayer({ viewport, draft, interactive }: { viewport: Viewport;
         {activeShape && <ShapeNode shape={activeShape} color={ACTIVE_COLOR} strokeWidth={1.5} dash={[6, 4]} listening={false} />}
         {draft && <Line points={draftPoints} stroke={ACTIVE_COLOR} strokeWidth={1.5} strokeScaleEnabled={false} dash={[6, 4]} listening={false} />}
         {draft &&
-          draft.points.map(([x, y], index) => (
+          (draft.anchors ?? draft.points).map(([x, y], index) => (
             <Circle key={index} x={x} y={y} radius={(index === 0 ? VERTEX_RADIUS + 1 : 2.5) / viewport.scale} fill={ACTIVE_COLOR} listening={false} />
           ))}
         {editablePolygon?.shape.type === 'polygon' &&

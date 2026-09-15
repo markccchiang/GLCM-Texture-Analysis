@@ -18,6 +18,7 @@ import { MOD_KEY, useUi } from '../stores/uiStore';
 import { isNavigatorVisible, useViewer, type Tool } from '../stores/viewerStore';
 import { usePreferences } from '../stores/preferences';
 import { COLOR_TABLES } from '../image/colorTables';
+import { useEdgeMap } from '../viewer/edgeMap';
 
 function Shortcut({ children }: { children: ReactNode }) {
   return (
@@ -45,6 +46,7 @@ const TOOL_ITEMS: Array<{ tool: Tool; label: string; key: string }> = [
   { tool: 'ellipse', label: 'Ellipse', key: 'E' },
   { tool: 'polygon', label: 'Polygon', key: 'P' },
   { tool: 'freehand', label: 'Freehand', key: 'F' },
+  { tool: 'livewire', label: 'Livewire', key: 'I' },
   { tool: 'wand', label: 'Magic Wand', key: 'W' },
   { tool: 'brush', label: 'Brush', key: 'B' },
   { tool: 'eraser', label: 'Eraser', key: 'X' },
@@ -62,6 +64,7 @@ export function MenuBar() {
   const hasResults = useResults((state) => state.rows.length > 0);
   const showLabels = useUi((state) => state.showRoiLabels);
   const showScaleBar = usePreferences((state) => state.showScaleBar);
+  const showEdgeMap = useEdgeMap((state) => state.shown);
   const colorTable = useViewer((state) => state.colorTable);
   const hasToken = useAuth((state) => state.token !== null);
   const catalog = useQuery(CATALOG_QUERY);
@@ -282,6 +285,13 @@ export function MenuBar() {
           onClick={() => usePreferences.getState().setShowScaleBar(!showScaleBar)}
         >
           Show Scale Bar
+        </Menu.Item>
+        <Menu.Item
+          disabled={!hasImage}
+          leftSection={showEdgeMap ? <IconCheck size={14} /> : <span style={{ width: 14 }} />}
+          onClick={() => useEdgeMap.getState().setShown(!showEdgeMap)}
+        >
+          Show Edge Map
         </Menu.Item>
         <Menu.Divider />
         <Menu.Item

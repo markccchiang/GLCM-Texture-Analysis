@@ -136,6 +136,32 @@ table, those above it the last. The strip under the histogram shows the colours 
 only changes the display, like the window; it is kept when you open another image and applies to server-rendered images
 too.
 
+Edge map
+~~~~~~~~
+
+*View ▸ Show Edge Map* draws the edges of the image over it, as a guide for drawing ROIs along boundaries. A card in the
+top-left corner of the image controls it:
+
+- **Canny** shows thin edge lines in cyan. A pixel is an edge where the gradient is a local maximum across the edge and
+  above the **High threshold**, or above the **Low threshold** and connected to such an edge.
+- **Sobel** shows the gradient magnitude itself: pixels with a gradient at or below **Black at** are transparent, and
+  pixels at or above **White at** are white.
+- **Smoothing σ** blurs the image with a Gaussian of that many pixels before the gradient is taken (1 by default), which
+  suppresses edges from noise. The livewire tool uses the same smoothing.
+- **Opacity** blends the edge map with the image.
+
+The gradient is measured on the original intensities, in intensity units per pixel: a ramp that rises by 10 per pixel has
+a gradient of 10. The card shows the median, the 95th percentile and the maximum of the gradient. **Auto** chooses the
+limits from them: for Canny, the 95th percentile as the high threshold and 40 % of it as the low one; for Sobel, a window
+from 0 to the 99th percentile. Changing the method or the smoothing chooses the limits again. The edge map only guides
+the eye: it does not change the image, the ROIs or the measurements.
+
+.. figure:: images/edge-map.png
+   :alt: The camera image with cyan Canny edges drawn over it, and the edge map card with the method, smoothing, thresholds, gradient percentiles and opacity.
+   :width: 100%
+
+   Canny edges over the image, with the edge map card.
+
 .. note::
 
    Images up to 4096 × 4096 pixels are rendered by your browser, so the window follows the slider immediately. Larger

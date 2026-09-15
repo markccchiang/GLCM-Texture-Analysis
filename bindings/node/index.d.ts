@@ -197,6 +197,45 @@ export function combineRois(roisJson: string, operation: 'union' | 'subtract', w
  */
 export function brushRoi(roisJson: string, path: Float64Array, radius: number, erase: boolean, width: number, height: number): Promise<NativeRoiShapeResult>;
 
+export interface NativeGradientStatistics {
+  sigma: number;
+  /** Nearest-rank percentiles of the gradient magnitude, in intensity units per pixel */
+  percentiles: { '50': number; '90': number; '95': number; '99': number };
+  max: number;
+}
+
+/** Percentiles and maximum of the gradient magnitude after Gaussian smoothing (glcm::ComputeGradientStatistics) */
+export function gradientStatistics(pixels: Uint8Array, width: number, height: number, bitDepth: 8 | 16, sigma: number): Promise<NativeGradientStatistics>;
+
+/**
+ * 8-bit PNG edge map (glcm::RenderEdgeMap): for "sobel" the gradient magnitude between low and high, for "canny" 255 on the
+ * edges found with the hysteresis thresholds low and high; the long side is reduced to maxSize (0: full size)
+ */
+export function renderEdgeMap(
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+  bitDepth: 8 | 16,
+  method: 'sobel' | 'canny',
+  sigma: number,
+  low: number,
+  high: number,
+  maxSize: number,
+): Promise<Buffer>;
+
+/** Livewire path from one pixel to another along strong edges, as pixel centres where it turns (glcm::LivewirePath) */
+export function livewirePath(
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+  bitDepth: 8 | 16,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  sigma: number,
+): Promise<Array<[number, number]>>;
+
 /**
  * Measures every ROI at every distance (glcm::RunAnalysis).
  * @returns the "glcm-results" JSON document (without image name, SHA-256 or timestamp)
@@ -257,5 +296,8 @@ declare const native: {
   selectWandRegion: typeof selectWandRegion;
   combineRois: typeof combineRois;
   brushRoi: typeof brushRoi;
+  gradientStatistics: typeof gradientStatistics;
+  renderEdgeMap: typeof renderEdgeMap;
+  livewirePath: typeof livewirePath;
 };
 export default native;

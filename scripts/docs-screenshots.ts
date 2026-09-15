@@ -356,6 +356,18 @@ async function main(): Promise<void> {
     await page.keyboard.press('Escape');
     await page.getByRole('dialog').waitFor({ state: 'hidden' });
 
+    // Edge map over the image, with its card
+    await page.mouse.move(5, VIEWPORT.height - 5);
+    const edgeMapLoaded = page.waitForResponse((response) => response.url().includes('/edges.png') && response.ok());
+    await chooseMenuItem(page, 'View', 'Show Edge Map');
+    const edgeCard = page.getByRole('region', { name: 'Edge map' });
+    await edgeCard.getByText(/95th percentile/).waitFor();
+    await edgeMapLoaded;
+    await page.waitForTimeout(600);
+    await shot(page, 'edge-map', page.getByTestId('image-canvas'));
+    await edgeCard.getByRole('button', { name: 'Hide edge map' }).click();
+    await edgeCard.waitFor({ state: 'hidden' });
+
     // An ROI with a hole, made with Subtract
     const cutId = await page.evaluate(() => {
       const rois = (

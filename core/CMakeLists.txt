@@ -17,6 +17,7 @@ add_library(glcm_core STATIC
         analysis/SizeZone.cpp
         analysis/TextureAnalysis.cpp
         imaging/DisplayRenderer.cpp
+        imaging/EdgeDetection.cpp
         imaging/ImageHeader.cpp
         imaging/ImageLoader.cpp
         imaging/Quantizer.cpp
@@ -28,6 +29,7 @@ add_library(glcm_core STATIC
         pipeline/AnalysisSettings.cpp
         pipeline/FeatureMap.cpp
         pipeline/FeatureCatalog.cpp
+        roi/Livewire.cpp
         roi/RegionSelection.cpp
         roi/RoiOperations.cpp
         roi/Roi.cpp)
@@ -51,6 +53,7 @@ if (GLCM_BUILD_TESTS)
     if (GTest_FOUND)
         enable_testing()
         add_executable(glcm-tests
+                tests/EdgeDetectionTest.cpp
                 tests/FeatureMapTest.cpp
                 tests/FirstOrderTest.cpp
                 tests/GrayToneDifferenceTest.cpp

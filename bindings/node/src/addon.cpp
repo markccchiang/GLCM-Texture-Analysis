@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "imaging/DisplayRenderer.hpp"
+#include "imaging/EdgeDetection.hpp"
 #include "imaging/ImageLoader.hpp"
 #include "io/Identifiers.hpp"
 #include "io/Json.hpp"
@@ -31,6 +32,7 @@
 #include "pipeline/FeatureCatalog.hpp"
 #include "pipeline/FeatureMap.hpp"
 #include "pipeline/Version.hpp"
+#include "roi/Livewire.hpp"
 #include "roi/RegionSelection.hpp"
 #include "roi/Roi.hpp"
 #include "roi/RoiOperations.hpp"
@@ -1033,6 +1035,152 @@ Napi::Value BrushRoi(const Napi::CallbackInfo& info) {
     return promise;
 }
 
+double NumberArgument(const Napi::CallbackInfo& info, size_t index, const char* name) {
+    if (info.Length() <= index || !info[index].IsNumber()) {
+        throw Napi::TypeError::New(info.Env(), std::string(name) + " must be a number");
+    }
+    const double value = info[index].As<Napi::Number>().DoubleValue();
+    if (!std::isfinite(value)) {
+        throw Napi::TypeError::New(info.Env(), std::string(name) + " must be a finite number");
+    }
+    return value;
+}
+
+class GradientStatisticsWorker : public PixelWorker {
+public:
+    GradientStatisticsWorker(Napi::Env env, const PixelArguments& arguments, double sigma) : PixelWorker(env, arguments), _sigma(sigma) {}
+
+    void Execute() override {
+        try {
+            _statistics = glcm::ComputeGradientStatistics(Gray(), _sigma);
+        } catch (const std::invalid_argument& error) {
+            Fail(CODE_INVALID_ARGUMENT, error.what());
+        } catch (const std::exception& error) {
+            Fail(CODE_INTERNAL, error.what());
+        }
+    }
+
+    void OnOK() override {
+        Napi::Env env = Env();
+        Napi::Object percentiles = Napi::Object::New(env);
+        percentiles.Set("50", _statistics.p50);
+        percentiles.Set("90", _statistics.p90);
+        percentiles.Set("95", _statistics.p95);
+        percentiles.Set("99", _statistics.p99);
+        Napi::Object result = Napi::Object::New(env);
+        result.Set("sigma", _sigma);
+        result.Set("percentiles", percentiles);
+        result.Set("max", _statistics.max);
+        Resolve(result);
+    }
+
+private:
+    double _sigma;
+    glcm::GradientStatistics _statistics;
+};
+
+class EdgeMapWorker : public PixelWorker {
+public:
+    EdgeMapWorker(
+        Napi::Env env, const PixelArguments& arguments, glcm::EdgeMethod method, double sigma, double low, double high, int max_size)
+        : PixelWorker(env, arguments), _method(method), _sigma(sigma), _low(low), _high(high), _max_size(max_size) {}
+
+    void Execute() override {
+        try {
+            const cv::Mat map = glcm::RenderEdgeMap(Gray(), _method, _sigma, _low, _high, _max_size);
+            if (!cv::imencode(".png", map, _png)) {
+                Fail(CODE_INTERNAL, "Cannot encode the PNG image");
+            }
+        } catch (const std::invalid_argument& error) {
+            Fail(CODE_INVALID_ARGUMENT, error.what());
+        } catch (const std::exception& error) {
+            Fail(CODE_INTERNAL, error.what());
+        }
+    }
+
+    void OnOK() override {
+        Resolve(Napi::Buffer<uint8_t>::Copy(Env(), _png.data(), _png.size()));
+    }
+
+private:
+    glcm::EdgeMethod _method;
+    double _sigma;
+    double _low;
+    double _high;
+    int _max_size;
+    std::vector<uchar> _png;
+};
+
+class LivewireWorker : public PixelWorker {
+public:
+    LivewireWorker(Napi::Env env, const PixelArguments& arguments, cv::Point from, cv::Point to, double sigma)
+        : PixelWorker(env, arguments), _from(from), _to(to), _sigma(sigma) {}
+
+    void Execute() override {
+        try {
+            _path = glcm::LivewirePath(Gray(), _from, _to, _sigma);
+        } catch (const std::invalid_argument& error) {
+            Fail(CODE_INVALID_ARGUMENT, error.what());
+        } catch (const std::exception& error) {
+            Fail(CODE_INTERNAL, error.what());
+        }
+    }
+
+    void OnOK() override {
+        Napi::Env env = Env();
+        Napi::Array points = Napi::Array::New(env, _path.size());
+        for (size_t i = 0; i < _path.size(); ++i) {
+            Napi::Array point = Napi::Array::New(env, 2);
+            point.Set(uint32_t{0}, _path[i][0]);
+            point.Set(uint32_t{1}, _path[i][1]);
+            points.Set(static_cast<uint32_t>(i), point);
+        }
+        Resolve(points);
+    }
+
+private:
+    cv::Point _from;
+    cv::Point _to;
+    double _sigma;
+    std::vector<std::array<double, 2>> _path;
+};
+
+// gradientStatistics(pixels, width, height, bitDepth, sigma): Promise<{sigma, percentiles, max}> (glcm::ComputeGradientStatistics)
+Napi::Value GradientStatistics(const Napi::CallbackInfo& info) {
+    const PixelArguments pixels = ReadPixelArguments(info, 0);
+    auto* worker = new GradientStatisticsWorker(info.Env(), pixels, NumberArgument(info, 4, "sigma"));
+    const Napi::Promise promise = worker->Promise();
+    worker->Queue();
+    return promise;
+}
+
+// renderEdgeMap(pixels, width, height, bitDepth, method, sigma, low, high, maxSize): Promise<Buffer> (8-bit PNG,
+// glcm::RenderEdgeMap); method is "sobel" or "canny"
+Napi::Value RenderEdgeMap(const Napi::CallbackInfo& info) {
+    const PixelArguments pixels = ReadPixelArguments(info, 0);
+    const std::string method = StringArgument(info, 4, "method");
+    if (method != "sobel" && method != "canny") {
+        throw Napi::TypeError::New(info.Env(), "method must be \"sobel\" or \"canny\"");
+    }
+    auto* worker = new EdgeMapWorker(info.Env(), pixels, method == "sobel" ? glcm::EdgeMethod::Sobel : glcm::EdgeMethod::Canny,
+        NumberArgument(info, 5, "sigma"), NumberArgument(info, 6, "low"), NumberArgument(info, 7, "high"),
+        IntegerArgument(info, 8, "maxSize"));
+    const Napi::Promise promise = worker->Promise();
+    worker->Queue();
+    return promise;
+}
+
+// livewirePath(pixels, width, height, bitDepth, fromX, fromY, toX, toY, sigma): Promise<Array<[x, y]>> (glcm::LivewirePath)
+Napi::Value LivewirePath(const Napi::CallbackInfo& info) {
+    const PixelArguments pixels = ReadPixelArguments(info, 0);
+    const cv::Point from(IntegerArgument(info, 4, "fromX"), IntegerArgument(info, 5, "fromY"));
+    const cv::Point to(IntegerArgument(info, 6, "toX"), IntegerArgument(info, 7, "toY"));
+    auto* worker = new LivewireWorker(info.Env(), pixels, from, to, NumberArgument(info, 8, "sigma"));
+    const Napi::Promise promise = worker->Promise();
+    worker->Queue();
+    return promise;
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set("coreVersion", Napi::Function::New(env, CoreVersion, "coreVersion"));
     exports.Set("catalog", Napi::Function::New(env, Catalog, "catalog"));
@@ -1051,6 +1199,9 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set("selectWandRegion", Napi::Function::New(env, SelectWandRegion, "selectWandRegion"));
     exports.Set("combineRois", Napi::Function::New(env, CombineRois, "combineRois"));
     exports.Set("brushRoi", Napi::Function::New(env, BrushRoi, "brushRoi"));
+    exports.Set("gradientStatistics", Napi::Function::New(env, GradientStatistics, "gradientStatistics"));
+    exports.Set("renderEdgeMap", Napi::Function::New(env, RenderEdgeMap, "renderEdgeMap"));
+    exports.Set("livewirePath", Napi::Function::New(env, LivewirePath, "livewirePath"));
     return exports;
 }
 

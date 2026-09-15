@@ -156,6 +156,29 @@ export const RoiShapeResult = Type.Object({
 export type RoiShapeResult = Static<typeof RoiShapeResult>;
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Livewire
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** Largest distance between the two points of a livewire segment along either axis (core/roi/Livewire.hpp) */
+export const MAX_LIVEWIRE_SPAN = 1024;
+
+const PixelPoint = Type.Object({ x: Type.Integer({ minimum: 0 }), y: Type.Integer({ minimum: 0 }) });
+
+export const LivewireRequest = Type.Object({
+  from: PixelPoint,
+  to: PixelPoint,
+  sigma: Type.Number({ minimum: 0, maximum: 10, description: 'Gaussian smoothing before the gradient, in pixels' }),
+});
+export type LivewireRequest = Static<typeof LivewireRequest>;
+
+export const LivewireResponse = Type.Object({
+  points: Type.Array(Type.Tuple([Coordinate, Coordinate]), {
+    description: 'Pixel centres of the path from `from` to `to`, where it changes direction, both ends included',
+  }),
+});
+export type LivewireResponse = Static<typeof LivewireResponse>;
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Analysis settings
 // ---------------------------------------------------------------------------------------------------------------------
 

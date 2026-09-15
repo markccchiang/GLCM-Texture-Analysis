@@ -38,6 +38,10 @@ Choose a tool in the toolbar, in the *ROI* menu or with its key, then draw on th
    * - Freehand
      - :kbd:`F`
      - Press, trace the outline and release. The outline is simplified slightly and kept as a polygon.
+   * - Livewire
+     - :kbd:`I`
+     - Click points around an object: the outline between them follows the strongest edges. Close it by double-clicking,
+       pressing :kbd:`Enter`, or clicking the first point again; see :ref:`livewire`.
    * - Magic wand
      - :kbd:`W`
      - Click a region. The pixels connected to the clicked pixel whose values are within the tolerance become the ROI;
@@ -58,6 +62,25 @@ If you measure while an active ROI exists and no ROI is selected, the active ROI
 .. tip::
 
    ROIs are placed in image pixel coordinates, independent of the zoom. Zoom in to draw small ROIs precisely.
+
+.. _livewire:
+
+Outlining along edges (livewire)
+--------------------------------
+
+The **livewire** tool (:kbd:`I`, also called intelligent scissors) draws an outline that snaps to the edges of an object:
+
+#. Click a point on the object's boundary.
+#. Move the pointer along the boundary: a preview shows the path the outline would take to the pixel under the pointer,
+   following the strongest edges nearby. Click to fix the path up to that point.
+#. Continue around the object. :kbd:`Backspace` removes the last point, and :kbd:`Esc` cancels the outline.
+#. Close the outline by double-clicking, pressing :kbd:`Enter`, or clicking the first point again (at least three points
+   are needed). The closed outline becomes the active ROI; press :kbd:`T` to add it.
+
+Between two points the path is the cheapest chain of neighbouring pixels, where pixels on strong edges are cheap. It
+stays within 32 pixels of the rectangle spanned by the two points, and the points may be at most 1,024 pixels apart. The
+gradient uses the **Smoothing σ** of the edge map (see :doc:`viewing`), so showing the edge map helps to see which edges
+the livewire will follow. Where the boundary is faint, add points closer together.
 
 .. _rois-by-intensity:
 

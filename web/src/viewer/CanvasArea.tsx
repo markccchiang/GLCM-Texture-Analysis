@@ -3,6 +3,7 @@ import { StartScreen } from '../components/StartScreen';
 import { FeatureMapCard } from '../featureMaps/FeatureMapCard';
 import { cancelImageLoad } from '../stores/imageLoader';
 import { useViewer, type LoadingState } from '../stores/viewerStore';
+import { EdgeMapCard } from './EdgeMapCard';
 import { ImageCanvas } from './ImageCanvas';
 import { ScaleBar } from './ScaleBar';
 
@@ -39,6 +40,7 @@ export function CanvasArea() {
       <ImageCanvas />
       <ScaleBar />
       <FeatureMapCard />
+      <EdgeMapCard />
       {!hasImage && !loading && (
         <div style={{ position: 'absolute', inset: 0 }}>
           <StartScreen />

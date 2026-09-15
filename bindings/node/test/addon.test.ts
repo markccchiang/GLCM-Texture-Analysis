@@ -500,3 +500,45 @@ describe('ROI editing', () => {
     expect(() => native.brushRoi('[]', new Float64Array([1]), 1, false, 40, 30)).toThrow(TypeError);
   });
 });
+
+describe('edge detection', () => {
+  // Dark background with a bright square [10, 30) x [10, 30)
+  const size = 40;
+  const pixels = Buffer.from(Array.from({ length: size * size }, (_, i) => {
+    const [x, y] = [i % size, Math.floor(i / size)];
+    return x >= 10 && x < 30 && y >= 10 && y < 30 ? 220 : 20;
+  }));
+
+  it('describes the gradient and renders Sobel and Canny edge maps', async () => {
+    const statistics = await native.gradientStatistics(pixels, size, size, 8, 0);
+    expect(statistics.sigma).toBe(0);
+    expect(statistics.percentiles['50']).toBe(0);
+    expect(statistics.max).toBeGreaterThan(statistics.percentiles['99'] - 1e-9);
+
+    const canny = PNG.sync.read(await native.renderEdgeMap(pixels, size, size, 8, 'canny', 1, 20, 60, 0));
+    expect([canny.width, canny.height]).toEqual([size, size]);
+    // RGBA from pngjs: one edge pixel on each side of the square in a middle row
+    const row = Array.from({ length: size }, (_, x) => canny.data[(20 * size + x) * 4]);
+    expect(row.filter((value) => value === 255)).toHaveLength(2);
+
+    const sobel = PNG.sync.read(await native.renderEdgeMap(pixels, size, size, 8, 'sobel', 0, 0, 100, 20));
+    expect([sobel.width, sobel.height]).toEqual([20, 20]);
+
+    expect(await rejectionCode(native.renderEdgeMap(pixels, size, size, 8, 'sobel', 0, 5, 5, 0))).toBe('INVALID_ARGUMENT');
+    expect(await rejectionCode(native.gradientStatistics(pixels, size, size, 8, 11))).toBe('INVALID_ARGUMENT');
+    expect(() => native.renderEdgeMap(pixels, size, size, 8, 'prewitt' as 'sobel', 0, 0, 1, 0)).toThrow(TypeError);
+  });
+
+  it('finds livewire paths along edges', async () => {
+    const flat = Buffer.alloc(size * size, 90);
+    expect(await native.livewirePath(flat, size, size, 8, 5, 5, 25, 5, 1)).toEqual([
+      [5.5, 5.5],
+      [25.5, 5.5],
+    ]);
+    const path = await native.livewirePath(pixels, size, size, 8, 10, 20, 29, 20, 0);
+    expect(path[0]).toEqual([10.5, 20.5]);
+    expect(path.at(-1)).toEqual([29.5, 20.5]);
+    expect(path.length).toBeGreaterThan(2);
+    expect(await rejectionCode(native.livewirePath(pixels, size, size, 8, 0, 0, size, 0, 0))).toBe('INVALID_ARGUMENT');
+  });
+});

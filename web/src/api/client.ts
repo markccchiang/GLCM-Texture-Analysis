@@ -8,6 +8,10 @@ import {
   type AnalysisResults,
   type BrushRoiRequest,
   type CombineRoisRequest,
+  type EdgeMapQuery,
+  type GradientStatsResponse,
+  type LivewireRequest,
+  type LivewireResponse,
   type RoiShapeResult,
   type FeatureMapInfo,
   type FeatureMapRequest,
@@ -234,6 +238,28 @@ export function combineRois(imageId: string, request: CombineRoisRequest): Promi
 /** A brush stroke painted into (or erased from) a shape, computed on the pixel grid */
 export function brushRoi(imageId: string, request: BrushRoiRequest): Promise<RoiShapeResult> {
   return sendJson('POST', `${API_PREFIX}/images/${imageId}/brush-roi`, request);
+}
+
+/** The 8-bit edge map PNG of an image */
+export async function fetchEdgeMap(imageId: string, query: EdgeMapQuery, signal?: AbortSignal): Promise<Blob> {
+  const parameters = new URLSearchParams({ method: query.method, sigma: String(query.sigma), low: String(query.low), high: String(query.high) });
+  if (query.maxSize !== undefined) {
+    parameters.set('maxSize', String(query.maxSize));
+  }
+  const response = await apiFetch(`${API_PREFIX}/images/${imageId}/edges.png?${parameters}`, { signal });
+  if (!response.ok) {
+    throw await errorFromResponse(response);
+  }
+  return response.blob();
+}
+
+export function getGradientStats(imageId: string, sigma: number, signal?: AbortSignal): Promise<GradientStatsResponse> {
+  return getJson(`${API_PREFIX}/images/${imageId}/gradient-stats?sigma=${sigma}`, signal);
+}
+
+/** Livewire path between two pixels along strong edges */
+export function livewirePath(imageId: string, request: LivewireRequest, signal?: AbortSignal): Promise<LivewireResponse> {
+  return sendJson('POST', `${API_PREFIX}/images/${imageId}/livewire`, request, signal);
 }
 
 export function startAnalysis(request: AnalysisRequest): Promise<AnalysisInfo> {

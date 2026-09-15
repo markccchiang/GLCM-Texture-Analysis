@@ -22,5 +22,8 @@ export const {
   selectWandRegion,
   combineRois,
   brushRoi,
+  gradientStatistics,
+  renderEdgeMap,
+  livewirePath,
 } = native;
 export default native;

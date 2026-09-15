@@ -147,6 +147,34 @@ export const DisplayQuery = Type.Object({
 });
 export type DisplayQuery = Static<typeof DisplayQuery>;
 
+export const EdgeMethod = Type.Union([Type.Literal('sobel'), Type.Literal('canny')]);
+export type EdgeMethod = Static<typeof EdgeMethod>;
+
+export const MAX_EDGE_SIGMA = 10;
+const EdgeSigma = Type.Number({ minimum: 0, maximum: MAX_EDGE_SIGMA, description: 'Gaussian smoothing before the derivatives, in pixels (0: none)' });
+
+export const EdgeMapQuery = Type.Object({
+  method: EdgeMethod,
+  sigma: EdgeSigma,
+  low: Type.Number({ minimum: 0, description: 'sobel: gradient magnitude shown black; canny: lower hysteresis threshold' }),
+  high: Type.Number({ minimum: 0, description: 'sobel: gradient magnitude shown white; canny: upper hysteresis threshold' }),
+  maxSize: Type.Optional(Type.Integer({ minimum: 1, maximum: 16384, description: 'Largest long side; capped by the server limit' })),
+});
+export type EdgeMapQuery = Static<typeof EdgeMapQuery>;
+
+export const GradientStatsQuery = Type.Object({ sigma: EdgeSigma });
+export type GradientStatsQuery = Static<typeof GradientStatsQuery>;
+
+export const GradientStatsResponse = Type.Object({
+  sigma: Type.Number(),
+  percentiles: Type.Object(
+    { '50': Type.Number(), '90': Type.Number(), '95': Type.Number(), '99': Type.Number() },
+    { description: 'Nearest-rank percentiles of the gradient magnitude, in intensity units per pixel' },
+  ),
+  max: Type.Number(),
+});
+export type GradientStatsResponse = Static<typeof GradientStatsResponse>;
+
 export const PixelQuery = Type.Object({
   x: Type.Integer({ minimum: 0 }),
   y: Type.Integer({ minimum: 0 }),

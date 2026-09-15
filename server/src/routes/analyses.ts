@@ -8,9 +8,12 @@ import {
   AnalysisResults,
   BrushRoiRequest,
   CombineRoisRequest,
+  LivewireRequest,
+  LivewireResponse,
   RoiShapeResult,
   ErrorResponse,
   ImageIdParams,
+  MAX_LIVEWIRE_SPAN,
   RoiStatsRequest,
   RoiStatsResponse,
   ThresholdRoisRequest,
@@ -189,6 +192,26 @@ export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = 
       const { shape, path, radius, erase } = request.body;
       const flat = Float64Array.from(path.flat());
       return shapeResult(await native.brushRoi(roisJson(shape ? [shape] : []), flat, radius, erase, info.width, info.height).catch(nativeError));
+    },
+  );
+
+  app.post(
+    '/images/:id/livewire',
+    {
+      schema: {
+        summary: 'Livewire path between two pixels',
+        description: `The cheapest 8-connected path from \`from\` to \`to\` where strong edges (gradient magnitude after Gaussian smoothing) are cheap, searched in a box that extends 32 pixels beyond the two points. The points must lie inside the image and at most ${MAX_LIVEWIRE_SPAN} pixels apart along each axis.`,
+        tags: ['rois'],
+        params: ImageIdParams,
+        body: LivewireRequest,
+        response: { 200: LivewireResponse, 400: ErrorResponse, 404: ErrorResponse },
+      },
+    },
+    async (request) => {
+      const info = await requireImage(request.params.id);
+      const { from, to, sigma } = request.body;
+      const pixels = await store.pixels(info.imageId);
+      return { points: await native.livewirePath(pixels, info.width, info.height, info.bitDepth, from.x, from.y, to.x, to.y, sigma).catch(nativeError) };
     },
   );
 

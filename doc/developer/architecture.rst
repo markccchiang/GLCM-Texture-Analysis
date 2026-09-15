@@ -117,6 +117,13 @@ Namespace ``glcm``; include paths are relative to ``core/``.
        seed within a tolerance): 8-connected regions whose holes (background not 4-connected to the border) are filled,
        each outlined by walking its pixel edges, so that ``RasterizeMask`` of the outline gives exactly the region.
        Threshold regions come from ``connectedComponentsWithStats`` on the filled mask, largest first.
+   * - ``imaging/EdgeDetection``
+     - ``GradientMagnitude``: 3×3 Sobel derivatives of the Gaussian-smoothed original intensities, divided by 8 so a ramp
+       of slope *s* gives *s*. ``RenderEdgeMap`` maps it to 8 bits (Sobel) or runs OpenCV's Canny on 16-bit derivatives
+       scaled down when necessary, with thresholds in the same units; reduced maps keep every edge.
+   * - ``roi/Livewire``
+     - ``LivewirePath``: Dijkstra over 8-connected pixels in a box 32 pixels around the two points, entering a pixel
+       costing its step length times ``1.05 − g / g_max`` of the box's gradient; returns the turning pixel centres.
    * - ``roi/RoiOperations``
      - ``CombineShapes`` and ``PaintStroke`` work on masks (``RasterizeCroppedMask`` of each shape, or the pixels within a
        radius of a stroke) and return ``MaskOutline`` of the result: the outline of every 8-connected part and of every

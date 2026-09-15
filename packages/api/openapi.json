@@ -1223,6 +1223,287 @@
         }
       }
     },
+    "/api/v1/images/{id}/edges.png": {
+      "get": {
+        "summary": "Edge map",
+        "tags": [
+          "images"
+        ],
+        "description": "An 8-bit PNG of the gradient magnitude after Gaussian smoothing (intensity units per pixel, on the original values). sobel: the magnitude mapped linearly from low (black) to high (white); canny: 255 on the thin edges found with the hysteresis thresholds low and high, 0 elsewhere. Reduced so the long side is at most maxSize (for canny, a reduced pixel is 255 when it covers any edge). Cached like display.png.",
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "sobel"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "canny"
+                  ]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "method",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "in": "query",
+            "name": "sigma",
+            "required": true,
+            "description": "Gaussian smoothing before the derivatives, in pixels (0: none)"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            },
+            "in": "query",
+            "name": "low",
+            "required": true,
+            "description": "sobel: gradient magnitude shown black; canny: lower hysteresis threshold"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            },
+            "in": "query",
+            "name": "high",
+            "required": true,
+            "description": "sobel: gradient magnitude shown white; canny: upper hysteresis threshold"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16384
+            },
+            "in": "query",
+            "name": "maxSize",
+            "required": false,
+            "description": "Largest long side; capped by the server limit"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^img_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Image id returned by POST /images"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PNG image",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (no body)"
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/images/{id}/gradient-stats": {
+      "get": {
+        "summary": "Gradient magnitude statistics",
+        "tags": [
+          "images"
+        ],
+        "description": "Percentiles (from at most about a million pixels on a regular grid) and the maximum of the gradient magnitude after smoothing, for choosing edge map limits.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "in": "query",
+            "name": "sigma",
+            "required": true,
+            "description": "Gaussian smoothing before the derivatives, in pixels (0: none)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^img_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Image id returned by POST /images"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "sigma",
+                    "percentiles",
+                    "max"
+                  ],
+                  "properties": {
+                    "sigma": {
+                      "type": "number"
+                    },
+                    "percentiles": {
+                      "type": "object",
+                      "required": [
+                        "50",
+                        "90",
+                        "95",
+                        "99"
+                      ],
+                      "properties": {
+                        "50": {
+                          "type": "number"
+                        },
+                        "90": {
+                          "type": "number"
+                        },
+                        "95": {
+                          "type": "number"
+                        },
+                        "99": {
+                          "type": "number"
+                        }
+                      },
+                      "description": "Nearest-rank percentiles of the gradient magnitude, in intensity units per pixel"
+                    },
+                    "max": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/images/{id}/raw": {
       "get": {
         "summary": "Raw grayscale samples",
@@ -2841,6 +3122,170 @@
                           "type": "null"
                         }
                       ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/images/{id}/livewire": {
+      "post": {
+        "summary": "Livewire path between two pixels",
+        "tags": [
+          "rois"
+        ],
+        "description": "The cheapest 8-connected path from `from` to `to` where strong edges (gradient magnitude after Gaussian smoothing) are cheap, searched in a box that extends 32 pixels beyond the two points. The points must lie inside the image and at most 1024 pixels apart along each axis.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "from",
+                  "to",
+                  "sigma"
+                ],
+                "properties": {
+                  "from": {
+                    "type": "object",
+                    "required": [
+                      "x",
+                      "y"
+                    ],
+                    "properties": {
+                      "x": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "y": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  },
+                  "to": {
+                    "type": "object",
+                    "required": [
+                      "x",
+                      "y"
+                    ],
+                    "properties": {
+                      "x": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "y": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  },
+                  "sigma": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10,
+                    "description": "Gaussian smoothing before the gradient, in pixels"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^img_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Image id returned by POST /images"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "points"
+                  ],
+                  "properties": {
+                    "points": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "additionalItems": false,
+                        "items": [
+                          {
+                            "type": "number",
+                            "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                          },
+                          {
+                            "type": "number",
+                            "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                          }
+                        ],
+                        "minItems": 2
+                      },
+                      "description": "Pixel centres of the path from `from` to `to`, where it changes direction, both ends included"
                     }
                   }
                 }

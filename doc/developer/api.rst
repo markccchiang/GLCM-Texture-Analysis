@@ -56,6 +56,12 @@ Endpoints
        or gzip when accepted, ``ETag`` and immutable caching
    * - ``GET /images/{id}/display.png?min&max&maxSize``
      - 8-bit PNG with window/level, long side at most ``maxSize``; ``ETag`` and ``304``
+   * - ``GET /images/{id}/edges.png?method&sigma&low&high&maxSize``
+     - 8-bit PNG edge map of the gradient magnitude after Gaussian smoothing (``sigma`` pixels): ``sobel`` maps
+       ``[low, high]`` to black–white, ``canny`` marks the edges found with the hysteresis thresholds ``low`` and
+       ``high``; limits in intensity units per pixel; cached with ``ETag`` like ``display.png``
+   * - ``GET /images/{id}/gradient-stats?sigma``
+     - ``{sigma, percentiles: {"50", "90", "95", "99"}, max}`` of the gradient magnitude, for choosing edge map limits
    * - ``GET /images/{id}/pixel?x&y``
      - ``{x, y, value}`` for one pixel
    * - ``GET /images/{id}/original``
@@ -76,6 +82,9 @@ Endpoints
    * - ``POST /images/{id}/wand-roi``
      - ``{x, y, tolerance}`` → ``{region}``: the 8-connected region around pixel ``(x, y)`` whose values differ from its
        value by at most ``tolerance``, outlined the same way; ``null`` outside the image
+   * - ``POST /images/{id}/livewire``
+     - ``{from: {x, y}, to: {x, y}, sigma}`` → ``{points}``: the livewire path between two pixels along strong edges,
+       as the pixel centres where it turns; ``400`` for points outside the image or more than 1024 pixels apart
    * - ``POST /images/{id}/combine-rois``
      - ``{operation: "union"|"subtract", shapes}`` → ``{shape, pixelCount, boundingBox}``: the shapes rasterized on the
        image grid and combined; ``shape`` is one polygon along the pixel edges whose parts and holes are joined by
@@ -329,6 +338,12 @@ functions throw, with an ``Error`` whose ``code`` is ``INVALID_ARGUMENT``, ``UNS
      - ``glcm::SelectThresholdRegions``; each region is ``{points, pixelCount, boundingBox}``
    * - ``selectWandRegion(pixels, width, height, bitDepth, x, y, tolerance): Promise<region | null>``
      - ``glcm::SelectWandRegion``
+   * - ``gradientStatistics(pixels, width, height, bitDepth, sigma): Promise<{sigma, percentiles, max}>``
+     - ``glcm::ComputeGradientStatistics``
+   * - ``renderEdgeMap(pixels, width, height, bitDepth, method, sigma, low, high, maxSize): Promise<Buffer>``
+     - ``glcm::RenderEdgeMap``, encoded as an 8-bit PNG
+   * - ``livewirePath(pixels, width, height, bitDepth, fromX, fromY, toX, toY, sigma): Promise<Array<[x, y]>>``
+     - ``glcm::LivewirePath``
    * - ``combineRois(roisJson, operation, width, height): Promise<{points, pixelCount, boundingBox}>``
      - ``glcm::CombineShapes``
    * - ``brushRoi(roisJson, path, radius, erase, width, height): Promise<{points, pixelCount, boundingBox}>``
@@ -387,6 +402,10 @@ paths are relative to ``core/``. The main entry points:
    * - ``roi/RegionSelection.hpp``
      - ``SelectThresholdRegions`` and ``SelectWandRegion``: connected regions of pixel values, with holes filled, as
        polygon outlines along the pixel edges
+   * - ``imaging/EdgeDetection.hpp``
+     - ``GradientMagnitude``, ``ComputeGradientStatistics`` and ``RenderEdgeMap`` (Sobel and Canny edge maps)
+   * - ``roi/Livewire.hpp``
+     - ``LivewirePath``: the cheapest path between two pixels along strong edges
    * - ``roi/RoiOperations.hpp``
      - ``MaskOutline`` (an exact polygon for any mask), ``CombineShapes`` (union, subtract) and ``PaintStroke`` (brush,
        eraser)
