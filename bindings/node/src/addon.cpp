@@ -13,6 +13,7 @@
 #include <cstring>
 #include <initializer_list>
 #include <memory>
+#include <optional>
 #include <opencv2/imgcodecs.hpp>
 #include <stdexcept>
 #include <string>
@@ -29,6 +30,7 @@
 #include "pipeline/FeatureCatalog.hpp"
 #include "pipeline/FeatureMap.hpp"
 #include "pipeline/Version.hpp"
+#include "roi/RegionSelection.hpp"
 #include "roi/Roi.hpp"
 
 namespace {
@@ -781,6 +783,109 @@ Napi::Value ComputeFeatureMap(const Napi::CallbackInfo& info) {
     return promise;
 }
 
+// {points: [[x, y], ...], pixelCount, boundingBox: {x, y, width, height}}
+Napi::Object SelectedRegionToJs(Napi::Env env, const glcm::SelectedRegion& region) {
+    Napi::Array points = Napi::Array::New(env, region.outline.size());
+    for (size_t i = 0; i < region.outline.size(); ++i) {
+        Napi::Array point = Napi::Array::New(env, 2);
+        point.Set(uint32_t{0}, region.outline[i][0]);
+        point.Set(uint32_t{1}, region.outline[i][1]);
+        points.Set(static_cast<uint32_t>(i), point);
+    }
+    Napi::Object box = Napi::Object::New(env);
+    box.Set("x", region.box.x);
+    box.Set("y", region.box.y);
+    box.Set("width", region.box.width);
+    box.Set("height", region.box.height);
+    Napi::Object result = Napi::Object::New(env);
+    result.Set("points", points);
+    result.Set("pixelCount", region.pixel_count);
+    result.Set("boundingBox", box);
+    return result;
+}
+
+class ThresholdRegionsWorker : public PixelWorker {
+public:
+    ThresholdRegionsWorker(Napi::Env env, const PixelArguments& arguments, int min_value, int max_value, int min_pixels, int max_regions)
+        : PixelWorker(env, arguments), _min_value(min_value), _max_value(max_value), _min_pixels(min_pixels), _max_regions(max_regions) {}
+
+    void Execute() override {
+        try {
+            _selection = glcm::SelectThresholdRegions(Gray(), _min_value, _max_value, _min_pixels, _max_regions);
+        } catch (const std::invalid_argument& error) {
+            Fail(CODE_INVALID_ARGUMENT, error.what());
+        } catch (const std::exception& error) {
+            Fail(CODE_INTERNAL, error.what());
+        }
+    }
+
+    void OnOK() override {
+        Napi::Env env = Env();
+        Napi::Array regions = Napi::Array::New(env, _selection.regions.size());
+        for (size_t i = 0; i < _selection.regions.size(); ++i) {
+            regions.Set(static_cast<uint32_t>(i), SelectedRegionToJs(env, _selection.regions[i]));
+        }
+        Napi::Object result = Napi::Object::New(env);
+        result.Set("regions", regions);
+        result.Set("total", _selection.total);
+        Resolve(result);
+    }
+
+private:
+    int _min_value;
+    int _max_value;
+    int _min_pixels;
+    int _max_regions;
+    glcm::ThresholdSelection _selection;
+};
+
+class WandRegionWorker : public PixelWorker {
+public:
+    WandRegionWorker(Napi::Env env, const PixelArguments& arguments, int x, int y, int tolerance)
+        : PixelWorker(env, arguments), _x(x), _y(y), _tolerance(tolerance) {}
+
+    void Execute() override {
+        try {
+            _region = glcm::SelectWandRegion(Gray(), _x, _y, _tolerance);
+        } catch (const std::invalid_argument& error) {
+            Fail(CODE_INVALID_ARGUMENT, error.what());
+        } catch (const std::exception& error) {
+            Fail(CODE_INTERNAL, error.what());
+        }
+    }
+
+    void OnOK() override {
+        Resolve(_region ? Napi::Value(SelectedRegionToJs(Env(), *_region)) : Env().Null());
+    }
+
+private:
+    int _x;
+    int _y;
+    int _tolerance;
+    std::optional<glcm::SelectedRegion> _region;
+};
+
+// selectThresholdRegions(pixels, width, height, bitDepth, min, max, minPixels, maxRegions): Promise<{regions, total}>
+// (glcm::SelectThresholdRegions)
+Napi::Value SelectThresholdRegions(const Napi::CallbackInfo& info) {
+    const PixelArguments pixels = ReadPixelArguments(info, 0);
+    auto* worker = new ThresholdRegionsWorker(info.Env(), pixels, IntegerArgument(info, 4, "min"), IntegerArgument(info, 5, "max"),
+        IntegerArgument(info, 6, "minPixels"), IntegerArgument(info, 7, "maxRegions"));
+    const Napi::Promise promise = worker->Promise();
+    worker->Queue();
+    return promise;
+}
+
+// selectWandRegion(pixels, width, height, bitDepth, x, y, tolerance): Promise<region | null> (glcm::SelectWandRegion)
+Napi::Value SelectWandRegion(const Napi::CallbackInfo& info) {
+    const PixelArguments pixels = ReadPixelArguments(info, 0);
+    auto* worker =
+        new WandRegionWorker(info.Env(), pixels, IntegerArgument(info, 4, "x"), IntegerArgument(info, 5, "y"), IntegerArgument(info, 6, "tolerance"));
+    const Napi::Promise promise = worker->Promise();
+    worker->Queue();
+    return promise;
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set("coreVersion", Napi::Function::New(env, CoreVersion, "coreVersion"));
     exports.Set("catalog", Napi::Function::New(env, Catalog, "catalog"));
@@ -795,6 +900,8 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set("featureMapGrid", Napi::Function::New(env, FeatureMapGridInfo, "featureMapGrid"));
     exports.Set("computeFeatureMap", Napi::Function::New(env, ComputeFeatureMap, "computeFeatureMap"));
     exports.Set("CancelToken", CancelToken::Define(env));
+    exports.Set("selectThresholdRegions", Napi::Function::New(env, SelectThresholdRegions, "selectThresholdRegions"));
+    exports.Set("selectWandRegion", Napi::Function::New(env, SelectWandRegion, "selectWandRegion"));
     return exports;
 }
 

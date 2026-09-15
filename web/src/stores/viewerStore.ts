@@ -11,6 +11,7 @@ import { sameSpacing } from '../image/spacing';
 import { usePreferences } from './preferences';
 import type { RulerLine } from '../viewer/ruler';
 import type { ColorTableId } from '../image/colorTables';
+import { defaultWandTolerance } from '../rois/regions';
 
 export type RendererKind = 'webgl2' | 'lut' | 'server';
 export type Tool = ToolName;
@@ -67,6 +68,8 @@ export interface ViewerState {
   ruler: RulerLine | null;
   /** Colour table of the display; kept when another image opens */
   colorTable: ColorTableId;
+  /** Largest difference from the clicked pixel value that the magic wand includes; reset for each image */
+  wandTolerance: number;
 
   setLoading(loading: LoadingState | null): void;
   openImage(image: LoadedImage): void;
@@ -88,6 +91,7 @@ export interface ViewerState {
   setTool(tool: Tool): void;
   setRuler(ruler: RulerLine | null): void;
   setColorTable(colorTable: ColorTableId): void;
+  setWandTolerance(tolerance: number): void;
   toggleNavigator(): void;
   setHover(hover: HoverState | null): void;
   setDisplaySource(source: CanvasImageSource | null, kind: RendererKind | null): void;
@@ -127,6 +131,7 @@ export const useViewer = create<ViewerState>()((set, get) => ({
   pixelSpacing: null,
   ruler: null,
   colorTable: 'gray',
+  wandTolerance: defaultWandTolerance(0, 255),
 
   setLoading: (loading) => set({ loading }),
 
@@ -159,6 +164,7 @@ export const useViewer = create<ViewerState>()((set, get) => ({
       rendererKind: null,
       pixelSpacing: spacingForImage(image.info),
       ruler: null,
+      wandTolerance: defaultWandTolerance(image.info.windowMin, image.info.windowMax),
     });
   },
 
@@ -246,6 +252,8 @@ export const useViewer = create<ViewerState>()((set, get) => ({
   setRuler: (ruler) => set({ ruler }),
 
   setColorTable: (colorTable) => set({ colorTable }),
+
+  setWandTolerance: (tolerance) => set({ wandTolerance: Math.min(65535, Math.max(0, Math.round(tolerance))) }),
 
   toggleNavigator: () => set({ navigatorMode: isNavigatorVisible(get()) ? 'hidden' : 'shown' }),
 

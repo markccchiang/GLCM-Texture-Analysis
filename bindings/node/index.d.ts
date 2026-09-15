@@ -144,6 +144,43 @@ export function computeFeatureMap(
   cancelToken?: CancelToken,
 ): Promise<Float32Array>;
 
+export interface NativeSelectedRegion {
+  /** Polygon along the pixel edges around the region, holes filled; rasterizing it gives exactly the region's pixels */
+  points: Array<[number, number]>;
+  /** Pixels of the region, holes included */
+  pixelCount: number;
+  boundingBox: { x: number; y: number; width: number; height: number };
+}
+
+/**
+ * Regions of the pixels with min ≤ value ≤ max (glcm::SelectThresholdRegions): 8-connected parts with their holes filled,
+ * at least minPixels pixels each, the largest maxRegions first; total counts every region of that size.
+ */
+export function selectThresholdRegions(
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+  bitDepth: 8 | 16,
+  min: number,
+  max: number,
+  minPixels: number,
+  maxRegions: number,
+): Promise<{ regions: NativeSelectedRegion[]; total: number }>;
+
+/**
+ * The 8-connected region around pixel (x, y) whose values are within tolerance of its value, holes filled
+ * (glcm::SelectWandRegion); null when (x, y) lies outside the image.
+ */
+export function selectWandRegion(
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+  bitDepth: 8 | 16,
+  x: number,
+  y: number,
+  tolerance: number,
+): Promise<NativeSelectedRegion | null>;
+
 /**
  * Measures every ROI at every distance (glcm::RunAnalysis).
  * @returns the "glcm-results" JSON document (without image name, SHA-256 or timestamp)
@@ -200,5 +237,7 @@ declare const native: {
   featureMapGrid: typeof featureMapGrid;
   computeFeatureMap: typeof computeFeatureMap;
   CancelToken: typeof CancelToken;
+  selectThresholdRegions: typeof selectThresholdRegions;
+  selectWandRegion: typeof selectWandRegion;
 };
 export default native;

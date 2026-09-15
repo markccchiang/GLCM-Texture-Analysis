@@ -431,3 +431,33 @@ describe('feature maps', () => {
     expect(await rejectionCode(native.computeFeatureMap(pixels, width, height, 8, none, 0, 1))).toBe('INVALID_ARGUMENT');
   });
 });
+
+describe('region selection', () => {
+  // A ring with a pixel in its hole, and a diagonal chain of three pixels
+  const rows = ['..........', '.####.....', '.##.#.....', '.#..#.#...', '.####..#..', '........#.', '..........'];
+  const width = rows[0].length;
+  const height = rows.length;
+  const pixels = Buffer.from(rows.flatMap((row) => [...row].map((character) => (character === '#' ? 255 : 0))));
+
+  it('outlines the parts in an intensity range with their holes filled', async () => {
+    const { regions, total } = await native.selectThresholdRegions(pixels, width, height, 8, 200, 255, 1, 10);
+    expect(total).toBe(2);
+    expect(regions.map((region) => region.pixelCount)).toEqual([16, 3]);
+    expect(regions[0]).toEqual({ points: [[1, 1], [5, 1], [5, 5], [1, 5]], pixelCount: 16, boundingBox: { x: 1, y: 1, width: 4, height: 4 } });
+
+    // The outlines contain exactly the region's pixels, counted by the core rasterizer
+    const stats = await native.roiStats(pixels, width, height, 8, JSON.stringify(regions.map((region, i) => ({ id: `r${i}`, shape: { type: 'polygon', points: region.points } }))));
+    expect(stats.map((statistics) => statistics.pixelCount)).toEqual([16, 3]);
+
+    expect(await native.selectThresholdRegions(pixels, width, height, 8, 200, 255, 4, 0)).toEqual({ regions: [], total: 1 });
+    expect(await rejectionCode(native.selectThresholdRegions(pixels, width, height, 8, 10, 9, 1, 10))).toBe('INVALID_ARGUMENT');
+  });
+
+  it('selects the connected region around a pixel within a tolerance', async () => {
+    const chain = await native.selectWandRegion(pixels, width, height, 8, 8, 5, 0);
+    expect(chain).toMatchObject({ pixelCount: 3, boundingBox: { x: 6, y: 3, width: 3, height: 3 } });
+    expect((await native.selectWandRegion(pixels, width, height, 8, 1, 1, 255))?.pixelCount).toBe(width * height);
+    expect(await native.selectWandRegion(pixels, width, height, 8, width, 0, 0)).toBeNull();
+    expect(await rejectionCode(native.selectWandRegion(pixels, width, height, 8, 0, 0, -1))).toBe('INVALID_ARGUMENT');
+  });
+});

@@ -28,6 +28,7 @@ add_library(glcm_core STATIC
         pipeline/AnalysisSettings.cpp
         pipeline/FeatureMap.cpp
         pipeline/FeatureCatalog.cpp
+        roi/RegionSelection.cpp
         roi/Roi.cpp)
 
 target_include_directories(glcm_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -59,6 +60,7 @@ if (GLCM_BUILD_TESTS)
                 tests/ImagingTest.cpp
                 tests/IoTest.cpp
                 tests/PipelineTest.cpp
+                tests/RegionSelectionTest.cpp
                 tests/RoiTest.cpp
                 tests/TextureOptionsTest.cpp)
         target_link_libraries(glcm-tests PRIVATE glcm_core GTest::gtest_main nlohmann_json::nlohmann_json)

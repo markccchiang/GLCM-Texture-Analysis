@@ -2,7 +2,7 @@
 
 Measures texture features of regions of interest (ROIs) in grayscale images: Haralick features from the Gray Level Co-occurrence Matrix (GLCM), first-order statistics, and run length (GLRLM), size zone (GLSZM), neighbourhood gray tone difference (NGTDM) and local binary pattern (LBP) features.
 
-Open an 8- or 16-bit image in the browser, draw rectangle, ellipse, polygon or freehand ROIs, choose the features and analysis settings (gray levels, quantization, distances, directions), and measure, one image or a batch. Results appear in a table and as plots, per direction and aggregated, optionally with an age-based score. Feature maps show a co-occurrence feature computed in a sliding window over the whole image as a colour overlay, and colour tables give inverted and pseudo-colour display.
+Open an 8- or 16-bit image in the browser, draw rectangle, ellipse, polygon or freehand ROIs or select them by intensity (magic wand, threshold), choose the features and analysis settings (gray levels, quantization, distances, directions), and measure, one image or a batch. Results appear in a table and as plots, per direction and aggregated, optionally with an age-based score. Feature maps show a co-occurrence feature computed in a sliding window over the whole image as a colour overlay, and colour tables give inverted and pseudo-colour display.
 
 <p align="center">
   <img src="doc/user/images/app-window.png" alt="The Texture Workbench web app: the sample image with four ROIs (Sky, Coat, Grass, Hair) on the canvas, the ROI Manager with their pixel counts, the Analysis Settings panel, and the Results table with texture features per direction." width="900">
@@ -123,7 +123,7 @@ npm run openapi         # regenerate packages/api/openapi.json
 
 A typical session:
 1. **Open an image:** use *File ▸ Open Image*, drag a file onto the window, or open a sample image.
-2. **Draw ROIs:** use the rectangle (`R`), ellipse (`E`), polygon (`P`, double-click or `Enter` to close) or freehand (`F`) tool. Press `T` to add the drawn ROI to the ROI Manager.
+2. **Draw ROIs:** use the rectangle (`R`), ellipse (`E`), polygon (`P`, double-click or `Enter` to close) or freehand (`F`) tool, or select by intensity with the magic wand (`W`, click a region) or *ROI ▸ Threshold ROI…* (every connected region inside the display window). Press `T` to add the drawn ROI to the ROI Manager.
    - The manager shows each ROI's pixel count, computed by the core with the same pixel-centre rule the analysis uses.
    - With the pointer tool, click to select (⌘/Ctrl or Shift to add), drag to move, and use the handles to resize or rotate. On a selected polygon, drag its vertices, double-click an edge to add a vertex, or Alt-click a vertex to remove it.
    - Arrow keys move selected ROIs (Shift: 10 px). `Z` zooms to the selection, and ⌘/Ctrl+Z undoes.

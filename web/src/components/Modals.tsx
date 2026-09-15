@@ -6,6 +6,7 @@ import { useState, type ReactNode } from 'react';
 import { getSamples } from '../api/client';
 import { BatchContent } from '../batch/BatchDialog';
 import { FeatureMapContent } from '../featureMaps/FeatureMapDialog';
+import { ThresholdRoiContent } from '../rois/ThresholdDialog';
 import { CATALOG_QUERY } from '../api/queryClient';
 import { useAnalysisSettings } from '../analysis/settingsStore';
 import { exportRoiImagesFile, saveProjectFile } from '../files/actions';
@@ -172,7 +173,7 @@ function PreferencesContent() {
 const SHORTCUTS: [string, string][] = [
   [`${MOD_KEY}O`, 'Open image'],
   [`${MOD_KEY}S`, 'Save project'],
-  ['R / E / P / F', 'Rectangle, ellipse, polygon, freehand tool'],
+  ['R / E / P / F / W', 'Rectangle, ellipse, polygon, freehand, magic wand tool'],
   ['L', 'Ruler: drag to measure a distance (Shift: 45° steps)'],
   ['T', 'Add the drawn ROI to the ROI Manager'],
   ['M / ⇧M', 'Measure selected / all ROIs'],
@@ -474,6 +475,7 @@ const TITLES: Record<ModalName, string> = {
   equations: 'Feature Equations',
   batch: 'Batch Measure',
   featureMap: 'Feature Map',
+  thresholdRoi: 'Threshold ROI',
 };
 
 export function AppModals() {
@@ -487,6 +489,7 @@ export function AppModals() {
       {modal === 'equations' && <EquationsContent />}
       {modal === 'batch' && <BatchContent onClose={close} />}
       {modal === 'featureMap' && <FeatureMapContent onClose={close} />}
+      {modal === 'thresholdRoi' && <ThresholdRoiContent onClose={close} />}
       {modal === 'about' && <AboutContent />}
       {modal === 'samples' && <SamplesContent onClose={close} />}
       {modal === 'saveProject' && <SaveProjectContent onClose={close} />}

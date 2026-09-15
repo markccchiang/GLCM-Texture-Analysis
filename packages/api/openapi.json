@@ -1874,6 +1874,380 @@
         }
       }
     },
+    "/api/v1/images/{id}/threshold-rois": {
+      "post": {
+        "summary": "ROIs from the pixels in an intensity range",
+        "tags": [
+          "rois"
+        ],
+        "description": "Each 8-connected part of the pixels with min ≤ value ≤ max becomes a polygon along the pixel edges with its holes filled (a part inside another part's hole belongs to it). Regions with fewer than minPixels pixels are left out; the largest maxRegions are returned, largest first, and total counts all of them.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "min",
+                  "max",
+                  "minPixels",
+                  "maxRegions"
+                ],
+                "properties": {
+                  "min": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 65535
+                  },
+                  "max": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 65535
+                  },
+                  "minPixels": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Regions with fewer pixels (holes included) are left out"
+                  },
+                  "maxRegions": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000,
+                    "description": "Regions returned, largest first; 0 returns only the total"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^img_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Image id returned by POST /images"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "regions",
+                    "total"
+                  ],
+                  "properties": {
+                    "regions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "points",
+                          "pixelCount",
+                          "boundingBox"
+                        ],
+                        "properties": {
+                          "points": {
+                            "type": "array",
+                            "items": {
+                              "type": "array",
+                              "additionalItems": false,
+                              "items": [
+                                {
+                                  "type": "number",
+                                  "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                                },
+                                {
+                                  "type": "number",
+                                  "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                                }
+                              ],
+                              "minItems": 2
+                            },
+                            "description": "Polygon along the pixel edges around the region with its holes filled, clockwise on screen; its pixels (pixel-centre rule) are exactly the region"
+                          },
+                          "pixelCount": {
+                            "type": "integer",
+                            "description": "Pixels of the region, holes included"
+                          },
+                          "boundingBox": {
+                            "type": "object",
+                            "required": [
+                              "x",
+                              "y",
+                              "width",
+                              "height"
+                            ],
+                            "properties": {
+                              "x": {
+                                "type": "integer"
+                              },
+                              "y": {
+                                "type": "integer"
+                              },
+                              "width": {
+                                "type": "integer"
+                              },
+                              "height": {
+                                "type": "integer"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "Regions with at least minPixels pixels, including those not returned"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/images/{id}/wand-roi": {
+      "post": {
+        "summary": "ROI of the connected region around a pixel",
+        "tags": [
+          "rois"
+        ],
+        "description": "The 8-connected pixels around (x, y) whose values differ by at most tolerance from its value, outlined like threshold-rois with holes filled; region is null when (x, y) lies outside the image.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "x",
+                  "y",
+                  "tolerance"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "integer",
+                    "description": "Column of the clicked pixel"
+                  },
+                  "y": {
+                    "type": "integer",
+                    "description": "Row of the clicked pixel"
+                  },
+                  "tolerance": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 65535,
+                    "description": "Largest difference from the clicked pixel value"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^img_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Image id returned by POST /images"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "region"
+                  ],
+                  "properties": {
+                    "region": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "points",
+                            "pixelCount",
+                            "boundingBox"
+                          ],
+                          "properties": {
+                            "points": {
+                              "type": "array",
+                              "items": {
+                                "type": "array",
+                                "additionalItems": false,
+                                "items": [
+                                  {
+                                    "type": "number",
+                                    "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                                  },
+                                  {
+                                    "type": "number",
+                                    "description": "Image pixel coordinate; pixel (c, r) covers [c, c + 1) × [r, r + 1)"
+                                  }
+                                ],
+                                "minItems": 2
+                              },
+                              "description": "Polygon along the pixel edges around the region with its holes filled, clockwise on screen; its pixels (pixel-centre rule) are exactly the region"
+                            },
+                            "pixelCount": {
+                              "type": "integer",
+                              "description": "Pixels of the region, holes included"
+                            },
+                            "boundingBox": {
+                              "type": "object",
+                              "required": [
+                                "x",
+                                "y",
+                                "width",
+                                "height"
+                              ],
+                              "properties": {
+                                "x": {
+                                  "type": "integer"
+                                },
+                                "y": {
+                                  "type": "integer"
+                                },
+                                "width": {
+                                  "type": "integer"
+                                },
+                                "height": {
+                                  "type": "integer"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "null when the pixel lies outside the image"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/analyses": {
       "post": {
         "summary": "Start an analysis",

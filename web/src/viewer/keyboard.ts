@@ -2,7 +2,7 @@
 
 import type { Size } from './viewport';
 
-export type ToolName = 'pointer' | 'pan' | 'rectangle' | 'ellipse' | 'polygon' | 'freehand' | 'ruler';
+export type ToolName = 'pointer' | 'pan' | 'rectangle' | 'ellipse' | 'polygon' | 'freehand' | 'wand' | 'ruler';
 
 export type ViewerAction =
   | { kind: 'zoomIn' }
@@ -57,6 +57,7 @@ const TOOL_KEYS: Record<string, ToolName> = {
   e: 'ellipse',
   p: 'polygon',
   f: 'freehand',
+  w: 'wand',
   l: 'ruler',
 };
 

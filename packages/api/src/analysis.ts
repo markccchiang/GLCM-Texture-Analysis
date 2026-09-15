@@ -81,6 +81,47 @@ export const RoiStatsResponse = Type.Object({ stats: Type.Array(RoiStatistics) }
 export type RoiStatsResponse = Static<typeof RoiStatsResponse>;
 
 // ---------------------------------------------------------------------------------------------------------------------
+// ROIs from pixel values (threshold and magic wand)
+// ---------------------------------------------------------------------------------------------------------------------
+
+const Intensity = Type.Integer({ minimum: 0, maximum: 65535 });
+
+export const SelectedRegion = Type.Object({
+  points: Type.Array(Type.Tuple([Coordinate, Coordinate]), {
+    description: 'Polygon along the pixel edges around the region with its holes filled, clockwise on screen; its pixels (pixel-centre rule) are exactly the region',
+  }),
+  pixelCount: Type.Integer({ description: 'Pixels of the region, holes included' }),
+  boundingBox: Type.Object({ x: Type.Integer(), y: Type.Integer(), width: Type.Integer(), height: Type.Integer() }),
+});
+export type SelectedRegion = Static<typeof SelectedRegion>;
+
+export const ThresholdRoisRequest = Type.Object({
+  min: Intensity,
+  max: Intensity,
+  minPixels: Type.Integer({ minimum: 1, description: 'Regions with fewer pixels (holes included) are left out' }),
+  maxRegions: Type.Integer({ minimum: 0, maximum: MAX_ROIS_PER_REQUEST, description: 'Regions returned, largest first; 0 returns only the total' }),
+});
+export type ThresholdRoisRequest = Static<typeof ThresholdRoisRequest>;
+
+export const ThresholdRoisResponse = Type.Object({
+  regions: Type.Array(SelectedRegion),
+  total: Type.Integer({ description: 'Regions with at least minPixels pixels, including those not returned' }),
+});
+export type ThresholdRoisResponse = Static<typeof ThresholdRoisResponse>;
+
+export const WandRoiRequest = Type.Object({
+  x: Type.Integer({ description: 'Column of the clicked pixel' }),
+  y: Type.Integer({ description: 'Row of the clicked pixel' }),
+  tolerance: Type.Integer({ minimum: 0, maximum: 65535, description: 'Largest difference from the clicked pixel value' }),
+});
+export type WandRoiRequest = Static<typeof WandRoiRequest>;
+
+export const WandRoiResponse = Type.Object({
+  region: Type.Union([SelectedRegion, Type.Null()], { description: 'null when the pixel lies outside the image' }),
+});
+export type WandRoiResponse = Static<typeof WandRoiResponse>;
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Analysis settings
 // ---------------------------------------------------------------------------------------------------------------------
 

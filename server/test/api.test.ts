@@ -69,6 +69,8 @@ describe('system routes', () => {
       '/api/v1/images/{id}/pixel',
       '/api/v1/images/{id}/raw',
       '/api/v1/images/{id}/roi-stats',
+      '/api/v1/images/{id}/threshold-rois',
+      '/api/v1/images/{id}/wand-roi',
       '/api/v1/samples',
       '/api/v1/samples/file',
     ]);

@@ -44,6 +44,7 @@ const TOOL_ITEMS: Array<{ tool: Tool; label: string; key: string }> = [
   { tool: 'ellipse', label: 'Ellipse', key: 'E' },
   { tool: 'polygon', label: 'Polygon', key: 'P' },
   { tool: 'freehand', label: 'Freehand', key: 'F' },
+  { tool: 'wand', label: 'Magic Wand', key: 'W' },
 ];
 
 export function MenuBar() {
@@ -198,6 +199,9 @@ export function MenuBar() {
             {item.label}
           </Menu.Item>
         ))}
+        <Menu.Item disabled={!hasImage} onClick={() => ui().setModal('thresholdRoi')}>
+          Threshold ROI…
+        </Menu.Item>
         <Menu.Divider />
         <Menu.Item disabled={!hasActive} rightSection={<Shortcut>T</Shortcut>} onClick={() => rois().addActiveRoi()}>
           Add to Manager

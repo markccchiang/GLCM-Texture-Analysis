@@ -329,6 +329,18 @@ async function main(): Promise<void> {
     await shot(page, 'file-menu', { x: 0, y: 0, width: menuBox.x + menuBox.width + 24, height: menuBox.y + menuBox.height + 12 });
     await page.keyboard.press('Escape');
 
+    // Threshold ROI with a dark window (the coat and the camera), so the dialog counts several regions
+    const setViewerWindow = (min: number, max: number) =>
+      page.evaluate(([low, high]) => (window as unknown as { __glcm: { viewer: { getState(): { setWindow(min: number, max: number): void } } } }).__glcm.viewer.getState().setWindow(low, high), [min, max]);
+    await setViewerWindow(0, 40);
+    await chooseMenuItem(page, 'ROI', 'Threshold ROI…');
+    const thresholdDialog = page.getByRole('dialog', { name: 'Threshold ROI' });
+    await thresholdDialog.getByTestId('threshold-summary').filter({ hasText: /region/ }).waitFor();
+    await dialogShot(page, 'threshold-roi', thresholdDialog);
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog').waitFor({ state: 'hidden' });
+    await page.evaluate(() => (window as unknown as { __glcm: { viewer: { getState(): { resetWindow(mode: 'auto' | 'full'): void } } } }).__glcm.viewer.getState().resetWindow('auto'));
+
     await chooseMenuItem(page, 'ROI', 'Export ROI Images…');
     await dialogShot(page, 'export-roi-images', page.getByRole('dialog', { name: 'Export ROI Images' }));
     await page.keyboard.press('Escape');

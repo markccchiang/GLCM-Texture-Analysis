@@ -23,6 +23,7 @@ import {
   translateShape,
 } from '../rois/geometry';
 import { useRois } from '../rois/roiStore';
+import { wandAt } from '../rois/regionActions';
 import { roiProblem, useRoiStatistics } from '../rois/useRoiStatistics';
 import { usePreferences } from '../stores/preferences';
 import { useViewer } from '../stores/viewerStore';
@@ -435,6 +436,14 @@ export function ImageCanvas() {
           return;
         }
         setDraft({ points: [...current.points, [point.x, point.y]], cursor: point });
+        return;
+      }
+      case 'wand': {
+        const pixel = pixelAt(state.viewport, local, state.image.info);
+        if (pixel) {
+          roiStore.setActiveShape(null);
+          void wandAt(state.image.info.imageId, pixel.x, pixel.y);
+        }
         return;
       }
       case 'ruler':

@@ -10,6 +10,10 @@ import {
   ImageIdParams,
   RoiStatsRequest,
   RoiStatsResponse,
+  ThresholdRoisRequest,
+  ThresholdRoisResponse,
+  WandRoiRequest,
+  WandRoiResponse,
   type AnalysisEvent,
   type ImageInfo,
 } from '@glcm/api';
@@ -91,6 +95,48 @@ export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = 
         .roiStats(pixels, info.width, info.height, info.bitDepth, JSON.stringify(rois.map(({ id, shape }) => ({ id, shape }))))
         .catch(nativeError);
       return { stats: stats.map((statistics, i) => ({ roiId: rois[i].id, ...statistics })) };
+    },
+  );
+
+  app.post(
+    '/images/:id/threshold-rois',
+    {
+      schema: {
+        summary: 'ROIs from the pixels in an intensity range',
+        description:
+          'Each 8-connected part of the pixels with min ≤ value ≤ max becomes a polygon along the pixel edges with its holes filled (a part inside another part\'s hole belongs to it). Regions with fewer than minPixels pixels are left out; the largest maxRegions are returned, largest first, and total counts all of them.',
+        tags: ['rois'],
+        params: ImageIdParams,
+        body: ThresholdRoisRequest,
+        response: { 200: ThresholdRoisResponse, 400: ErrorResponse, 404: ErrorResponse },
+      },
+    },
+    async (request) => {
+      const info = await requireImage(request.params.id);
+      const { min, max, minPixels, maxRegions } = request.body;
+      const pixels = await store.pixels(info.imageId);
+      return native.selectThresholdRegions(pixels, info.width, info.height, info.bitDepth, min, max, minPixels, maxRegions).catch(nativeError);
+    },
+  );
+
+  app.post(
+    '/images/:id/wand-roi',
+    {
+      schema: {
+        summary: 'ROI of the connected region around a pixel',
+        description:
+          'The 8-connected pixels around (x, y) whose values differ by at most tolerance from its value, outlined like threshold-rois with holes filled; region is null when (x, y) lies outside the image.',
+        tags: ['rois'],
+        params: ImageIdParams,
+        body: WandRoiRequest,
+        response: { 200: WandRoiResponse, 400: ErrorResponse, 404: ErrorResponse },
+      },
+    },
+    async (request) => {
+      const info = await requireImage(request.params.id);
+      const { x, y, tolerance } = request.body;
+      const pixels = await store.pixels(info.imageId);
+      return { region: await native.selectWandRegion(pixels, info.width, info.height, info.bitDepth, x, y, tolerance).catch(nativeError) };
     },
   );
 

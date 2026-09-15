@@ -8,7 +8,8 @@ Texture Workbench measures the texture of regions in grayscale images. A typical
 #. **Open an image** — PNG, JPEG, BMP or TIFF, 8 or 16 bits per pixel (:ref:`getting-started`).
 #. **Look at it** — zoom, pan, adjust the display window and choose a colour table to see the structures you want to
    measure (:ref:`viewing`).
-#. **Draw regions of interest (ROIs)** — rectangles, ellipses, polygons or freehand outlines, collected in the ROI
+#. **Draw regions of interest (ROIs)** — rectangles, ellipses, polygons or freehand outlines, or regions selected by
+   intensity with the magic wand or Threshold ROI, collected in the ROI
    Manager (:ref:`rois`).
 #. **Measure** — choose the texture features and the analysis settings, and measure the selected or all ROIs, or the
    same ROIs on a batch of images; the results appear in a table and as plots. A feature map shows one feature across

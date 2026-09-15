@@ -38,6 +38,10 @@ Choose a tool in the toolbar, in the *ROI* menu or with its key, then draw on th
    * - Freehand
      - :kbd:`F`
      - Press, trace the outline and release. The outline is simplified slightly and kept as a polygon.
+   * - Magic wand
+     - :kbd:`W`
+     - Click a region. The pixels connected to the clicked pixel whose values are within the tolerance become the ROI;
+       see :ref:`rois-by-intensity`.
 
 A newly drawn shape has a **dashed white outline**: it is the *active* ROI and not yet part of the ROI Manager. Press
 :kbd:`T` (or **Add (T)** in the ROI Manager, or *ROI ▸ Add to Manager*) to add it. It then gets a name ("ROI 1",
@@ -48,6 +52,34 @@ If you measure while an active ROI exists and no ROI is selected, the active ROI
 .. tip::
 
    ROIs are placed in image pixel coordinates, independent of the zoom. Zoom in to draw small ROIs precisely.
+
+.. _rois-by-intensity:
+
+Selecting ROIs by intensity
+---------------------------
+
+Two tools create ROIs from pixel values instead of a drawn outline. Both treat pixels that touch at an edge or at a
+corner as connected, and outline each region along the pixel edges, so the ROI contains exactly the selected pixels.
+Holes inside a region are filled: they belong to the ROI, and so does anything lying in them.
+
+- **Magic wand** (:kbd:`W`, or *ROI ▸ Magic Wand*): click a pixel. The pixels connected to it whose values differ from
+  the clicked pixel's value by at most the **tolerance** become the active ROI; press :kbd:`T` to add it. The tolerance
+  is the **±** field that appears next to the tool buttons while the wand is chosen. It starts at 5 % of the image's
+  default display window whenever an image opens.
+- **Threshold ROI** (*ROI ▸ Threshold ROI…*): selects every pixel whose value lies inside the current display window
+  (see :doc:`viewing`), so set the window first. Each connected part with at least the **Minimum size** (50 pixels by
+  default, holes included) becomes an ROI. The dialog shows how many regions that gives; **Add** puts them into the ROI
+  Manager, largest first, with the usual names and colours, and selects them. At most 1,000 are added at once; raise
+  the minimum size to add fewer. One undo step removes them all.
+
+.. figure:: images/threshold-roi.png
+   :alt: The Threshold ROI dialog with the window range, the minimum size field, the number of regions and the Add button.
+   :width: 60%
+
+   Threshold ROI counts the regions inside the display window before adding them.
+
+An ROI may have at most 10,000 vertices. A longer outline, for example around a large noisy region, is simplified to
+fit, and a message says so; its edges then no longer follow the pixels exactly.
 
 Which pixels belong to an ROI
 -----------------------------

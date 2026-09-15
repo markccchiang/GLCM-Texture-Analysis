@@ -10,6 +10,10 @@ import {
   type FeatureMapRequest,
   type RoiStatsRequest,
   type RoiStatsResponse,
+  type ThresholdRoisRequest,
+  type ThresholdRoisResponse,
+  type WandRoiRequest,
+  type WandRoiResponse,
   type CatalogResponse,
   type ExportFormat,
   type HealthResponse,
@@ -207,6 +211,16 @@ async function sendJson<T>(method: 'POST' | 'DELETE', url: string, body?: unknow
 
 export function getRoiStats(imageId: string, rois: RoiStatsRequest['rois'], signal?: AbortSignal): Promise<RoiStatsResponse> {
   return sendJson('POST', `${API_PREFIX}/images/${imageId}/roi-stats`, { rois }, signal);
+}
+
+/** The largest regions of the pixels in an intensity range, as polygon outlines (maxRegions 0: only the total) */
+export function selectThresholdRois(imageId: string, request: ThresholdRoisRequest, signal?: AbortSignal): Promise<ThresholdRoisResponse> {
+  return sendJson('POST', `${API_PREFIX}/images/${imageId}/threshold-rois`, request, signal);
+}
+
+/** The connected region around a pixel within a tolerance of its value */
+export function selectWandRoi(imageId: string, request: WandRoiRequest, signal?: AbortSignal): Promise<WandRoiResponse> {
+  return sendJson('POST', `${API_PREFIX}/images/${imageId}/wand-roi`, request, signal);
 }
 
 export function startAnalysis(request: AnalysisRequest): Promise<AnalysisInfo> {

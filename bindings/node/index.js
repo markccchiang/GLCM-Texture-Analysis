@@ -18,5 +18,7 @@ export const {
   featureMapGrid,
   computeFeatureMap,
   CancelToken,
+  selectThresholdRegions,
+  selectWandRegion,
 } = native;
 export default native;

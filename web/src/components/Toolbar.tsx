@@ -1,4 +1,4 @@
-import { ActionIcon, Button, Divider, Menu, Tooltip } from '@mantine/core';
+import { ActionIcon, Button, Divider, Menu, NumberInput, Tooltip } from '@mantine/core';
 import {
   IconArrowsMaximize,
   IconChevronDown,
@@ -10,6 +10,7 @@ import {
   IconRuler,
   IconScribble,
   IconSquare,
+  IconWand,
   IconZoomIn,
   IconZoomOut,
 } from '@tabler/icons-react';
@@ -36,10 +37,12 @@ const ROI_TOOLS: Array<{ tool: Tool; label: string; icon: ReactNode }> = [
   { tool: 'ellipse', label: 'Ellipse (E); Shift = circle', icon: <IconOvalVertical size={18} /> },
   { tool: 'polygon', label: 'Polygon (P): click vertices, double-click or Enter to close', icon: <IconPolygon size={18} /> },
   { tool: 'freehand', label: 'Freehand (F)', icon: <IconScribble size={18} /> },
+  { tool: 'wand', label: 'Magic wand (W): click a region; pixels connected to it within the tolerance', icon: <IconWand size={18} /> },
 ];
 
 export function Toolbar() {
   const tool = useViewer((state) => state.tool);
+  const wandTolerance = useViewer((state) => state.wandTolerance);
   const scale = useViewer((state) => state.viewport.scale);
   const hasImage = useViewer((state) => state.image !== null);
   const running = useResults((state) => state.runs.some(isRunning));
@@ -61,6 +64,21 @@ export function Toolbar() {
           {icon}
         </ToolButton>
       ))}
+      {tool === 'wand' && (
+        <Tooltip label="Magic wand tolerance: largest difference from the clicked pixel value" openDelay={400}>
+          <NumberInput
+            size="xs"
+            w={76}
+            min={0}
+            max={65535}
+            allowDecimal={false}
+            leftSection="±"
+            aria-label="Wand tolerance"
+            value={wandTolerance}
+            onChange={(value) => typeof value === 'number' && viewer().setWandTolerance(value)}
+          />
+        </Tooltip>
+      )}
       <ToolButton label="Ruler (L): drag to measure a distance; Shift = 45° steps" active={tool === 'ruler'} disabled={!hasImage} onClick={selectTool('ruler')}>
         <IconRuler size={18} />
       </ToolButton>

@@ -112,6 +112,11 @@ Namespace ``glcm``; include paths are relative to ``core/``.
    * - ``roi/Roi``
      - Rectangle, ellipse and polygon shapes in image pixel coordinates. ``RasterizeMask`` (and ``RasterizeCroppedMask``, which rasterizes only a box around the shape so small ROIs on large images are fast) uses the pixel-centre rule:
        a pixel belongs to the ROI when its centre ``(c + 0.5, r + 0.5)`` lies inside the shape.
+   * - ``roi/RegionSelection``
+     - ``SelectThresholdRegions`` (the pixels in an intensity range) and ``SelectWandRegion`` (the pixels connected to a
+       seed within a tolerance): 8-connected regions whose holes (background not 4-connected to the border) are filled,
+       each outlined by walking its pixel edges, so that ``RasterizeMask`` of the outline gives exactly the region.
+       Threshold regions come from ``connectedComponentsWithStats`` on the filled mask, largest first.
    * - ``imaging/ImageLoader``
      - Decodes PNG, JPEG, BMP and 8/16-bit TIFF with OpenCV and converts color to grayscale (with a warning).
    * - ``imaging/Quantizer``

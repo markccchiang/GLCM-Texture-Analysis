@@ -69,6 +69,13 @@ Endpoints
      - Description
    * - ``POST /images/{id}/roi-stats``
      - ``{rois: [{id, shape}]}`` → ``{stats: [{roiId, pixelCount, boundingBox, min, max, mean, std, error}]}``
+   * - ``POST /images/{id}/threshold-rois``
+     - ``{min, max, minPixels, maxRegions}`` → ``{regions: [{points, pixelCount, boundingBox}], total}``: the 8-connected
+       parts of the pixels in ``[min, max]`` with holes filled, outlined along the pixel edges, at least ``minPixels``
+       pixels each, the largest ``maxRegions`` (at most 1000; 0 returns only ``total``)
+   * - ``POST /images/{id}/wand-roi``
+     - ``{x, y, tolerance}`` → ``{region}``: the 8-connected region around pixel ``(x, y)`` whose values differ from its
+       value by at most ``tolerance``, outlined the same way; ``null`` outside the image
    * - ``POST /analyses``
      - ``{imageId, rois, settings}`` → ``202`` with ``AnalysisInfo``; ``400`` for invalid settings or ROIs; ``422``
        ``TooManyJobs`` when ROIs × distances exceed ``GLCM_MAX_PENDING_JOBS``; ``503`` ``ServerBusy`` (with
@@ -311,6 +318,10 @@ functions throw, with an ``Error`` whose ``code`` is ``INVALID_ARGUMENT``, ``UNS
      - PNG with window/level, downscaled to ``maxSize``
    * - ``roiStats(pixels, width, height, bitDepth, roisJson): Promise<NativeRoiStatistics[]>``
      - Pixel count, bounding box and intensity statistics per ROI
+   * - ``selectThresholdRegions(pixels, width, height, bitDepth, min, max, minPixels, maxRegions): Promise<{regions, total}>``
+     - ``glcm::SelectThresholdRegions``; each region is ``{points, pixelCount, boundingBox}``
+   * - ``selectWandRegion(pixels, width, height, bitDepth, x, y, tolerance): Promise<region | null>``
+     - ``glcm::SelectWandRegion``
    * - ``validateAnalysis(roisJson, settingsJson): void``
      - Parses and validates an analysis request
    * - ``runAnalysis(pixels, width, height, bitDepth, roisJson, settingsJson): Promise<string>``
@@ -362,6 +373,9 @@ paths are relative to ``core/``. The main entry points:
    * - ``roi/Roi.hpp``
      - ``RectangleRoi``, ``EllipseRoi``, ``PolygonRoi``, ``Roi``; ``RasterizeMask``, ``RasterizeCroppedMask``, ``MaskBoundingBox``,
        ``CountMaskPixels``
+   * - ``roi/RegionSelection.hpp``
+     - ``SelectThresholdRegions`` and ``SelectWandRegion``: connected regions of pixel values, with holes filled, as
+       polygon outlines along the pixel edges
    * - ``imaging/ImageHeader.hpp``
      - ``ReadImageSize``, ``ReadImageSizeFromBytes`` → ``ImageSize{width, height, more_images, pixel_spacing}``;
        ``PixelSpacing``, ``SpacingFromDensity``
