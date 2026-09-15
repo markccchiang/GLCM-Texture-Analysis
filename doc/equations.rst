@@ -486,6 +486,73 @@ With :math:`N_r = \sum_{i,j} R(i, j)` runs, :math:`N_p` pixels in :math:`\Omega`
 ``GlrlmLongRunHighGrayLevelEmphasis`` — Long Run High Gray Level Emphasis
    .. math:: f = \frac{1}{N_r} \sum_{i,j} R(i, j) \, i^2 j^2
 
+Size zone features (GLSZM)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A **zone** is a connected region of pixels of :math:`\Omega` with the same gray level, where a pixel connects to its
+eight neighbours (including the diagonals), as in PyRadiomics' 2D computation. Pixels outside the ROI separate zones.
+:math:`Z(i, j)` counts the zones of gray level :math:`i` and size :math:`j` pixels. Zones have no direction and do not
+depend on the distance :math:`d`, so the same value is reported for every direction and distance.
+
+As for the run length features, gray levels are numbered from 1 (:math:`i = \text{level} + 1`), and the definitions
+follow PyRadiomics' GLSZM [vanGriethuysen2017]_ and the IBSI [Zwanenburg2020]_; they are checked against PyRadiomics in
+the core tests with a fixed bin width of 1. ``ComputeSizeZoneFeatures`` (``core/analysis/SizeZone``) computes them; all
+values are NaN for an empty region.
+
+With :math:`N_z = \sum_{i,j} Z(i, j)` zones, :math:`N_p` pixels in :math:`\Omega`, :math:`p(i, j) = Z(i, j) / N_z`,
+:math:`Z_g(i) = \sum_j Z(i, j)` zones per gray level and :math:`Z_s(j) = \sum_i Z(i, j)` zones per size:
+
+``GlszmSmallAreaEmphasis`` — Small Area Emphasis
+   .. math:: f = \frac{1}{N_z} \sum_{i,j} \frac{Z(i, j)}{j^2}
+
+``GlszmLargeAreaEmphasis`` — Large Area Emphasis
+   .. math:: f = \frac{1}{N_z} \sum_{i,j} Z(i, j) \, j^2
+
+``GlszmGrayLevelNonUniformity`` — Gray Level Non-Uniformity (GLSZM)
+   .. math:: f = \frac{1}{N_z} \sum_i Z_g(i)^2
+
+``GlszmGrayLevelNonUniformityNormalized`` — Gray Level Non-Uniformity Normalized (GLSZM)
+   .. math:: f = \frac{1}{N_z^2} \sum_i Z_g(i)^2
+
+``GlszmSizeZoneNonUniformity`` — Size Zone Non-Uniformity
+   .. math:: f = \frac{1}{N_z} \sum_j Z_s(j)^2
+
+``GlszmSizeZoneNonUniformityNormalized`` — Size Zone Non-Uniformity Normalized
+   .. math:: f = \frac{1}{N_z^2} \sum_j Z_s(j)^2
+
+``GlszmZonePercentage`` — Zone Percentage
+   .. math:: f = \frac{N_z}{N_p}
+
+``GlszmGrayLevelVariance`` — Gray Level Variance (GLSZM)
+   .. math:: f = \sum_{i,j} p(i, j) \, (i - \mu_i)^2, \qquad \mu_i = \sum_{i,j} p(i, j) \, i
+
+``GlszmZoneVariance`` — Zone Variance
+   .. math:: f = \sum_{i,j} p(i, j) \, (j - \mu_j)^2, \qquad \mu_j = \sum_{i,j} p(i, j) \, j
+
+``GlszmZoneEntropy`` — Zone Entropy
+   .. math:: f = -\sum_{i,j} p(i, j) \log\bigl(p(i, j) + \epsilon\bigr)
+
+   :math:`\epsilon` is the machine epsilon, and the logarithm follows the log base setting (PyRadiomics uses
+   :math:`\log_2`).
+
+``GlszmLowGrayLevelZoneEmphasis`` — Low Gray Level Zone Emphasis
+   .. math:: f = \frac{1}{N_z} \sum_{i,j} \frac{Z(i, j)}{i^2}
+
+``GlszmHighGrayLevelZoneEmphasis`` — High Gray Level Zone Emphasis
+   .. math:: f = \frac{1}{N_z} \sum_{i,j} Z(i, j) \, i^2
+
+``GlszmSmallAreaLowGrayLevelEmphasis`` — Small Area Low Gray Level Emphasis
+   .. math:: f = \frac{1}{N_z} \sum_{i,j} \frac{Z(i, j)}{i^2 j^2}
+
+``GlszmSmallAreaHighGrayLevelEmphasis`` — Small Area High Gray Level Emphasis
+   .. math:: f = \frac{1}{N_z} \sum_{i,j} \frac{Z(i, j) \, i^2}{j^2}
+
+``GlszmLargeAreaLowGrayLevelEmphasis`` — Large Area Low Gray Level Emphasis
+   .. math:: f = \frac{1}{N_z} \sum_{i,j} \frac{Z(i, j) \, j^2}{i^2}
+
+``GlszmLargeAreaHighGrayLevelEmphasis`` — Large Area High Gray Level Emphasis
+   .. math:: f = \frac{1}{N_z} \sum_{i,j} Z(i, j) \, i^2 j^2
+
 Score
 ~~~~~
 

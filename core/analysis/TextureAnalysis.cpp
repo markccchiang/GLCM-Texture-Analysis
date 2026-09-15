@@ -877,6 +877,38 @@ std::string TextureAnalysis::TypeToString(Type type) {
             return "Long Run Low Gray Level Emphasis";
         case Type::GlrlmLongRunHighGrayLevelEmphasis:
             return "Long Run High Gray Level Emphasis";
+        case Type::GlszmSmallAreaEmphasis:
+            return "Small Area Emphasis";
+        case Type::GlszmLargeAreaEmphasis:
+            return "Large Area Emphasis";
+        case Type::GlszmGrayLevelNonUniformity:
+            return "Gray Level Non-Uniformity (GLSZM)";
+        case Type::GlszmGrayLevelNonUniformityNormalized:
+            return "Gray Level Non-Uniformity Normalized (GLSZM)";
+        case Type::GlszmSizeZoneNonUniformity:
+            return "Size Zone Non-Uniformity";
+        case Type::GlszmSizeZoneNonUniformityNormalized:
+            return "Size Zone Non-Uniformity Normalized";
+        case Type::GlszmZonePercentage:
+            return "Zone Percentage";
+        case Type::GlszmGrayLevelVariance:
+            return "Gray Level Variance (GLSZM)";
+        case Type::GlszmZoneVariance:
+            return "Zone Variance";
+        case Type::GlszmZoneEntropy:
+            return "Zone Entropy";
+        case Type::GlszmLowGrayLevelZoneEmphasis:
+            return "Low Gray Level Zone Emphasis";
+        case Type::GlszmHighGrayLevelZoneEmphasis:
+            return "High Gray Level Zone Emphasis";
+        case Type::GlszmSmallAreaLowGrayLevelEmphasis:
+            return "Small Area Low Gray Level Emphasis";
+        case Type::GlszmSmallAreaHighGrayLevelEmphasis:
+            return "Small Area High Gray Level Emphasis";
+        case Type::GlszmLargeAreaLowGrayLevelEmphasis:
+            return "Large Area Low Gray Level Emphasis";
+        case Type::GlszmLargeAreaHighGrayLevelEmphasis:
+            return "Large Area High Gray Level Emphasis";
         case Type::Score:
             return "Score";
         case Type::Age:

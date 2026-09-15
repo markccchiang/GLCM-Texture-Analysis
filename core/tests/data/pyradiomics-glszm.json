@@ -1,0 +1,65 @@
+{
+  "source": "PyRadiomics 3.1.0a2.post8+g6a761c4, NumPy 2.5.3, SimpleITK 2.5.6",
+  "settings": {
+    "binWidth": 1,
+    "force2D": true,
+    "force2Ddimension": 0,
+    "logBase": "log2"
+  },
+  "cases": [
+    {
+      "image": "textures/camera.png",
+      "rectangle": [
+        100,
+        100,
+        64,
+        48
+      ],
+      "features": {
+        "GrayLevelNonUniformity": 32.77596075224857,
+        "GrayLevelNonUniformityNormalized": 0.0267996408440299,
+        "GrayLevelVariance": 3607.045686752078,
+        "HighGrayLevelZoneEmphasis": 6183.334423548651,
+        "LargeAreaEmphasis": 178.51512673753066,
+        "LargeAreaHighGrayLevelEmphasis": 7282330.354047424,
+        "LargeAreaLowGrayLevelEmphasis": 0.04574057851676094,
+        "LowGrayLevelZoneEmphasis": 0.009829541405987885,
+        "SizeZoneNonUniformity": 610.5928045789043,
+        "SizeZoneNonUniformityNormalized": 0.4992582212419496,
+        "SmallAreaEmphasis": 0.7342726279473216,
+        "SmallAreaHighGrayLevelEmphasis": 4518.0751004702415,
+        "SmallAreaLowGrayLevelEmphasis": 0.006815288528599352,
+        "ZoneEntropy": 7.144525663048257,
+        "ZonePercentage": 0.3981119791666667,
+        "ZoneVariance": 172.20570571273274
+      }
+    },
+    {
+      "image": "textures/brick.png",
+      "rectangle": [
+        200,
+        150,
+        90,
+        70
+      ],
+      "features": {
+        "GrayLevelNonUniformity": 43.619601328903656,
+        "GrayLevelNonUniformityNormalized": 0.018114452379112814,
+        "GrayLevelVariance": 1199.870393090308,
+        "HighGrayLevelZoneEmphasis": 4981.354235880399,
+        "LargeAreaEmphasis": 78.70681063122923,
+        "LargeAreaHighGrayLevelEmphasis": 83176.38787375415,
+        "LargeAreaLowGrayLevelEmphasis": 0.08303802634387819,
+        "LowGrayLevelZoneEmphasis": 0.0017420103034524275,
+        "SizeZoneNonUniformity": 1324.5224252491694,
+        "SizeZoneNonUniformityNormalized": 0.5500508410503195,
+        "SmallAreaEmphasis": 0.7688155647203367,
+        "SmallAreaHighGrayLevelEmphasis": 4352.44401860119,
+        "SmallAreaLowGrayLevelEmphasis": 0.001339452533870413,
+        "ZoneEntropy": 7.73172917324329,
+        "ZonePercentage": 0.38222222222222224,
+        "ZoneVariance": 71.86189446032604
+      }
+    }
+  ]
+}

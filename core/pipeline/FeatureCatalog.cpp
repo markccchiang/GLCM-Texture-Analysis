@@ -19,6 +19,7 @@ const char REGION_ANCHOR[] = "equations.html#first-order-statistics";
 const char HARALICK_ANCHOR[] = "equations.html#haralick-features";
 const char OTHER_ANCHOR[] = "equations.html#other-co-occurrence-features";
 const char RUN_LENGTH_ANCHOR[] = "equations.html#run-length-features-glrlm";
+const char SIZE_ZONE_ANCHOR[] = "equations.html#size-zone-features-glszm";
 
 FeatureInfo Make(Type type, const char* id, FeatureGroup group, const char* anchor, FeatureCost cost = FeatureCost::Normal,
     const char* non_standard_reason = "") {
@@ -92,6 +93,23 @@ std::vector<FeatureInfo> BuildCatalog() {
         Make(Type::GlrlmShortRunHighGrayLevelEmphasis, "GlrlmShortRunHighGrayLevelEmphasis", G::RunLength, RUN_LENGTH_ANCHOR),
         Make(Type::GlrlmLongRunLowGrayLevelEmphasis, "GlrlmLongRunLowGrayLevelEmphasis", G::RunLength, RUN_LENGTH_ANCHOR),
         Make(Type::GlrlmLongRunHighGrayLevelEmphasis, "GlrlmLongRunHighGrayLevelEmphasis", G::RunLength, RUN_LENGTH_ANCHOR),
+
+        Make(Type::GlszmSmallAreaEmphasis, "GlszmSmallAreaEmphasis", G::SizeZone, SIZE_ZONE_ANCHOR),
+        Make(Type::GlszmLargeAreaEmphasis, "GlszmLargeAreaEmphasis", G::SizeZone, SIZE_ZONE_ANCHOR),
+        Make(Type::GlszmGrayLevelNonUniformity, "GlszmGrayLevelNonUniformity", G::SizeZone, SIZE_ZONE_ANCHOR),
+        Make(Type::GlszmGrayLevelNonUniformityNormalized, "GlszmGrayLevelNonUniformityNormalized", G::SizeZone, SIZE_ZONE_ANCHOR),
+        Make(Type::GlszmSizeZoneNonUniformity, "GlszmSizeZoneNonUniformity", G::SizeZone, SIZE_ZONE_ANCHOR),
+        Make(Type::GlszmSizeZoneNonUniformityNormalized, "GlszmSizeZoneNonUniformityNormalized", G::SizeZone, SIZE_ZONE_ANCHOR),
+        Make(Type::GlszmZonePercentage, "GlszmZonePercentage", G::SizeZone, SIZE_ZONE_ANCHOR),
+        Make(Type::GlszmGrayLevelVariance, "GlszmGrayLevelVariance", G::SizeZone, SIZE_ZONE_ANCHOR),
+        Make(Type::GlszmZoneVariance, "GlszmZoneVariance", G::SizeZone, SIZE_ZONE_ANCHOR),
+        Make(Type::GlszmZoneEntropy, "GlszmZoneEntropy", G::SizeZone, SIZE_ZONE_ANCHOR),
+        Make(Type::GlszmLowGrayLevelZoneEmphasis, "GlszmLowGrayLevelZoneEmphasis", G::SizeZone, SIZE_ZONE_ANCHOR),
+        Make(Type::GlszmHighGrayLevelZoneEmphasis, "GlszmHighGrayLevelZoneEmphasis", G::SizeZone, SIZE_ZONE_ANCHOR),
+        Make(Type::GlszmSmallAreaLowGrayLevelEmphasis, "GlszmSmallAreaLowGrayLevelEmphasis", G::SizeZone, SIZE_ZONE_ANCHOR),
+        Make(Type::GlszmSmallAreaHighGrayLevelEmphasis, "GlszmSmallAreaHighGrayLevelEmphasis", G::SizeZone, SIZE_ZONE_ANCHOR),
+        Make(Type::GlszmLargeAreaLowGrayLevelEmphasis, "GlszmLargeAreaLowGrayLevelEmphasis", G::SizeZone, SIZE_ZONE_ANCHOR),
+        Make(Type::GlszmLargeAreaHighGrayLevelEmphasis, "GlszmLargeAreaHighGrayLevelEmphasis", G::SizeZone, SIZE_ZONE_ANCHOR),
         Make(Type::MaximumProbability, "MaximumProbability", G::Other, OTHER_ANCHOR),
         Make(Type::InverseDifferenceNormalized, "InverseDifferenceNormalized", G::Other, OTHER_ANCHOR),
         Make(Type::InverseDifferenceMomentNormalized, "InverseDifferenceMomentNormalized", G::Other, OTHER_ANCHOR),
@@ -128,12 +146,15 @@ const std::vector<FeaturePreset>& FeaturePresets() {
         std::set<Type> all;
         std::set<Type> first_order;
         std::set<Type> run_length;
+        std::set<Type> size_zone;
         for (const FeatureInfo& info : FeatureCatalog()) {
             all.insert(info.type);
             if (info.group == FeatureGroup::RegionStatistics) {
                 first_order.insert(info.type);
             } else if (info.group == FeatureGroup::RunLength) {
                 run_length.insert(info.type);
+            } else if (info.group == FeatureGroup::SizeZone) {
+                size_zone.insert(info.type);
             }
         }
         return std::vector<FeaturePreset>{
@@ -148,6 +169,7 @@ const std::vector<FeaturePreset>& FeaturePresets() {
             {"score", "Score (Mean, Entropy, Contrast)", {Type::Mean, Type::Entropy, Type::Contrast}, true},
             {"firstOrder", "First-order statistics", first_order, false},
             {"glrlm", "Run length (GLRLM)", run_length, false},
+            {"glszm", "Size zone (GLSZM)", size_zone, false},
             {"all", "All features", all, false},
         };
     }();
@@ -164,6 +186,8 @@ std::string FeatureGroupId(FeatureGroup group) {
             return "other";
         case FeatureGroup::RunLength:
             return "runLength";
+        case FeatureGroup::SizeZone:
+            return "sizeZone";
     }
     throw std::invalid_argument("Unknown feature group");
 }

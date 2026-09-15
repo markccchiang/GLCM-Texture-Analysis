@@ -47,6 +47,7 @@ const GROUP_LABELS: Record<string, string> = {
   haralick: 'Haralick',
   other: 'Other',
   runLength: 'Run length (GLRLM)',
+  sizeZone: 'Size zone (GLSZM)',
 };
 
 const QUANTIZATION_OPTIONS: Array<{ value: QuantizationMethod; label: string }> = [

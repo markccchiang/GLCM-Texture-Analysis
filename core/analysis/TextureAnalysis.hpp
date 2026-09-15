@@ -79,6 +79,23 @@ enum class Type {
     GlrlmShortRunHighGrayLevelEmphasis,
     GlrlmLongRunLowGrayLevelEmphasis,
     GlrlmLongRunHighGrayLevelEmphasis,
+    // Gray level size zone matrix features (analysis/SizeZone)
+    GlszmSmallAreaEmphasis,
+    GlszmLargeAreaEmphasis,
+    GlszmGrayLevelNonUniformity,
+    GlszmGrayLevelNonUniformityNormalized,
+    GlszmSizeZoneNonUniformity,
+    GlszmSizeZoneNonUniformityNormalized,
+    GlszmZonePercentage,
+    GlszmGrayLevelVariance,
+    GlszmZoneVariance,
+    GlszmZoneEntropy,
+    GlszmLowGrayLevelZoneEmphasis,
+    GlszmHighGrayLevelZoneEmphasis,
+    GlszmSmallAreaLowGrayLevelEmphasis,
+    GlszmSmallAreaHighGrayLevelEmphasis,
+    GlszmLargeAreaLowGrayLevelEmphasis,
+    GlszmLargeAreaHighGrayLevelEmphasis,
     // Not texture features: added by CalculateScore
     Score,
     Age

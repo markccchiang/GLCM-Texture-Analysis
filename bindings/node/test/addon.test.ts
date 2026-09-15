@@ -55,9 +55,9 @@ describe('catalog', () => {
 
   it('lists every feature with its flags', () => {
     const catalog = native.catalog();
-    expect(catalog.features).toHaveLength(63);
-    expect(new Set(catalog.features.map((feature) => feature.id)).size).toBe(63);
-    expect(new Set(catalog.features.map((feature) => feature.name)).size).toBe(63);
+    expect(catalog.features).toHaveLength(79);
+    expect(new Set(catalog.features.map((feature) => feature.id)).size).toBe(79);
+    expect(new Set(catalog.features.map((feature) => feature.name)).size).toBe(79);
 
     const nonStandard = catalog.features.filter((feature) => feature.nonStandard).map((feature) => feature.id);
     expect(nonStandard.sort()).toEqual(['CorrelationIII', 'SumOfSquares']);
@@ -65,9 +65,11 @@ describe('catalog', () => {
     expect(catalog.features[0]).toMatchObject({ id: 'Mean', group: 'regionStatistics', docAnchor: 'equations.html#first-order-statistics' });
     expect(catalog.features.filter((feature) => feature.group === 'regionStatistics')).toHaveLength(18);
     expect(catalog.features.filter((feature) => feature.group === 'runLength')).toHaveLength(16);
+    expect(catalog.features.filter((feature) => feature.group === 'sizeZone')).toHaveLength(16);
+    expect(catalog.features.find((feature) => feature.id === 'GlszmZoneEntropy')).toMatchObject({ docAnchor: 'equations.html#size-zone-features-glszm' });
     expect(catalog.features.find((feature) => feature.id === 'GlrlmRunEntropy')).toMatchObject({ docAnchor: 'equations.html#run-length-features-glrlm' });
 
-    expect(catalog.presets.map((preset) => preset.id)).toEqual(['haralick', 'clausi2002', 'basic', 'score', 'firstOrder', 'glrlm', 'all']);
+    expect(catalog.presets.map((preset) => preset.id)).toEqual(['haralick', 'clausi2002', 'basic', 'score', 'firstOrder', 'glrlm', 'glszm', 'all']);
     expect(catalog.presets[0].features).toHaveLength(14);
     expect(catalog.limits).toMatchObject({
       minGrayLevels: 2,

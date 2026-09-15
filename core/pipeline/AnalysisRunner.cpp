@@ -7,6 +7,7 @@
 #include "analysis/FirstOrder.hpp"
 #include "analysis/RunLength.hpp"
 #include "analysis/Score.hpp"
+#include "analysis/SizeZone.hpp"
 #include "imaging/Quantizer.hpp"
 
 namespace glcm {
@@ -103,10 +104,11 @@ struct PreparedRegion {
     QuantizationResult quantized;
     std::map<Type, double> first_order;  // the requested first-order statistics
     std::map<Type, Features> run_length; // the requested run length features: they do not depend on the distance
+    std::map<Type, double> size_zone;    // the requested size zone features: no direction, no distance
 };
 
 PreparedRegion Prepare(const cv::Mat& gray, const cv::Mat& mask, const AnalysisSettings& settings) {
-    PreparedRegion prepared{ComputeRegionStatistics(gray, mask), Quantize(gray, mask, settings.gray_levels, settings.quantization), {}, {}};
+    PreparedRegion prepared{ComputeRegionStatistics(gray, mask), Quantize(gray, mask, settings.gray_levels, settings.quantization), {}, {}, {}};
     std::set<Type> first_order;
     for (Type type : settings.features) {
         if (IsFirstOrderStatistic(type)) {
@@ -126,6 +128,15 @@ PreparedRegion Prepare(const cv::Mat& gray, const cv::Mat& mask, const AnalysisS
     if (!run_length.empty()) {
         prepared.run_length =
             ComputeRunLengthFeatures(prepared.quantized.image, mask, settings.gray_levels, settings.directions, settings.log_base, run_length);
+    }
+    std::set<Type> size_zone;
+    for (Type type : settings.features) {
+        if (IsSizeZoneFeature(type)) {
+            size_zone.insert(type);
+        }
+    }
+    if (!size_zone.empty()) {
+        prepared.size_zone = ComputeSizeZoneFeatures(prepared.quantized.image, mask, settings.gray_levels, settings.log_base, size_zone);
     }
     return prepared;
 }
@@ -155,7 +166,8 @@ void Measure(const cv::Mat& gray, const cv::Mat& mask, const PreparedRegion& pre
 
     std::set<Type> texture_types;
     for (Type type : settings.features) {
-        if (type != Type::Mean && type != Type::Std && !IsFirstOrderStatistic(type) && !IsRunLengthFeature(type)) {
+        if (type != Type::Mean && type != Type::Std && !IsFirstOrderStatistic(type) && !IsRunLengthFeature(type) &&
+            !IsSizeZoneFeature(type)) {
             texture_types.insert(type);
         }
     }
@@ -179,6 +191,9 @@ void Measure(const cv::Mat& gray, const cv::Mat& mask, const PreparedRegion& pre
     }
     for (const auto& [type, features] : prepared.run_length) {
         result.values[type] = features;
+    }
+    for (const auto& [type, value] : prepared.size_zone) {
+        result.values[type] = Uniform(value, settings.directions);
     }
     for (Type type : texture_types) {
         result.values[type] = values.at(type);

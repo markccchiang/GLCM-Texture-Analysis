@@ -13,6 +13,7 @@
 
 #include "analysis/FirstOrder.hpp"
 #include "analysis/RunLength.hpp"
+#include "analysis/SizeZone.hpp"
 #include "imaging/Quantizer.hpp"
 #include "io/Identifiers.hpp"
 #include "io/Json.hpp"
@@ -563,6 +564,29 @@ TEST(AnalysisRunnerRunLengthTest, ReportsRunLengthFeaturesPerDirectionAtEveryDis
             EXPECT_EQ(result.values.at(type).RD, features.RD);
             EXPECT_TRUE(std::isnan(result.values.at(type).V));
         }
+    }
+}
+
+TEST(AnalysisRunnerSizeZoneTest, ReportsSizeZoneFeaturesInEveryDirection) {
+    AnalysisSettings settings = DefaultSettings(8);
+    settings.features = {Type::GlszmZonePercentage, Type::GlszmZoneEntropy, Type::Contrast};
+    settings.directions = {Direction::H, Direction::LD};
+    const cv::Mat image = Pattern8(30, 30);
+    const AnalysisOutput output = RunAnalysis(image, {MakeRoi("r1", "A", RectangleRoi{2, 3, 20, 10})}, settings);
+    ASSERT_EQ(output.results.size(), 1u);
+    const MeasurementResult& result = output.results[0];
+    ASSERT_EQ(result.status, MeasurementStatus::Ok);
+
+    const cv::Rect box(2, 3, 20, 10);
+    const cv::Mat mask(box.size(), CV_8UC1, cv::Scalar(255));
+    const QuantizationResult quantized = Quantize(image(box), mask, settings.gray_levels, settings.quantization);
+    const auto expected =
+        ComputeSizeZoneFeatures(quantized.image, mask, settings.gray_levels, settings.log_base, {Type::GlszmZonePercentage, Type::GlszmZoneEntropy});
+    for (const auto& [type, value] : expected) {
+        SCOPED_TRACE(TextureAnalysis::TypeToString(type));
+        EXPECT_EQ(result.values.at(type).H, value);
+        EXPECT_EQ(result.values.at(type).LD, value);
+        EXPECT_TRUE(std::isnan(result.values.at(type).V));
     }
 }
 

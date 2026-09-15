@@ -61,6 +61,7 @@ To run the application, build the addon and web app and start the server; see [W
 | --- | --- |
 | First-order statistics | Mean, STD, Minimum, Maximum, Range, Median, 10th/90th Percentile, Interquartile Range, (Robust) Mean Absolute Deviation, Root Mean Squared, Energy, Variance, Skewness, Kurtosis, Entropy, Uniformity |
 | Run length (GLRLM) | Short/Long Run Emphasis, Gray Level and Run Length Non-Uniformity (and normalized), Run Percentage, Gray Level Variance, Run Variance, Run Entropy, Low/High Gray Level Run Emphasis, Short/Long Run Low/High Gray Level Emphasis |
+| Size zone (GLSZM) | Small/Large Area Emphasis, Gray Level and Size Zone Non-Uniformity (and normalized), Zone Percentage, Gray Level Variance, Zone Variance, Zone Entropy, Low/High Gray Level Zone Emphasis, Small/Large Area Low/High Gray Level Emphasis |
 | Haralick | Energy (Angular Second Moment), Contrast, Correlation (I, II, III), Sum of Squares (in i, j, both), Homogeneity I, Homogeneity II (Inverse Difference Moment), Sum Average, Sum Variance, Sum Entropy, Entropy, Difference Variance, Difference Entropy, Information Measures of Correlation I and II, Maximal Correlation Coefficient |
 | Others | Auto Correlation, Cluster Shade, Cluster Prominence, Dissimilarity, Maximum Probability, Inverse Difference Normalized, Inverse Difference Moment Normalized |
 

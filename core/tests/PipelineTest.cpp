@@ -137,6 +137,9 @@ TEST(FeatureCatalogTest, PresetsAreValid) {
         if (preset.id == "haralick") {
             EXPECT_EQ(preset.features.size(), 14u);
         }
+        if (preset.id == "glszm") {
+            EXPECT_EQ(preset.features.size(), 16u);
+        }
         if (preset.id == "glrlm") {
             EXPECT_EQ(preset.features.size(), 16u);
         }
@@ -147,7 +150,7 @@ TEST(FeatureCatalogTest, PresetsAreValid) {
             EXPECT_TRUE(preset.enables_score);
         }
     }
-    EXPECT_EQ(ids, (std::set<std::string>{"haralick", "clausi2002", "basic", "score", "firstOrder", "glrlm", "all"}));
+    EXPECT_EQ(ids, (std::set<std::string>{"haralick", "clausi2002", "basic", "score", "firstOrder", "glrlm", "glszm", "all"}));
 }
 
 TEST(AnalysisSettingsTest, DefaultsDependOnBitDepth) {
