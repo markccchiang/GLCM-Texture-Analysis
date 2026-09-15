@@ -132,7 +132,8 @@ Results
 Every measurement adds rows to the **Results** table:
 
 - One row per **ROI**, **distance** (``d``) and **direction** (``Dir``: 0°, 45°, 90°, 135°, Mean or Range, depending
-  on the aggregation), with the **pixel count**, the **gray levels** and one column per feature. The **Score** column
+  on the aggregation), with the **pixel count**, the **area** in mm² (once a measurement had a pixel spacing, see
+  :doc:`viewing`), the **gray levels** and one column per feature. The **Score** column
   appears when a measurement included the score.
 - Values are shown with six significant digits; copied and exported values have full precision.
 - **Status** is empty for normal results, **⚠** when the result has warnings, or *skipped* / *failed* with the reason —

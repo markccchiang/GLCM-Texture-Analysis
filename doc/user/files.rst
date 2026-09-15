@@ -44,6 +44,8 @@ Exporting results
 - Then follows a header row and one row per ROI, distance and direction (or mean and range), with the timestamp, image,
   ROI name and id, status, pixel count, gray levels, quantization, distance, direction, one column per feature, the
   score and the warnings.
+- With a pixel spacing, a ``# pixelSpacingMm=`` line gives it (width;height), and an ``areaMm2`` column follows the
+  pixel count: the pixel count × pixel width × pixel height.
 - Columns of non-standard features end with ``[non-standard]``.
 - Numbers are written with full precision.
 - Text cells (image and ROI names, ids and warnings) that start with ``=``, ``+``, ``-`` or ``@`` get a leading
@@ -105,8 +107,8 @@ Exporting ROI images
 Projects
 --------
 
-A project keeps a complete session: the image reference, the ROIs (including hidden ones), the analysis settings and
-all finished results.
+A project keeps a complete session: the image reference, the pixel spacing in use, the ROIs (including hidden ones), the
+analysis settings and all finished results.
 
 .. figure:: images/save-project.png
    :alt: The Save Project dialog with the option Embed the image.

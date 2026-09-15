@@ -12,6 +12,7 @@ import { CATALOG_QUERY } from '../api/queryClient';
 import { NON_STANDARD_NOTE } from '../analysis/SettingsPanel';
 import { PanelSection } from '../components/PanelSection';
 import { exportResultsFile } from '../files/actions';
+import { formatSpacing } from '../image/spacing';
 import { useRois } from '../rois/roiStore';
 import { ResultsPlot } from './ResultsPlot';
 import { useResults } from './resultsStore';
@@ -39,7 +40,7 @@ function settingsSummary(row: ResultRow): string {
         ? `bin width ${settings.quantization.binWidth}`
         : QUANTIZATION_LABELS[settings.quantization.method];
   const lines = [
-    `${row.imageName}`,
+    row.pixelSpacing ? `${row.imageName}, pixels ${formatSpacing(row.pixelSpacing)}` : row.imageName,
     `Ng ${settings.grayLevels}, ${quantization}, d ${row.distance}, directions ${settings.directions.join('/')}°, log ${settings.logBase}`,
   ];
   if (settings.score.enabled) {

@@ -32,6 +32,7 @@ import { ROI_NODE_NAME, RoiLayer, VERTEX_NODE_NAME, type PolygonDraft } from './
 import { useDisplaySource } from './useDisplaySource';
 import { imageToScreen, pixelAt, screenToImage, zoomAt, type Point } from './viewport';
 import { classifyWheel } from './wheel';
+import { areaMm2, formatArea } from '../image/spacing';
 
 const PIXEL_LOOKUP_DELAY_MS = 80;
 const TOOLTIP_DELAY_MS = 300;
@@ -600,6 +601,7 @@ export function ImageCanvas() {
   const info = image?.info;
   const tooltipRoi = tooltip ? rois.find((roi) => roi.id === tooltip.roiId) : undefined;
   const tooltipStatistics = tooltipRoi ? statistics.get(tooltipRoi.id) : undefined;
+  const pixelSpacing = useViewer((state) => state.pixelSpacing);
 
   return (
     <div
@@ -650,7 +652,10 @@ export function ImageCanvas() {
         <div className="roi-tooltip" style={{ left: tooltip.x + 14, top: tooltip.y + 14 }} data-testid="roi-tooltip">
           <strong>{tooltipRoi.name}</strong>
           <span>{SHAPE_LABELS[shapeKind(tooltipRoi.shape)]}</span>
-          <span className="mono">{tooltipStatistics ? `${tooltipStatistics.pixelCount.toLocaleString()} px` : '… px'}</span>
+          <span className="mono">
+            {tooltipStatistics ? `${tooltipStatistics.pixelCount.toLocaleString()} px` : '… px'}
+            {tooltipStatistics && pixelSpacing ? ` · ${formatArea(areaMm2(tooltipStatistics.pixelCount, pixelSpacing))}` : ''}
+          </span>
           {roiProblem(tooltipStatistics) && <span className="roi-tooltip-warning">⚠ {roiProblem(tooltipStatistics)}</span>}
         </div>
       )}

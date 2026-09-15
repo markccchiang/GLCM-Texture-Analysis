@@ -1,7 +1,7 @@
 // Rows of the Results table and the analyses producing them (doc/ui-design-plan.md, section 6.3.3). Rows are appended
 // and keep their settings; changing settings never alters them.
 
-import type { AnalysisInfo, AnalysisSettings, AnalysisStatus, MeasurementResult } from '@glcm/api';
+import type { AnalysisInfo, AnalysisSettings, AnalysisStatus, MeasurementResult, PixelSpacing } from '@glcm/api';
 import { create } from 'zustand';
 import { rowsForResult, type ResultRow } from './rows';
 
@@ -10,6 +10,8 @@ export interface AnalysisRun {
   imageName: string;
   imageSha256: string;
   settings: AnalysisSettings;
+  /** Spacing the analysis was started with, for ROI areas */
+  pixelSpacing: PixelSpacing | null;
   status: AnalysisStatus;
   /** When the analysis finished (or started, while it runs) */
   timestamp: string;
@@ -37,7 +39,7 @@ export interface ResultsState {
 function buildRows(runs: readonly AnalysisRun[]): ResultRow[] {
   return runs.flatMap((run) =>
     run.results.flatMap((result, index) =>
-      result ? rowsForResult(result, { analysisId: run.analysisId, index, imageName: run.imageName, settings: run.settings }) : [],
+      result ? rowsForResult(result, { analysisId: run.analysisId, index, imageName: run.imageName, settings: run.settings, pixelSpacing: run.pixelSpacing }) : [],
     ),
   );
 }
@@ -63,6 +65,7 @@ export const useResults = create<ResultsState>()((set, get) => {
         imageName: info.imageName,
         imageSha256: info.imageSha256,
         settings: info.settings,
+        pixelSpacing: info.pixelSpacing ?? null,
         status: info.status,
         timestamp: info.createdAt,
         completed: info.completed,

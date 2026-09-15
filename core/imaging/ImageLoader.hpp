@@ -1,8 +1,11 @@
 #ifndef GLCM_IMAGE_LOADER_HPP_
 #define GLCM_IMAGE_LOADER_HPP_
 
+#include "imaging/ImageHeader.hpp"
+
 #include <cstdint>
 #include <opencv2/core.hpp>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -14,6 +17,8 @@ struct ImageInfo {
     int height = 0;
     int bit_depth = 0;       // 8 or 16
     int source_channels = 0; // channels of the decoded file before grayscale conversion (1 or 3)
+    // Millimetres per pixel from the file's resolution (see ImageSize::pixel_spacing), after the EXIF orientation
+    std::optional<PixelSpacing> pixel_spacing;
 };
 
 // A decoded image, ready for analysis: single-channel CV_8UC1 or CV_16UC1

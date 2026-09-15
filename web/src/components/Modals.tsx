@@ -1,5 +1,5 @@
-import { Anchor, Badge, Button, Checkbox, Group, Kbd, List, Modal, NavLink, ScrollArea, SegmentedControl, Stack, Switch, Table, Text } from '@mantine/core';
-import type { HealthResponse, SampleInfo } from '@glcm/api';
+import { Anchor, Badge, Button, Checkbox, Group, Kbd, List, Modal, NavLink, NumberInput, ScrollArea, SegmentedControl, Stack, Switch, Table, Text } from '@mantine/core';
+import type { HealthResponse, ImageInfo, SampleInfo } from '@glcm/api';
 import { API_PREFIX } from '@glcm/api';
 import { useQuery } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
@@ -8,6 +8,7 @@ import { BatchContent } from '../batch/BatchDialog';
 import { CATALOG_QUERY } from '../api/queryClient';
 import { useAnalysisSettings } from '../analysis/settingsStore';
 import { exportRoiImagesFile, saveProjectFile } from '../files/actions';
+import { formatSpacing, isAnisotropic, sameSpacing } from '../image/spacing';
 import { useRois } from '../rois/roiStore';
 import { openSample } from '../stores/imageLoader';
 import { usePreferences } from '../stores/preferences';
@@ -52,6 +53,52 @@ function InfoRows({ rows }: { rows: [string, ReactNode][] }) {
   );
 }
 
+const MAX_SPACING_MM = 1e6;
+
+const validSpacing = (value: string | number) => typeof value === 'number' && value > 0 && value <= MAX_SPACING_MM;
+
+/** Pixel spacing of the open image: from the file, entered here, or none */
+function PixelSpacingEditor({ info }: { info: ImageInfo }) {
+  const spacing = useViewer((state) => state.pixelSpacing);
+  const [width, setWidth] = useState<string | number>(spacing?.x ?? '');
+  const [height, setHeight] = useState<string | number>(spacing?.y ?? '');
+  const choose = (next: typeof spacing) => {
+    useViewer.getState().setPixelSpacing(next);
+    setWidth(next?.x ?? '');
+    setHeight(next?.y ?? '');
+  };
+  const source = !spacing ? 'none' : sameSpacing(spacing, info.pixelSpacing) ? 'from the file' : 'entered';
+  return (
+    <Stack gap={6}>
+      <Text size="sm" fw={500}>
+        Pixel spacing
+      </Text>
+      <Group gap="xs" align="flex-end">
+        <NumberInput size="xs" w={130} label="Pixel width (mm)" min={0} hideControls value={width} onChange={setWidth} />
+        <NumberInput size="xs" w={130} label="Pixel height (mm)" min={0} hideControls value={height} onChange={setHeight} />
+        <Button size="xs" disabled={!validSpacing(width) || !validSpacing(height)} onClick={() => choose({ x: Number(width), y: Number(height) })}>
+          Apply
+        </Button>
+        {info.pixelSpacing && !sameSpacing(spacing, info.pixelSpacing) && (
+          <Button size="xs" variant="subtle" onClick={() => choose(info.pixelSpacing)}>
+            Use the file&apos;s spacing
+          </Button>
+        )}
+        {spacing && (
+          <Button size="xs" variant="subtle" color="gray" onClick={() => choose(null)}>
+            Clear
+          </Button>
+        )}
+      </Group>
+      <Text size="xs" c="dimmed" data-testid="pixel-spacing-status">
+        {spacing ? `${formatSpacing(spacing)} per pixel (${source}). ` : 'No pixel spacing: sizes are given in pixels only. '}
+        {spacing && isAnisotropic(spacing) ? 'The pixels are not square. ' : ''}
+        The spacing adds a scale bar and ROI areas in mm², and is remembered for this image. Features are always computed in pixels.
+      </Text>
+    </Stack>
+  );
+}
+
 function ImageInfoContent() {
   const image = useViewer((state) => state.image);
   const rendererKind = useViewer((state) => state.rendererKind);
@@ -76,6 +123,7 @@ function ImageInfoContent() {
           ['Uploaded', new Date(info.createdAt).toLocaleString()],
         ]}
       />
+      <PixelSpacingEditor key={info.imageId} info={info} />
       {info.warnings.length > 0 && (
         <List size="sm" c="yellow">
           {info.warnings.map((warning) => (

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -95,7 +96,49 @@ ImageSize Checked(HeaderReader& reader, int64_t width, int64_t height) {
     if (width <= 0 || height <= 0) {
         reader.Invalid("the width and height must be positive");
     }
-    return {width, height};
+    ImageSize size;
+    size.width = width;
+    size.height = height;
+    return size;
+}
+
+constexpr double MM_PER_INCH = 25.4;
+constexpr double MM_PER_CM = 10.0;
+constexpr double MM_PER_METRE = 1000.0;
+// Chunks or directory entries looked at for the resolution, so a crafted file cannot keep the reader busy
+constexpr int MAX_METADATA_ITEMS = 4096;
+
+// Runs a metadata reader; a truncated or malformed resolution only means that the spacing is unknown
+template <typename Read>
+std::optional<PixelSpacing> OptionalSpacing(Read read) {
+    try {
+        return read();
+    } catch (const std::runtime_error&) {
+        return std::nullopt;
+    }
+}
+
+// pHYs may appear anywhere between IHDR and the first IDAT chunk
+std::optional<PixelSpacing> PngSpacing(HeaderReader& reader) {
+    uint64_t offset = 8;
+    for (int i = 0; i < MAX_METADATA_ITEMS; ++i) {
+        const uint64_t length = reader.Unsigned(offset, 4, false);
+        std::array<uint8_t, 4> type{};
+        reader.Bytes(offset + 4, type.data(), type.size());
+        if (std::memcmp(type.data(), "IDAT", 4) == 0 || std::memcmp(type.data(), "IEND", 4) == 0) {
+            return std::nullopt;
+        }
+        if (std::memcmp(type.data(), "pHYs", 4) == 0 && length == 9) {
+            // Pixels per unit on x and y, then the unit: 1 = metre, 0 = aspect ratio only
+            if (reader.Unsigned(offset + 16, 1, false) != 1) {
+                return std::nullopt;
+            }
+            return SpacingFromDensity(static_cast<double>(reader.Unsigned(offset + 8, 4, false)),
+                static_cast<double>(reader.Unsigned(offset + 12, 4, false)), MM_PER_METRE);
+        }
+        offset += 12 + length; // length, type, data, CRC
+    }
+    return std::nullopt;
 }
 
 ImageSize PngSize(ByteSource& source) {
@@ -105,7 +148,9 @@ ImageSize PngSize(ByteSource& source) {
     if (std::memcmp(chunk_type.data(), "IHDR", 4) != 0) {
         reader.Invalid("the first chunk is not IHDR");
     }
-    return Checked(reader, static_cast<int64_t>(reader.Unsigned(16, 4, false)), static_cast<int64_t>(reader.Unsigned(20, 4, false)));
+    ImageSize size = Checked(reader, static_cast<int64_t>(reader.Unsigned(16, 4, false)), static_cast<int64_t>(reader.Unsigned(20, 4, false)));
+    size.pixel_spacing = OptionalSpacing([&] { return PngSpacing(reader); });
+    return size;
 }
 
 bool IsJpegFrameMarker(uint8_t marker) {
@@ -113,8 +158,28 @@ bool IsJpegFrameMarker(uint8_t marker) {
     return marker >= 0xC0 && marker <= 0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC;
 }
 
+// JFIF APP0 segment: length (2), "JFIF\0" (5), version (2), units (1: per inch, 2: per cm, 0: aspect ratio only), X and
+// Y density (2 each)
+std::optional<PixelSpacing> JfifSpacing(HeaderReader& reader, uint64_t offset, uint64_t length) {
+    std::array<uint8_t, 5> identifier{};
+    if (length < 16) {
+        return std::nullopt;
+    }
+    reader.Bytes(offset + 2, identifier.data(), identifier.size());
+    if (std::memcmp(identifier.data(), "JFIF\0", 5) != 0) {
+        return std::nullopt;
+    }
+    const uint64_t units = reader.Unsigned(offset + 9, 1, false);
+    if (units != 1 && units != 2) {
+        return std::nullopt;
+    }
+    return SpacingFromDensity(static_cast<double>(reader.Unsigned(offset + 10, 2, false)),
+        static_cast<double>(reader.Unsigned(offset + 12, 2, false)), units == 1 ? MM_PER_INCH : MM_PER_CM);
+}
+
 ImageSize JpegSize(ByteSource& source) {
     HeaderReader reader(source, "JPEG");
+    std::optional<PixelSpacing> spacing;
     uint64_t offset = 2; // after SOI
     for (;;) {
         if (reader.Unsigned(offset, 1, false) != 0xFF) {
@@ -141,7 +206,12 @@ ImageSize JpegSize(ByteSource& source) {
             // Segment: length (2), sample precision (1), height (2), width (2)
             const auto height = static_cast<int64_t>(reader.Unsigned(offset + 3, 2, false));
             const auto width = static_cast<int64_t>(reader.Unsigned(offset + 5, 2, false));
-            return Checked(reader, width, height);
+            ImageSize size = Checked(reader, width, height);
+            size.pixel_spacing = spacing;
+            return size;
+        }
+        if (marker == 0xE0 && !spacing) {
+            spacing = OptionalSpacing([&] { return JfifSpacing(reader, offset, length); });
         }
         offset += length;
     }
@@ -160,7 +230,52 @@ ImageSize BmpSize(ByteSource& source) {
     // BITMAPINFOHEADER and later: signed 32-bit width and height; a negative height means top-down rows
     const auto width = static_cast<int32_t>(static_cast<uint32_t>(reader.Unsigned(18, 4, true)));
     const auto height = static_cast<int32_t>(static_cast<uint32_t>(reader.Unsigned(22, 4, true)));
-    return Checked(reader, width, height == INT32_MIN ? 0 : std::abs(static_cast<int64_t>(height)));
+    ImageSize size = Checked(reader, width, height == INT32_MIN ? 0 : std::abs(static_cast<int64_t>(height)));
+    // Signed 32-bit horizontal and vertical pixels per metre; 0 when unknown
+    size.pixel_spacing = OptionalSpacing([&] {
+        const auto x = static_cast<int32_t>(static_cast<uint32_t>(reader.Unsigned(38, 4, true)));
+        const auto y = static_cast<int32_t>(static_cast<uint32_t>(reader.Unsigned(42, 4, true)));
+        return SpacingFromDensity(x, y, MM_PER_METRE);
+    });
+    return size;
+}
+
+// XResolution (282) and YResolution (283) are RATIONALs in pixels per ResolutionUnit (296: 1 none, 2 inch (default),
+// 3 cm)
+std::optional<PixelSpacing> TiffSpacing(HeaderReader& reader, bool little_endian, bool big, uint64_t first_entry, uint64_t entries) {
+    const uint64_t entry_size = big ? 20 : 12;
+    const uint64_t value_offset = big ? 12 : 8;
+    std::optional<double> x_resolution;
+    std::optional<double> y_resolution;
+    uint64_t unit = 2;
+    const auto rational = [&](uint64_t entry) -> std::optional<double> {
+        if (reader.Unsigned(entry + 2, 2, little_endian) != 5) {
+            return std::nullopt;
+        }
+        // Eight bytes: inline in a BigTIFF entry, elsewhere in a classic TIFF
+        const uint64_t at = big ? entry + value_offset : reader.Unsigned(entry + value_offset, 4, little_endian);
+        const uint64_t numerator = reader.Unsigned(at, 4, little_endian);
+        const uint64_t denominator = reader.Unsigned(at + 4, 4, little_endian);
+        if (denominator == 0) {
+            return std::nullopt;
+        }
+        return static_cast<double>(numerator) / static_cast<double>(denominator);
+    };
+    for (uint64_t i = 0; i < std::min<uint64_t>(entries, MAX_METADATA_ITEMS); ++i) {
+        const uint64_t entry = first_entry + i * entry_size;
+        const uint64_t tag = reader.Unsigned(entry, 2, little_endian);
+        if (tag == 282) {
+            x_resolution = rational(entry);
+        } else if (tag == 283) {
+            y_resolution = rational(entry);
+        } else if (tag == 296 && reader.Unsigned(entry + 2, 2, little_endian) == 3) {
+            unit = reader.Unsigned(entry + value_offset, 2, little_endian);
+        }
+    }
+    if (!x_resolution || !y_resolution || (unit != 2 && unit != 3)) {
+        return std::nullopt;
+    }
+    return SpacingFromDensity(*x_resolution, *y_resolution, unit == 2 ? MM_PER_INCH : MM_PER_CM);
 }
 
 ImageSize TiffSize(ByteSource& source, bool little_endian) {
@@ -211,6 +326,7 @@ ImageSize TiffSize(ByteSource& source, bool little_endian) {
         reader.Invalid("missing image width or length");
     }
     ImageSize size = Checked(reader, width, height);
+    size.pixel_spacing = OptionalSpacing([&] { return TiffSpacing(reader, little_endian, big, first_entry, entries); });
     // The offset of the next image directory follows the entries; it is non-zero in a multi-page file
     try {
         size.more_images = reader.Unsigned(first_entry + entries * entry_size, offset_size, little_endian) != 0;
@@ -246,6 +362,26 @@ std::optional<ImageSize> SizeFromSignature(ByteSource& source) {
 }
 
 } // namespace
+
+std::optional<PixelSpacing> SpacingFromDensity(double x_per_unit, double y_per_unit, double mm_per_unit) {
+    if (!std::isfinite(x_per_unit) || !std::isfinite(y_per_unit) || x_per_unit <= 0 || y_per_unit <= 0) {
+        return std::nullopt;
+    }
+    const PixelSpacing spacing{mm_per_unit / x_per_unit, mm_per_unit / y_per_unit};
+    // From 1 nm to 1 km per pixel
+    const auto plausible = [](double mm) { return mm >= 1e-6 && mm <= 1e6; };
+    if (!plausible(spacing.x_mm) || !plausible(spacing.y_mm)) {
+        return std::nullopt;
+    }
+    const auto dpi_default = [&](double mm_per_pixel) {
+        const double dpi = MM_PER_INCH / mm_per_pixel;
+        return std::abs(dpi - 72) < 0.5 || std::abs(dpi - 96) < 0.5;
+    };
+    if (dpi_default(spacing.x_mm) && dpi_default(spacing.y_mm)) {
+        return std::nullopt;
+    }
+    return spacing;
+}
 
 std::optional<ImageSize> ReadImageSize(const std::string& path) {
     FileSource source(path);

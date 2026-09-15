@@ -1,7 +1,7 @@
 // Batch measurement: one ROI set and the current analysis settings applied to many images, one image at a time, on the
 // existing API (POST /images, POST /analyses). The API calls are passed in, so the flow can be tested without a server.
 
-import type { AnalysisInfo, AnalysisRequest, AnalysisResults, AnalysisSettings, CatalogResponse, ImageInfo, RoiSetDocument } from '@glcm/api';
+import type { AnalysisInfo, AnalysisRequest, AnalysisResults, AnalysisSettings, CatalogResponse, ImageInfo, PixelSpacing, RoiSetDocument } from '@glcm/api';
 import { adaptToImage, checkSettings, requestSettings } from '../analysis/settings';
 import { prepareRoiImport } from '../files/roiSet';
 
@@ -31,6 +31,8 @@ export interface BatchDependencies {
   /** Resolves with the final results; onProgress reports the number of finished jobs meanwhile */
   waitForResults(analysisId: string, onProgress: (completed: number) => void): Promise<AnalysisResults>;
   cancelAnalysis(analysisId: string): Promise<void>;
+  /** Spacing chosen for an image earlier; undefined: the image's own */
+  pixelSpacing?(info: ImageInfo): PixelSpacing | null | undefined;
   /** E.g. to show the analysis in the results table */
   onAnalysisStarted?(info: AnalysisInfo): void;
   onAnalysisFinished?(results: AnalysisResults): void;
@@ -86,11 +88,13 @@ export async function runBatch(input: BatchInput, deps: BatchDependencies, onCha
         continue;
       }
 
+      const pixelSpacing = deps.pixelSpacing?.(info);
       const started = await deps.startAnalysis({
         imageId: info.imageId,
         // ROIs imported without a colour have an empty one, which the API does not accept
         rois: prepared.rois.map(({ id, name, color, shape }) => ({ id, name, ...(color ? { color } : {}), shape })),
         settings: requestSettings(settings, bitDepth, { min: info.windowMin, max: info.windowMax }),
+        ...(pixelSpacing !== undefined ? { pixelSpacing } : {}),
       });
       deps.onAnalysisStarted?.(started);
       update(index, { status: 'measuring', analysisId: started.analysisId, completed: 0, total: started.total, message: notes.join(' ') || undefined });

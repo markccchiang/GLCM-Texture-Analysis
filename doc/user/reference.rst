@@ -104,7 +104,7 @@ Menus
    * - Analyze
      - Measure Selected, Measure All, Batch Measure…, Presets (the feature presets of the Analysis Settings panel), Clear Results
    * - View
-     - Show / Hide Navigator, Show ROI Labels, Reset Layout
+     - Show / Hide Navigator, Show ROI Labels, Show Scale Bar, Reset Layout
    * - Help
      - Feature Equations, Keyboard Shortcuts, About
 

@@ -1,6 +1,8 @@
 #ifndef GLCM_JSON_HPP_
 #define GLCM_JSON_HPP_
 
+#include "imaging/ImageHeader.hpp"
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -30,6 +32,8 @@ struct ExportContext {
     std::string image_name;
     std::string image_sha256;
     std::string timestamp; // ISO 8601, supplied by the caller
+    // Millimetres per pixel; when present, exports also give ROI areas in mm²
+    std::optional<PixelSpacing> pixel_spacing;
 };
 
 // A "glcm-results" document read back by ResultsFromJson

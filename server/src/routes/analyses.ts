@@ -197,7 +197,13 @@ export const analysisRoutes: FastifyPluginAsyncTypebox<AnalysisRoutesOptions> = 
       },
       async (request, reply) => {
         const { timestamp, image, settings, results: measurements } = jobs.results(await requireAnalysis(request.params.id));
-        const text = formatResultsDocument({ timestamp, image: { name: image.name, sha256: image.sha256 }, settings, results: measurements }, format);
+        const document = {
+          timestamp,
+          image: { name: image.name, sha256: image.sha256, ...(image.pixelSpacing ? { pixelSpacing: image.pixelSpacing } : {}) },
+          settings,
+          results: measurements,
+        };
+        const text = formatResultsDocument(document, format);
         return reply
           .header('Content-Disposition', attachment(`${fileStem(image.name)}-results.${format}`))
           .type(format === 'csv' ? 'text/csv; charset=utf-8' : 'application/json; charset=utf-8')

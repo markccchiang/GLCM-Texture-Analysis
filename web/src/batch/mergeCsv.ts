@@ -2,7 +2,7 @@
 // possible. Files with the same settings share one file; their rows already name the image and its SHA-256.
 
 /** Comment lines that describe one image; they are replaced by "# images=N" in a combined file */
-const PER_IMAGE_KEYS = ['timestamp', 'image', 'imageSha256'];
+const PER_IMAGE_KEYS = ['timestamp', 'image', 'imageSha256', 'pixelSpacingMm'];
 
 export interface ResultsCsvFile {
   /** Leading "# key=value" lines */

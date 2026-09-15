@@ -3,7 +3,7 @@
 
 import { Type, type Static } from 'typebox';
 import { AnalysisSettings, AnalysisStatus, MAX_ROIS_PER_REQUEST, MeasurementResult, Roi } from './analysis.js';
-import { IMAGE_ID_PATTERN, ImageInfo } from './schemas.js';
+import { IMAGE_ID_PATTERN, ImageInfo, PixelSpacing } from './schemas.js';
 
 export const SHA256_PATTERN = '^[0-9a-f]{64}$';
 
@@ -26,7 +26,11 @@ export type ImageListResponse = Static<typeof ImageListResponse>;
 export const ResultsDocument = Type.Object(
   {
     timestamp: Type.String(),
-    image: Type.Object({ name: Type.String(), sha256: Type.String() }),
+    image: Type.Object({
+      name: Type.String(),
+      sha256: Type.String(),
+      pixelSpacing: Type.Optional(Type.Unsafe<PixelSpacing>({ ...PixelSpacing, description: 'Adds ROI areas in mm² to the export' })),
+    }),
     settings: AnalysisSettings,
     results: Type.Array(MeasurementResult),
   },
@@ -89,6 +93,7 @@ export const ProjectRun = Type.Object({
   status: AnalysisStatus,
   timestamp: Type.String(),
   settings: AnalysisSettings,
+  pixelSpacing: Type.Optional(PixelSpacing),
   results: Type.Array(MeasurementResult),
 });
 export type ProjectRun = Static<typeof ProjectRun>;
@@ -105,6 +110,9 @@ export const ProjectDocument = Type.Object({
     height: Type.Integer(),
     bitDepth: Type.Union([Type.Literal(8), Type.Literal(16)]),
     sha256: Type.String({ pattern: SHA256_PATTERN }),
+    pixelSpacing: Type.Optional(
+      Type.Union([PixelSpacing, Type.Null()], { description: "The spacing in use when saved; null: none. Omitted: the image's own" }),
+    ),
     data: Type.Optional(Type.String({ description: 'The uploaded file, base64-encoded, when embedded for portability' })),
   }),
   rois: Type.Array(ProjectRoi, { maxItems: MAX_ROIS_PER_REQUEST }),

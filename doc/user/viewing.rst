@@ -57,6 +57,28 @@ The status bar shows the column (``x``), row (``y``) and value of the pixel unde
 stored image: 0–255 for 8-bit images and 0–65535 for 16-bit images, after conversion to grayscale for color images.
 Column 0, row 0 is the upper left pixel.
 
+Pixel spacing and scale bar
+---------------------------
+
+The **pixel spacing** is the physical size of one pixel, in millimetres. With a spacing, the viewer shows a
+**scale bar** in the lower left corner of the image (it follows the zoom; *View ▸ Show Scale Bar* hides it), and ROI
+sizes are also given as **areas in mm²**: in the ROI Manager, the status bar, the ROI tooltip, the Results table and
+exported results.
+
+The spacing comes from the image file when it stores a resolution: the ``pHYs`` chunk of PNG files, the JFIF density of
+JPEG files, the pixels per metre of BMP files, or the resolution tags of TIFF files. Resolutions of 72 and 96 dots per
+inch on both axes are ignored: image editors write them by default, and they do not describe the object. The medical
+samples store their real spacing, for example 1 × 1.33 mm for the MRI slice.
+
+To enter or change it, open *Image ▸ Image Info* and type the **Pixel width** and **Pixel height** in millimetres, then
+click **Apply**. **Use the file's spacing** returns to the spacing stored in the file, and **Clear** removes the
+spacing. The choice is remembered for the image (identified by its checksum) in this browser, and saved in projects.
+
+The spacing does not change how features are computed: distances and ROIs are always measured in pixels. When the
+pixels are not square, the Analysis Settings panel shows how far the neighbours at the first distance are in each
+direction, for example 1 mm at 0° and 1.33 mm at 90°: directional values, and their mean, then mix different physical
+lengths. The scale bar gives the horizontal scale.
+
 .. _window-level:
 
 Display window (window/level)

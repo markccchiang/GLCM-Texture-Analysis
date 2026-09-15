@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <limits>
@@ -176,7 +177,7 @@ std::map<std::string, std::vector<uchar>> ByName(const std::vector<ExportedFile>
     return by_name;
 }
 
-const ExportContext CONTEXT{"pattern.png", "sha-1", "2026-09-14T12:00:00Z"};
+const ExportContext CONTEXT{"pattern.png", "sha-1", "2026-09-14T12:00:00Z", std::nullopt};
 
 } // namespace
 
@@ -507,6 +508,56 @@ TEST(ResultsJsonTest, ReadsBackWhatItWrites) {
     EXPECT_EQ(document.settings.distances, settings.distances);
 }
 
+TEST(ResultsCsvTest, WritesAreasWithAPixelSpacing) {
+    AnalysisSettings settings = DefaultSettings(8);
+    settings.features = {Type::Contrast};
+    const AnalysisOutput output =
+        RunAnalysis(Pattern8(30, 30), {MakeRoi("r1", "A", RectangleRoi{2, 2, 20, 20}), MakeRoi("r2", "tiny", RectangleRoi{0, 0, 1, 1})}, settings);
+    ExportContext context = CONTEXT;
+    context.pixel_spacing = PixelSpacing{0.7, 1.25};
+
+    const CsvTable table = ParseCsv(ResultsToCsv(output.results, settings, context));
+    EXPECT_TRUE(Contains(table.comments, "# pixelSpacingMm=0.7;1.25"));
+    const size_t area = table.Column("areaMm2");
+    const size_t pixels = table.Column("pixelCount");
+    EXPECT_EQ(area, pixels + 1);
+    ASSERT_EQ(table.rows.size(), 6u); // five rows for "A", one for the skipped ROI
+    for (const auto& row : table.rows) {
+        ASSERT_EQ(row.size(), table.header.size());
+        EXPECT_EQ(std::strtod(row[area].c_str(), nullptr), std::stoi(row[pixels]) * 0.7 * 1.25);
+    }
+
+    // Without a spacing the file is as before: no comment and no column
+    const CsvTable plain = ParseCsv(ResultsToCsv(output.results, settings, CONTEXT));
+    EXPECT_EQ(std::find(plain.header.begin(), plain.header.end(), "areaMm2"), plain.header.end());
+    EXPECT_TRUE(std::none_of(plain.comments.begin(), plain.comments.end(), [](const std::string& line) { return line.rfind("# pixelSpacing", 0) == 0; }));
+}
+
+TEST(ResultsJsonTest, KeepsThePixelSpacing) {
+    AnalysisSettings settings = DefaultSettings(8);
+    settings.features = {Type::Contrast};
+    const AnalysisOutput output = RunAnalysis(Pattern8(30, 30), {MakeRoi("r1", "A", RectangleRoi{2, 2, 20, 20})}, settings);
+    ExportContext context = CONTEXT;
+    context.pixel_spacing = PixelSpacing{0.703125, 1.3298};
+
+    const std::string text = ResultsToJson(output.results, settings, context);
+    EXPECT_EQ(json::parse(text)["image"]["pixelSpacing"], (json{{"x", 0.703125}, {"y", 1.3298}}));
+    const ResultsDocument document = ResultsFromJson(text);
+    ASSERT_TRUE(document.context.pixel_spacing.has_value());
+    EXPECT_EQ(*document.context.pixel_spacing, *context.pixel_spacing);
+    EXPECT_EQ(ResultsToJson(document.results, document.settings, document.context), text);
+    EXPECT_EQ(ResultsToCsv(document.results, document.settings, document.context), ResultsToCsv(output.results, settings, context));
+    EXPECT_FALSE(ResultsFromJson(ResultsToJson(output.results, settings, CONTEXT)).context.pixel_spacing.has_value());
+
+    json invalid = json::parse(text);
+    invalid["image"]["pixelSpacing"]["y"] = 0;
+    EXPECT_NE(ErrorOf([&] { ResultsFromJson(invalid.dump()); }).find("image.pixelSpacing.y must be positive"), std::string::npos);
+    invalid["image"]["pixelSpacing"] = "0.7 mm";
+    EXPECT_NE(ErrorOf([&] { ResultsFromJson(invalid.dump()); }).find("image.pixelSpacing must be an object"), std::string::npos);
+    invalid["image"]["pixelSpacing"] = json{{"x", 1}};
+    EXPECT_NE(ErrorOf([&] { ResultsFromJson(invalid.dump()); }).find("image.pixelSpacing.y"), std::string::npos);
+}
+
 TEST(ResultsJsonTest, ReportsWhereResultsAreInvalid) {
     auto message = [](const std::string& text) {
         try {
@@ -545,7 +596,7 @@ TEST(ResultsCsvTest, PrefixesFormulaTextButNotNumbers) {
     }
     rois.push_back(MakeRoi("-id", "a=b", RectangleRoi{2, 2, 20, 20}));
     const AnalysisOutput output = RunAnalysis(Pattern8(30, 30), rois, settings);
-    const ExportContext context{"=calc.png", "sha-1", "2026-09-14T12:00:00Z"};
+    const ExportContext context{"=calc.png", "sha-1", "2026-09-14T12:00:00Z", std::nullopt};
     const CsvTable table = ParseCsv(ResultsToCsv(output.results, settings, context));
 
     std::string imc_header;

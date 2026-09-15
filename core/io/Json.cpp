@@ -534,6 +534,9 @@ std::string ResultsToJson(const std::vector<MeasurementResult>& results, const A
     document["coreVersion"] = CORE_VERSION;
     document["timestamp"] = context.timestamp;
     document["image"] = {{"name", context.image_name}, {"sha256", context.image_sha256}};
+    if (context.pixel_spacing) {
+        document["image"]["pixelSpacing"] = {{"x", context.pixel_spacing->x_mm}, {"y", context.pixel_spacing->y_mm}};
+    }
     document["settings"] = json_detail::SettingsToJsonValue(settings);
     document["results"] = items;
     return document.dump(2);
@@ -560,6 +563,22 @@ ResultsDocument ResultsFromJson(const std::string& text) {
             }
             if (image.contains("sha256")) {
                 result.context.image_sha256 = Text(image.at("sha256"), "image.sha256");
+            }
+            if (image.contains("pixelSpacing")) {
+                const std::string path = "image.pixelSpacing";
+                const Json& spacing = image.at("pixelSpacing");
+                if (!spacing.is_object()) {
+                    Fail(path, "must be an object with x and y in millimetres");
+                }
+                PixelSpacing parsed;
+                for (const auto& [key, target] : {std::pair<const char*, double*>{"x", &parsed.x_mm}, {"y", &parsed.y_mm}}) {
+                    const std::string axis_path = path + "." + key;
+                    *target = Number(Field(spacing, key, path), axis_path);
+                    if (!(*target > 0)) {
+                        Fail(axis_path, "must be positive");
+                    }
+                }
+                result.context.pixel_spacing = parsed;
             }
         }
 

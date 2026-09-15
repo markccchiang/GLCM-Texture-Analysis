@@ -250,6 +250,14 @@ public:
         result.Set("height", Napi::Number::New(env, _info.height));
         result.Set("bitDepth", Napi::Number::New(env, _info.bit_depth));
         result.Set("sourceChannels", Napi::Number::New(env, _info.source_channels));
+        if (_info.pixel_spacing) {
+            Napi::Object spacing = Napi::Object::New(env);
+            spacing.Set("x", Napi::Number::New(env, _info.pixel_spacing->x_mm));
+            spacing.Set("y", Napi::Number::New(env, _info.pixel_spacing->y_mm));
+            result.Set("pixelSpacing", spacing);
+        } else {
+            result.Set("pixelSpacing", env.Null());
+        }
         result.Set("warnings", StringArray(env, _warnings));
         result.Set("windowMin", Napi::Number::New(env, _statistics.window_min));
         result.Set("windowMax", Napi::Number::New(env, _statistics.window_max));

@@ -38,6 +38,7 @@ import {
   parseDistances,
 } from './settings';
 import { useAnalysisSettings } from './settingsStore';
+import { formatLength, formatSpacing, isAnisotropic, offsetLengthsMm } from '../image/spacing';
 
 export const NON_STANDARD_NOTE = 'Non-standard: follows Yang et al. (2012) as printed; see Feature Equations.';
 
@@ -284,6 +285,7 @@ function SettingsForm({ settings, catalog, bitDepth }: { settings: AnalysisSetti
           ))}
         </Group>
       </Checkbox.Group>
+      <AnisotropyNote distances={settings.distances} />
 
       <Select
         size="xs"
@@ -386,6 +388,23 @@ function SettingsForm({ settings, catalog, bitDepth }: { settings: AnalysisSetti
 
       <FeaturePicker opened={pickerOpen} onClose={() => setPickerOpen(false)} catalog={catalog} selected={settings.features} onChange={(features) => set({ features })} />
     </Stack>
+  );
+}
+
+/** With non-square pixels, the neighbours at distance d lie at different physical distances in each direction */
+function AnisotropyNote({ distances }: { distances: readonly number[] }) {
+  const spacing = useViewer((state) => state.pixelSpacing);
+  if (!spacing || !isAnisotropic(spacing)) {
+    return null;
+  }
+  const distance = distances[0] ?? 1;
+  const lengths = offsetLengthsMm(spacing, distance);
+  return (
+    <Text size="xs" c="yellow" data-testid="anisotropy-note">
+      The pixels are {formatSpacing(spacing)}, so at d = {distance} the neighbour is {formatLength(lengths.horizontal)} away at 0°,{' '}
+      {formatLength(lengths.vertical)} at 90° and {formatLength(lengths.diagonal)} at 45° and 135°. Directional values and their mean mix these
+      lengths.
+    </Text>
   );
 }
 

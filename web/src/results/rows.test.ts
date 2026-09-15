@@ -98,6 +98,17 @@ describe('formatting, columns and export', () => {
     expect(tsv).toHaveLength(4);
   });
 
+  it('adds an area column in mm² once a measurement has a pixel spacing', () => {
+    expect(columnsForRows(rowsForResult(ok, context), features).some((column) => column.id === 'area')).toBe(false);
+    const spaced = rowsForResult(ok, { ...context, pixelSpacing: { x: 0.5, y: 0.25 } });
+    const columns = columnsForRows([...rowsForResult(ok, context), ...spaced], features);
+    const area = columns.find((column) => column.id === 'area')!;
+    expect(area.label).toBe('Area (mm²)');
+    expect(columns[columns.indexOf(area) - 1].id).toBe('pixels');
+    expect(area.value(spaced[0])).toBe(ok.pixelCount * 0.5 * 0.25);
+    expect(area.value(rowsForResult(ok, context)[0])).toBeNull();
+  });
+
   it('adds an Image column only when rows come from several images', () => {
     const one = rowsForResult(ok, context);
     expect(columnsForRows(one, features)[0].id).toBe('roi');

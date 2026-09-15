@@ -42,6 +42,15 @@ describe('sample images', () => {
     expect(image.pixels).toHaveLength(width * height * (bitDepth / 8));
   });
 
+  it('reads the pixel spacing stored in the medical samples', async () => {
+    const spacing = async (file: string) => (await native.decodeImageFile(path.join(SAMPLES, file))).pixelSpacing;
+    // pHYs holds whole pixels per metre: 1422 for 0.703125 mm, 1000 × 750 for 1 × 1.3333 mm, 2431 × 2430 for 0.4113 × 0.4115 mm
+    expect(await spacing('medical/ct-chest.png')).toEqual({ x: 1000 / 1422, y: 1000 / 1422 });
+    expect(await spacing('medical/mri-brain-t1.png')).toEqual({ x: 1, y: 1000 / 750 });
+    expect(await spacing('medical/xray-chest.png')).toEqual({ x: 1000 / 2431, y: 1000 / 2430 });
+    expect(await spacing('textures/camera.png')).toBeNull();
+  });
+
   it('converts the RGB quadrants to BT.601 gray values', async () => {
     const image = await native.decodeImageFile(path.join(SAMPLES, 'synthetic/quadrants-rgb.png'));
     const at = (x: number, y: number) => image.pixels[y * image.width + x];

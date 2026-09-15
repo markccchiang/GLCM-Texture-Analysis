@@ -60,6 +60,23 @@ describe('POST /images', () => {
     expect(await fs.readdir(path.join(t.dataDir, 'uploads'))).toEqual([]);
   });
 
+  it('reads the pixel spacing of the file, and defaults it for images stored without one', async () => {
+    const png = await fs.readFile(path.resolve(import.meta.dirname, '../../samples/medical/mri-brain-t1.png'));
+    const mri = (await uploadImage(t.app, 'mri-brain-t1.png', png)).json<ImageInfo>();
+    // pHYs: 1000 × 750 pixels per metre
+    expect(mri.pixelSpacing).toEqual({ x: 1, y: 1000 / 750 });
+
+    const tiff = (await uploadImage(t.app, 'plain.tif', encodeTiff({ width: WIDTH, height: HEIGHT, bitsPerSample: 8, samplesPerPixel: 1, data: new Array(WIDTH * HEIGHT).fill(7) }))).json<ImageInfo>();
+    expect(tiff.pixelSpacing).toBeNull();
+
+    // info.json written before pixel spacing existed
+    const file = path.join(t.dataDir, 'images', mri.imageId, 'info.json');
+    const old = JSON.parse(await fs.readFile(file, 'utf8'));
+    delete old.pixelSpacing;
+    await fs.writeFile(file, JSON.stringify(old));
+    expect((await t.app.inject({ method: 'GET', url: `/api/v1/images/${mri.imageId}` })).json<ImageInfo>().pixelSpacing).toBeNull();
+  });
+
   it('uses server-side transfer for images above the raw limit', async () => {
     const small = await createTestApp({ rawTransferMaxPixels: 100 });
     try {

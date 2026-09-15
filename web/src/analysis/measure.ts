@@ -70,6 +70,7 @@ export async function measure(scope: 'selected' | 'all'): Promise<void> {
       imageId,
       rois: rois.map(({ id, name, color, shape }) => ({ id, name, color, shape })),
       settings: requestSettings(settings, bitDepth, window),
+      pixelSpacing: useViewer.getState().pixelSpacing,
     });
   } catch (error) {
     fail('Could not start the measurement', (error as Error).message);

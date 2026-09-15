@@ -99,6 +99,15 @@ export const ImageIdParams = Type.Object({
 });
 export type ImageIdParams = Static<typeof ImageIdParams>;
 
+export const PixelSpacing = Type.Object(
+  {
+    x: Type.Number({ exclusiveMinimum: 0, maximum: 1e6, description: 'Millimetres per pixel, horizontally' }),
+    y: Type.Number({ exclusiveMinimum: 0, maximum: 1e6, description: 'Millimetres per pixel, vertically' }),
+  },
+  { additionalProperties: false, description: 'Physical size of one pixel' },
+);
+export type PixelSpacing = Static<typeof PixelSpacing>;
+
 export const ImageInfo = Type.Object({
   imageId: Type.String({ pattern: IMAGE_ID_PATTERN }),
   name: Type.String({ description: 'File name of the upload' }),
@@ -107,6 +116,9 @@ export const ImageInfo = Type.Object({
   height: Type.Integer(),
   bitDepth: Type.Union([Type.Literal(8), Type.Literal(16)]),
   sourceChannels: Type.Integer({ description: 'Channels before grayscale conversion (1 or 3)' }),
+  pixelSpacing: Type.Union([PixelSpacing, Type.Null()], {
+    description: "From the file's resolution metadata (PNG pHYs, JPEG JFIF, BMP, TIFF); null when the file has none, or only the 72/96 dpi default of image editors",
+  }),
   sha256: Type.String({ description: 'SHA-256 of the uploaded file (hex)' }),
   transfer: Type.Union([Type.Literal('raw'), Type.Literal('server')], {
     description: '"raw": GET /raw is available and the browser renders the image; "server": use display.png and /pixel',

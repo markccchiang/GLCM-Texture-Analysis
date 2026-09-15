@@ -76,7 +76,9 @@ export class ImageStore {
 
   async info(id: string): Promise<ImageInfo | undefined> {
     try {
-      return JSON.parse(await fs.readFile(path.join(this.folder(id), 'info.json'), 'utf8')) as ImageInfo;
+      const info = JSON.parse(await fs.readFile(path.join(this.folder(id), 'info.json'), 'utf8')) as ImageInfo;
+      // Images stored before pixel spacing was read have no field
+      return { ...info, pixelSpacing: info.pixelSpacing ?? null };
     } catch (error) {
       if (isNotFound(error)) {
         return undefined;

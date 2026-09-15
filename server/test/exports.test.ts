@@ -99,6 +99,18 @@ describe('exports', () => {
     expect(JSON.parse(new TextDecoder().decode(files['2-haralick-results.json'])).settings.aggregation).toBe('meanOnly');
   });
 
+  it('keeps documents with different pixel spacings apart', async () => {
+    const plain = documentOf(analysis);
+    const spaced = { ...plain, image: { ...plain.image, pixelSpacing: { x: 0.5, y: 0.5 } } };
+    const response = await exportResults('csv', [plain, spaced]);
+    expect(response.headers['content-type']).toBe('application/zip');
+    const files = unzipSync(response.rawPayload);
+    const second = new TextDecoder().decode(files['2-haralick-results.csv']);
+    expect(second).toContain('# pixelSpacingMm=0.5;0.5');
+    expect(second).toContain(',pixelCount,areaMm2,');
+    expect(new TextDecoder().decode(files['1-haralick-results.csv'])).not.toContain('areaMm2');
+  });
+
   it('rejects invalid documents', async () => {
     const broken = { ...documentOf(analysis), results: [{ ...analysis.results[0], values: { NoSuchFeature: analysis.results[0].values.Contrast } }] };
     const response = await exportResults('csv', [broken]);

@@ -40,11 +40,11 @@ export function formatResultsDocument(document: ResultsDocument, format: ExportF
   }
 }
 
-/** Merges documents computed with the same settings on the same image, keeping their order */
+/** Merges documents computed with the same settings on the same image and pixel spacing, keeping their order */
 export function groupDocuments(documents: readonly ResultsDocument[]): ResultsDocument[] {
   const groups = new Map<string, ResultsDocument>();
   for (const document of documents) {
-    const key = JSON.stringify([document.image.sha256, document.image.name, document.settings]);
+    const key = JSON.stringify([document.image.sha256, document.image.name, document.image.pixelSpacing ?? null, document.settings]);
     const group = groups.get(key);
     if (group) {
       group.results.push(...document.results);

@@ -3,6 +3,7 @@ import { StartScreen } from '../components/StartScreen';
 import { cancelImageLoad } from '../stores/imageLoader';
 import { useViewer, type LoadingState } from '../stores/viewerStore';
 import { ImageCanvas } from './ImageCanvas';
+import { ScaleBar } from './ScaleBar';
 
 const PHASE_LABELS: Record<LoadingState['phase'], string> = {
   downloadingSample: 'Fetching sample',
@@ -35,6 +36,7 @@ export function CanvasArea() {
   return (
     <div style={{ position: 'relative', height: '100%' }}>
       <ImageCanvas />
+      <ScaleBar />
       {!hasImage && !loading && (
         <div style={{ position: 'absolute', inset: 0 }}>
           <StartScreen />

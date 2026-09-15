@@ -44,6 +44,8 @@ export interface DecodedImage {
   bitDepth: 8 | 16;
   /** Channels of the file before grayscale conversion (1 or 3) */
   sourceChannels: number;
+  /** Millimetres per pixel from the file's resolution metadata; null when the file has none */
+  pixelSpacing: { x: number; y: number } | null;
   warnings: string[];
   /** 0.5th and 99.5th percentiles (nearest rank) */
   windowMin: number;

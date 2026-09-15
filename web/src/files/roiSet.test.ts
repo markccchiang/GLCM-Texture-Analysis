@@ -12,6 +12,7 @@ const info: ImageInfo = {
   height: 50,
   bitDepth: 16,
   sourceChannels: 1,
+  pixelSpacing: null,
   sha256: 'a'.repeat(64),
   transfer: 'raw',
   windowMin: 0,

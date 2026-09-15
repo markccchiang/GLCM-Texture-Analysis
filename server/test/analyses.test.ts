@@ -137,6 +137,35 @@ describe('analyses', () => {
     expect(results.results[2].values.Contrast.mean).toBe(0);
   });
 
+  it('keeps the pixel spacing of the request and writes ROI areas into the results files', async () => {
+    const spacing = { x: 0.5, y: 0.25 };
+    const response = await start({ pixelSpacing: spacing });
+    expect(response.statusCode).toBe(202);
+    const info = response.json<AnalysisInfo>();
+    expect(info.pixelSpacing).toEqual(spacing);
+    await t.app.inject({ method: 'GET', url: `/api/v1/analyses/${info.analysisId}/events` });
+
+    const results = (await t.app.inject({ method: 'GET', url: `/api/v1/analyses/${info.analysisId}/results` })).json<AnalysisResults>();
+    expect(results.image.pixelSpacing).toEqual(spacing);
+    const csv = (await t.app.inject({ method: 'GET', url: `/api/v1/analyses/${info.analysisId}/results.csv` })).body;
+    expect(csv).toContain('# pixelSpacingMm=0.5;0.25');
+    const [header, first] = csv.split('\n').filter((line) => line !== '' && !line.startsWith('#'));
+    const columns = header.split(',');
+    const area = columns.indexOf('areaMm2');
+    const pixels = columns.indexOf('pixelCount');
+    expect(area).toBe(pixels + 1);
+    // Both columns come before the first quoted field, so splitting on commas is safe here
+    expect(Number(first.split(',')[area])).toBe(Number(first.split(',')[pixels]) * 0.5 * 0.25);
+
+    // Without one in the request, the image's own: none for this TIFF
+    const plain = (await start({})).json<AnalysisInfo>();
+    expect(plain.pixelSpacing).toBeNull();
+    await t.app.inject({ method: 'GET', url: `/api/v1/analyses/${plain.analysisId}/events` });
+    expect((await t.app.inject({ method: 'GET', url: `/api/v1/analyses/${plain.analysisId}/results.csv` })).body).not.toContain('areaMm2');
+
+    expect((await start({ pixelSpacing: { x: 0, y: 1 } })).statusCode).toBe(400);
+  });
+
   it('computes the calibration score', async () => {
     const response = await start({ settings: { ...SETTINGS, score: { ...SETTINGS.score, enabled: true } } });
     const { analysisId } = response.json<AnalysisInfo>();

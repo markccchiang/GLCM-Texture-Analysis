@@ -1,5 +1,6 @@
 // User preferences, kept in localStorage (doc/ui-design-plan.md, section 5.1).
 
+import type { PixelSpacing } from '@glcm/api';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { ScrollBehaviour } from '../viewer/wheel';
@@ -17,12 +18,20 @@ export interface PreferencesState {
   /** Use the WebGL2 renderer when available (the lookup-table renderer otherwise) */
   useWebGl: boolean;
   windowPresets: WindowPreset[];
+  /** Pixel spacing chosen for an image (by SHA-256): a spacing, or null to ignore the file's; the most recent ones */
+  pixelSpacings: Record<string, PixelSpacing | null>;
+  showScaleBar: boolean;
   setScrollBehaviour(scrollBehaviour: ScrollBehaviour): void;
   setUseWebGl(useWebGl: boolean): void;
   /** Adds a preset, replacing one with the same name and bit depth */
   saveWindowPreset(preset: WindowPreset): void;
   removeWindowPreset(name: string, bitDepth: number): void;
+  /** undefined forgets the choice, so the image uses the spacing of its file again */
+  rememberPixelSpacing(sha256: string, spacing: PixelSpacing | null | undefined): void;
+  setShowScaleBar(showScaleBar: boolean): void;
 }
+
+const MAX_REMEMBERED_SPACINGS = 200;
 
 const samePreset = (preset: WindowPreset, name: string, bitDepth: number) => preset.name === name && preset.bitDepth === bitDepth;
 
@@ -44,12 +53,23 @@ export const usePreferences = create<PreferencesState>()(
       scrollBehaviour: 'auto',
       useWebGl: true,
       windowPresets: [],
+      pixelSpacings: {},
+      showScaleBar: true,
       setScrollBehaviour: (scrollBehaviour) => set({ scrollBehaviour }),
       setUseWebGl: (useWebGl) => set({ useWebGl }),
       saveWindowPreset: (preset) =>
         set((state) => ({ windowPresets: [...state.windowPresets.filter((existing) => !samePreset(existing, preset.name, preset.bitDepth)), preset] })),
       removeWindowPreset: (name, bitDepth) =>
         set((state) => ({ windowPresets: state.windowPresets.filter((existing) => !samePreset(existing, name, bitDepth)) })),
+      rememberPixelSpacing: (sha256, spacing) =>
+        set((state) => {
+          const entries = Object.entries(state.pixelSpacings).filter(([key]) => key !== sha256);
+          if (spacing !== undefined) {
+            entries.push([sha256, spacing]);
+          }
+          return { pixelSpacings: Object.fromEntries(entries.slice(-MAX_REMEMBERED_SPACINGS)) };
+        }),
+      setShowScaleBar: (showScaleBar) => set({ showScaleBar }),
     }),
     { name: 'glcm.preferences', version: 1, storage: safeStorage },
   ),

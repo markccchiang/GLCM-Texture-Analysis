@@ -7,6 +7,7 @@
 #include <fstream>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -521,6 +522,93 @@ TEST(ImageLoaderTest, ChecksThePixelLimitBeforeDecoding) {
 
     // Without a limit, the same file reaches the decoder, which cannot read it
     EXPECT_THROW(glcm::LoadImageFile(file.path.string()), std::runtime_error);
+}
+
+namespace {
+
+// CRC-32 of PNG chunks (ISO 3309), so decoders accept an inserted chunk
+uint32_t Crc32(const uchar* data, size_t size) {
+    uint32_t crc = 0xFFFFFFFF;
+    for (size_t i = 0; i < size; ++i) {
+        crc ^= data[i];
+        for (int bit = 0; bit < 8; ++bit) {
+            crc = (crc >> 1) ^ (0xEDB88320U & (0U - (crc & 1U)));
+        }
+    }
+    return ~crc;
+}
+
+// An encoded PNG with a pHYs chunk inserted after IHDR
+std::vector<uchar> WithPhys(std::vector<uchar> png, uint32_t x_per_unit, uint32_t y_per_unit, int unit) {
+    std::vector<uchar> chunk;
+    AppendBig(chunk, 9, 4);
+    Append(chunk, {'p', 'H', 'Y', 's'});
+    AppendBig(chunk, x_per_unit, 4);
+    AppendBig(chunk, y_per_unit, 4);
+    Append(chunk, {unit});
+    AppendBig(chunk, Crc32(chunk.data() + 4, chunk.size() - 4), 4);
+    const auto after_ihdr = png.begin() + 8 + 25; // signature, then IHDR: length, type, 13 data bytes, CRC
+    png.insert(after_ihdr, chunk.begin(), chunk.end());
+    return png;
+}
+
+void ExpectSpacing(const std::optional<glcm::PixelSpacing>& spacing, double x_mm, double y_mm) {
+    ASSERT_TRUE(spacing.has_value());
+    EXPECT_DOUBLE_EQ(spacing->x_mm, x_mm);
+    EXPECT_DOUBLE_EQ(spacing->y_mm, y_mm);
+}
+
+} // namespace
+
+TEST(ImageHeaderTest, ReadsThePixelSpacing) {
+    const cv::Mat gray(20, 30, CV_8UC1, cv::Scalar(100));
+
+    // PNG pHYs in pixels per metre; OpenCV writes none
+    std::vector<uchar> png;
+    ASSERT_TRUE(cv::imencode(".png", gray, png));
+    EXPECT_FALSE(SizeOf(png)->pixel_spacing.has_value());
+    ExpectSpacing(SizeOf(WithPhys(png, 1000, 752, 1))->pixel_spacing, 1.0, 1000.0 / 752);
+    EXPECT_FALSE(SizeOf(WithPhys(png, 1000, 752, 0))->pixel_spacing.has_value()); // aspect ratio only
+    EXPECT_FALSE(SizeOf(WithPhys(png, 2835, 2835, 1))->pixel_spacing.has_value()); // 72 dpi: an editor default
+    EXPECT_FALSE(SizeOf(WithPhys(png, 3780, 3780, 1))->pixel_spacing.has_value()); // 96 dpi
+    EXPECT_FALSE(SizeOf(WithPhys(png, 0, 752, 1))->pixel_spacing.has_value());
+    // A PNG that ends after IHDR still has a size
+    ExpectSize(SizeOf(PngHeader(300, 200)), 300, 200);
+
+    // JPEG JFIF density: units at byte 13 (1 per inch, 2 per cm), then X and Y density
+    std::vector<uchar> jpeg;
+    ASSERT_TRUE(cv::imencode(".jpg", gray, jpeg));
+    ASSERT_EQ(std::string(jpeg.begin() + 6, jpeg.begin() + 11), std::string("JFIF\0", 5));
+    jpeg[13] = 2;
+    jpeg[14] = 0;
+    jpeg[15] = 40;
+    jpeg[16] = 0;
+    jpeg[17] = 50;
+    ExpectSpacing(SizeOf(jpeg)->pixel_spacing, 0.25, 0.2);
+    jpeg[13] = 0;
+    EXPECT_FALSE(SizeOf(jpeg)->pixel_spacing.has_value());
+
+    // BMP pixels per metre at bytes 38 and 42
+    std::vector<uchar> bmp;
+    ASSERT_TRUE(cv::imencode(".bmp", gray, bmp));
+    for (int i = 0; i < 4; ++i) {
+        bmp[38 + i] = ByteOf(4000, i);
+        bmp[42 + i] = ByteOf(2000, i);
+    }
+    ExpectSpacing(SizeOf(bmp)->pixel_spacing, 0.25, 0.5);
+
+    // TIFF resolution in pixels per cm or inch
+    std::vector<uchar> tiff;
+    ASSERT_TRUE(cv::imencode(".tif", gray, tiff, {cv::IMWRITE_TIFF_RESUNIT, 3, cv::IMWRITE_TIFF_XDPI, 40, cv::IMWRITE_TIFF_YDPI, 25}));
+    ExpectSpacing(SizeOf(tiff)->pixel_spacing, 0.25, 0.4);
+    ASSERT_TRUE(cv::imencode(".tif", gray, tiff, {cv::IMWRITE_TIFF_RESUNIT, 2, cv::IMWRITE_TIFF_XDPI, 300, cv::IMWRITE_TIFF_YDPI, 300}));
+    ExpectSpacing(SizeOf(tiff)->pixel_spacing, 25.4 / 300, 25.4 / 300);
+    ASSERT_TRUE(cv::imencode(".tif", gray, tiff, {cv::IMWRITE_TIFF_RESUNIT, 2, cv::IMWRITE_TIFF_XDPI, 72, cv::IMWRITE_TIFF_YDPI, 72}));
+    EXPECT_FALSE(SizeOf(tiff)->pixel_spacing.has_value());
+
+    // The loader reports it, and nothing for a file without one
+    ExpectSpacing(glcm::LoadImageBytes(WithPhys(png, 1000, 752, 1)).info.pixel_spacing, 1.0, 1000.0 / 752);
+    EXPECT_FALSE(glcm::LoadImageBytes(png).info.pixel_spacing.has_value());
 }
 
 TEST(ImageLoaderTest, WarnsThatOnlyTheFirstTiffPageIsUsed) {

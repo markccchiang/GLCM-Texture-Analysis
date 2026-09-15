@@ -64,7 +64,8 @@ def dicom_instance(series_uid: str, instance_uid: str) -> pydicom.Dataset:
     raise RuntimeError(f'Instance {instance_uid} not found in series {series_uid}')
 
 
-def save_png(pixels: np.ndarray, name: str) -> None:
+def save_png(pixels: np.ndarray, name: str, spacing_mm: tuple[float, float]) -> None:
+    """Writes a 16-bit PNG; spacing_mm (x, y) becomes its pHYs chunk, which stores whole pixels per metre"""
     assert pixels.dtype == np.uint16
     digest = hashlib.sha256(pixels.astype('<u2').tobytes()).hexdigest()
     if digest != EXPECTED_PIXELS_SHA256[name]:
@@ -73,15 +74,24 @@ def save_png(pixels: np.ndarray, name: str) -> None:
             'The source data or a package version changed; check it before updating EXPECTED_PIXELS_SHA256.'
         )
     path = OUTPUT / name
-    Image.fromarray(pixels).save(path, optimize=True)
-    print(f'{path.relative_to(ROOT)}: {pixels.shape[1]} × {pixels.shape[0]}, values {pixels.min()}–{pixels.max()}, pixels sha256 {digest}')
+    Image.fromarray(pixels).save(path, optimize=True, dpi=tuple(25.4 / mm for mm in spacing_mm))
+    print(
+        f'{path.relative_to(ROOT)}: {pixels.shape[1]} × {pixels.shape[0]}, values {pixels.min()}–{pixels.max()}, '
+        f'pixel spacing {spacing_mm[0]:.6g} × {spacing_mm[1]:.6g} mm, pixels sha256 {digest}'
+    )
+
+
+def dicom_spacing(dataset: pydicom.Dataset) -> tuple[float, float]:
+    """(x, y) in mm; DICOM lists the row spacing (between rows, y) first"""
+    rows, columns = dataset.get('PixelSpacing') or dataset.ImagerPixelSpacing
+    return float(columns), float(rows)
 
 
 def ct_chest() -> None:
     dataset = dicom_instance(CT_SERIES, CT_INSTANCE)
     hounsfield = dataset.pixel_array.astype(np.int32) * int(dataset.RescaleSlope) + int(dataset.RescaleIntercept)
     # Stored value = HU + 1024: air is about 0, water 1024; the area outside the scan field (-2048 HU) becomes 0
-    save_png(np.clip(hounsfield + 1024, 0, 4095).astype(np.uint16), 'ct-chest.png')
+    save_png(np.clip(hounsfield + 1024, 0, 4095).astype(np.uint16), 'ct-chest.png', dicom_spacing(dataset))
 
 
 def xray_chest() -> None:
@@ -92,7 +102,10 @@ def xray_chest() -> None:
     # Area averaging keeps the 15-bit values of the detector
     # A float32 array becomes a mode "F" image (the mode argument of fromarray is deprecated)
     reduced = np.asarray(Image.fromarray(pixels).resize((XRAY_WIDTH, height), Image.Resampling.BOX))
-    save_png(np.clip(np.rint(reduced), 0, 65535).astype(np.uint16), 'xray-chest.png')
+    x_mm, y_mm = dicom_spacing(dataset)
+    # Each output pixel covers original pixels in proportion to the reduction on its axis
+    spacing = (x_mm * pixels.shape[1] / XRAY_WIDTH, y_mm * pixels.shape[0] / height)
+    save_png(np.clip(np.rint(reduced), 0, 65535).astype(np.uint16), 'xray-chest.png', spacing)
 
 
 def mri_brain() -> None:
@@ -103,7 +116,9 @@ def mri_brain() -> None:
         data = np.asarray(volume.dataobj)
         # Axial slice with anterior at the top and the patient's right on the image's left
         axial = np.rot90(data[:, :, MRI_SLICE]).astype(np.int32)
-        save_png(np.clip(axial, 0, 65535).astype(np.uint16), 'mri-brain-t1.png')
+        # After rot90 the image columns run along the volume's first axis (x) and the rows along its second (y)
+        zooms = volume.header.get_zooms()
+        save_png(np.clip(axial, 0, 65535).astype(np.uint16), 'mri-brain-t1.png', (float(zooms[0]), float(zooms[1])))
 
 
 def main() -> None:

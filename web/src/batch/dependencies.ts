@@ -5,6 +5,7 @@ import { waitForFinalResults } from '../analysis/waitForResults';
 import { useResults } from '../results/resultsStore';
 import type { BatchDependencies } from './runBatch';
 import { fileSha256 } from './sha256';
+import { usePreferences } from '../stores/preferences';
 
 export function browserBatchDependencies(): BatchDependencies {
   return {
@@ -22,6 +23,7 @@ export function browserBatchDependencies(): BatchDependencies {
         },
       }),
     cancelAnalysis,
+    pixelSpacing: (info) => usePreferences.getState().pixelSpacings[info.sha256],
     // Each image appears in the Results table like a measurement of the open image
     onAnalysisStarted: (info) => useResults.getState().startRun(info),
     onAnalysisFinished: (results) => useResults.getState().finishRun(results.analysisId, results.status, results.results, results.timestamp),

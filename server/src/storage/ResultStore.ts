@@ -45,7 +45,9 @@ export class ResultStore {
       return undefined;
     }
     try {
-      return JSON.parse(await fs.readFile(this.file(id), 'utf8')) as StoredAnalysis;
+      const stored = JSON.parse(await fs.readFile(this.file(id), 'utf8')) as StoredAnalysis;
+      // Analyses saved before pixel spacing existed have no field
+      return { ...stored, info: { ...stored.info, pixelSpacing: stored.info.pixelSpacing ?? null } };
     } catch (error) {
       if (isNotFound(error)) {
         return undefined;

@@ -1,6 +1,7 @@
 import { ActionIcon, Loader, Text, Tooltip } from '@mantine/core';
 import { IconX } from '@tabler/icons-react';
 import { cancelMeasurement } from '../analysis/measure';
+import { areaMm2, formatArea } from '../image/spacing';
 import { isRunning, useResults } from '../results/resultsStore';
 import { useRois } from '../rois/roiStore';
 import { useRoiStatistics } from '../rois/useRoiStatistics';
@@ -17,6 +18,7 @@ export function StatusBar() {
   const image = useViewer((state) => state.image);
   const scale = useViewer((state) => state.viewport.scale);
   const rendererKind = useViewer((state) => state.rendererKind);
+  const pixelSpacing = useViewer((state) => state.pixelSpacing);
   // Select the stored array and filter here: Zustand selectors must return stable references
   const runs = useResults((state) => state.runs).filter(isRunning);
   const rois = useRois((state) => state.rois);
@@ -45,6 +47,7 @@ export function StatusBar() {
       {selected && (
         <Text size="xs" className="mono" truncate>
           {selected.name} {selectedPixels === undefined ? '…' : `${selectedPixels.toLocaleString()} px`}
+          {selectedPixels !== undefined && pixelSpacing ? ` · ${formatArea(areaMm2(selectedPixels, pixelSpacing))}` : ''}
         </Text>
       )}
       {selectedIds.length > 1 && <Text size="xs">{selectedIds.length} ROIs selected</Text>}

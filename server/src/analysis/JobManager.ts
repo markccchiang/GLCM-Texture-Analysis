@@ -143,6 +143,8 @@ export class JobManager {
         finishedAt: null,
         coreVersion: native.coreVersion(),
         settings: request.settings,
+        // Image infos saved before pixel spacing existed have no field
+        pixelSpacing: request.pixelSpacing === undefined ? (image.pixelSpacing ?? null) : request.pixelSpacing,
       },
       results: new Array<MeasurementResult | undefined>(jobs.length),
       events,
@@ -194,7 +196,12 @@ export class JobManager {
       status: state.info.status,
       coreVersion: state.info.coreVersion,
       timestamp: state.info.finishedAt ?? new Date().toISOString(),
-      image: { id: state.info.imageId, name: state.info.imageName, sha256: state.info.imageSha256 },
+      image: {
+        id: state.info.imageId,
+        name: state.info.imageName,
+        sha256: state.info.imageSha256,
+        ...(state.info.pixelSpacing ? { pixelSpacing: state.info.pixelSpacing } : {}),
+      },
       settings: state.info.settings,
       results: state.results.filter((result): result is MeasurementResult => result !== undefined),
     };

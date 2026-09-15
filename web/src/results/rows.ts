@@ -1,7 +1,8 @@
 // Results table rows (doc/ui-design-plan.md, section 6.3.3). Each measurement becomes rows according to its
 // aggregation; rows keep the settings they were computed with.
 
-import type { AnalysisSettings, FeatureInfo, MeasurementResult, MeasurementStatus } from '@glcm/api';
+import type { AnalysisSettings, FeatureInfo, MeasurementResult, MeasurementStatus, PixelSpacing } from '@glcm/api';
+import { areaMm2 } from '../image/spacing';
 
 export type RowDirection = '0' | '45' | '90' | '135' | 'mean' | 'range';
 
@@ -21,6 +22,7 @@ export interface ResultRow {
   score: number | null;
   warnings: string[];
   settings: AnalysisSettings;
+  pixelSpacing: PixelSpacing | null;
 }
 
 export const DIRECTION_LABELS: Record<RowDirection, string> = {
@@ -43,7 +45,10 @@ export function rowDirections(settings: AnalysisSettings): RowDirection[] {
   }
 }
 
-export function rowsForResult(result: MeasurementResult, context: { analysisId: string; index: number; imageName: string; settings: AnalysisSettings }): ResultRow[] {
+export function rowsForResult(
+  result: MeasurementResult,
+  context: { analysisId: string; index: number; imageName: string; settings: AnalysisSettings; pixelSpacing?: PixelSpacing | null },
+): ResultRow[] {
   const base = {
     analysisId: context.analysisId,
     imageName: context.imageName,
@@ -55,6 +60,7 @@ export function rowsForResult(result: MeasurementResult, context: { analysisId: 
     pixelCount: result.pixelCount,
     warnings: result.warnings,
     settings: context.settings,
+    pixelSpacing: context.pixelSpacing ?? null,
   };
   const keyPrefix = `${context.analysisId}:${context.index}`;
   if (result.status !== 'ok') {
@@ -103,6 +109,10 @@ export function columnsForRows(rows: readonly ResultRow[], features: readonly Fe
     { id: 'distance', label: 'd', numeric: true, value: (row) => row.distance },
     { id: 'direction', label: 'Dir', numeric: false, value: (row) => (row.direction ? DIRECTION_LABELS[row.direction] : '') },
     { id: 'pixels', label: 'Pixels', numeric: true, value: (row) => row.pixelCount },
+    // Once a measurement has a pixel spacing
+    ...(rows.some((row) => row.pixelSpacing)
+      ? [{ id: 'area', label: 'Area (mm²)', numeric: true, value: (row: ResultRow) => (row.pixelSpacing ? areaMm2(row.pixelCount, row.pixelSpacing) : null) }]
+      : []),
     { id: 'grayLevels', label: 'Ng', numeric: true, value: (row) => row.settings.grayLevels },
   ];
   for (const feature of features) {

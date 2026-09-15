@@ -34,7 +34,7 @@ export function resultsDocuments(): ResultsDocument[] {
     .getState()
     .runs.map((run) => ({
       timestamp: run.timestamp,
-      image: { name: run.imageName, sha256: run.imageSha256 },
+      image: { name: run.imageName, sha256: run.imageSha256, ...(run.pixelSpacing ? { pixelSpacing: run.pixelSpacing } : {}) },
       settings: run.settings,
       results: run.results.filter((result) => result !== undefined),
     }))
@@ -134,6 +134,7 @@ export async function saveProjectFile({ embedImage }: { embedImage: boolean }): 
     const [coreVersion, imageBytes] = await Promise.all([getCoreVersion(), embedImage ? downloadOriginal(image.info.imageId) : undefined]);
     const project = buildProject({
       info: image.info,
+      pixelSpacing: useViewer.getState().pixelSpacing,
       rois: useRois.getState().rois,
       settings: useAnalysisSettings.getState().settings,
       runs: useResults.getState().runs,
@@ -161,6 +162,9 @@ function restoreProject(project: ProjectDocument, info: ImageInfo): void {
     useAnalysisSettings.getState().setSettings(project.settings, { history: 'clear' });
   }
   useResults.getState().loadRuns(runsFromProject(project));
+  if (project.image.pixelSpacing !== undefined) {
+    useViewer.getState().setPixelSpacing(project.image.pixelSpacing);
+  }
 
   const mismatch = info.sha256 !== project.image.sha256;
   notifications.show({

@@ -15,6 +15,7 @@ import { useRois } from '../rois/roiStore';
 import { cancelImageLoad } from '../stores/imageLoader';
 import { MOD_KEY, useUi } from '../stores/uiStore';
 import { isNavigatorVisible, useViewer, type Tool } from '../stores/viewerStore';
+import { usePreferences } from '../stores/preferences';
 
 function Shortcut({ children }: { children: ReactNode }) {
   return (
@@ -55,6 +56,7 @@ export function MenuBar() {
   const hasActive = useRois((state) => state.activeShape !== null);
   const hasResults = useResults((state) => state.rows.length > 0);
   const showLabels = useUi((state) => state.showRoiLabels);
+  const showScaleBar = usePreferences((state) => state.showScaleBar);
   const hasToken = useAuth((state) => state.token !== null);
   const catalog = useQuery(CATALOG_QUERY);
   const settings = useAnalysisSettings((state) => state.settings);
@@ -231,6 +233,12 @@ export function MenuBar() {
         </Menu.Item>
         <Menu.Item leftSection={showLabels ? <IconCheck size={14} /> : <span style={{ width: 14 }} />} onClick={() => ui().toggleRoiLabels()}>
           Show ROI Labels
+        </Menu.Item>
+        <Menu.Item
+          leftSection={showScaleBar ? <IconCheck size={14} /> : <span style={{ width: 14 }} />}
+          onClick={() => usePreferences.getState().setShowScaleBar(!showScaleBar)}
+        >
+          Show Scale Bar
         </Menu.Item>
         <Menu.Divider />
         <Menu.Item

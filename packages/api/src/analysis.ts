@@ -2,7 +2,7 @@
 // the JSON written and read by glcm_core (core/io/Json.cpp).
 
 import { Type, type Static } from 'typebox';
-import { IMAGE_ID_PATTERN } from './schemas.js';
+import { IMAGE_ID_PATTERN, PixelSpacing } from './schemas.js';
 
 // Limits from doc/ui-design-plan.md, section 8.2
 export const MAX_ROIS_PER_REQUEST = 1000;
@@ -140,6 +140,11 @@ export const AnalysisRequest = Type.Object({
   imageId: Type.String({ pattern: IMAGE_ID_PATTERN }),
   rois: Type.Array(Roi, { minItems: 1, maxItems: MAX_ROIS_PER_REQUEST }),
   settings: AnalysisSettings,
+  pixelSpacing: Type.Optional(
+    Type.Union([PixelSpacing, Type.Null()], {
+      description: "Pixel spacing for the ROI areas in the results, e.g. entered by the user; null for none. Omitted: the image's own pixelSpacing",
+    }),
+  ),
 });
 export type AnalysisRequest = Static<typeof AnalysisRequest>;
 
@@ -196,6 +201,7 @@ export const AnalysisInfo = Type.Object({
   finishedAt: Type.Union([Type.String({ format: 'date-time' }), Type.Null()]),
   coreVersion: Type.String(),
   settings: AnalysisSettings,
+  pixelSpacing: Type.Union([PixelSpacing, Type.Null()], { description: 'Spacing of the analysis: from the request, else from the image' }),
 });
 export type AnalysisInfo = Static<typeof AnalysisInfo>;
 
@@ -206,7 +212,12 @@ export const AnalysisResults = Type.Object({
   status: AnalysisStatus,
   coreVersion: Type.String(),
   timestamp: Type.String({ format: 'date-time' }),
-  image: Type.Object({ id: Type.String(), name: Type.String(), sha256: Type.String() }),
+  image: Type.Object({
+    id: Type.String(),
+    name: Type.String(),
+    sha256: Type.String(),
+    pixelSpacing: Type.Optional(PixelSpacing),
+  }),
   settings: AnalysisSettings,
   results: Type.Array(MeasurementResult, { description: 'Ordered by ROI, then distance; only finished jobs' }),
 });

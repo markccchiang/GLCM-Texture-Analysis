@@ -309,6 +309,21 @@ without it every image is uploaded.
   validated with the shared schemas. Opening a project finds its image with ``GET /images?sha256=``, re-uploads an
   embedded copy, or asks for the image file.
 
+.. rubric:: Pixel spacing
+
+.. code-block:: text
+
+   ReadImageSize (core/imaging/ImageHeader): pHYs, JFIF density, BMP pixels per metre, TIFF resolution
+     → LoadedImage.info.pixel_spacing (swapped when the EXIF orientation turns the image)
+     → decodeImageFile().pixelSpacing → ImageInfo.pixelSpacing (null without one)
+   web: viewerStore.pixelSpacing = the spacing chosen for this SHA-256 earlier (preferences), else the file's;
+        edited in Image Info; scale bar, ROI areas, note on non-square pixels
+   POST /analyses {…, pixelSpacing} → AnalysisInfo.pixelSpacing → results image.pixelSpacing
+     → ResultsToCsv: # pixelSpacingMm=x;y and areaMm2 = pixelCount × x × y
+
+The spacing only annotates results; the GLCM computation stays in pixels. Each run keeps the spacing it was measured
+with, so a later change does not alter existing rows or exports.
+
 Design decisions
 ----------------
 

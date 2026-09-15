@@ -43,9 +43,11 @@ One slice or radiograph each, from public de-identified datasets, stored as loss
 
 | File | Size | Content | Conversion |
 | --- | --- | --- | --- |
-| `ct-chest.png` | 512 × 512 | Axial chest CT at z = −115 mm (0.70 mm pixels, 2.5 mm slices): both lungs, the heart and great vessels, and a nodule in the left lung | Stored value = Hounsfield units + 1024, clipped to 0–4095 (12 bits); air ≈ 0, water ≈ 1024, outside the scan field 0 |
+| `ct-chest.png` | 512 × 512 | Axial chest CT at z = −115 mm (0.703125 mm pixels, 2.5 mm slices): both lungs, the heart and great vessels, and a nodule in the left lung | Stored value = Hounsfield units + 1024, clipped to 0–4095 (12 bits); air ≈ 0, water ≈ 1024, outside the scan field 0 |
 | `mri-brain-t1.png` | 160 × 192 | Axial T1-weighted brain MRI above the ventricles: gray and white matter, sulci and skull; pixels are 1 mm wide and 1.33 mm high | Slice 120 of the volume in RAS orientation, anterior at the top; original values 0–504 |
-| `xray-chest.png` | 1024 × 838 | Posteroanterior (PA) chest radiograph with an "R" marker | Reduced from 2846 × 2330 (0.148 mm pixels) by area averaging; 15-bit detector values, 76–30,619 |
+| `xray-chest.png` | 1024 × 838 | Posteroanterior (PA) chest radiograph with an "R" marker | Reduced from 2846 × 2330 (0.148 mm pixels) by area averaging, so the pixels are 0.4113 × 0.4115 mm; 15-bit detector values, 76–30,619 |
+
+The medical PNGs store their pixel spacing in a `pHYs` chunk, taken from the DICOM `PixelSpacing` (CT) or `ImagerPixelSpacing` (X-ray, scaled by the reduction) and from the NIfTI voxel size (MRI). PNG stores whole pixels per metre, so the spacing read back is rounded slightly: 0.70323 mm for the CT, 1 × 1.33333 mm for the MRI, 0.41135 × 0.41152 mm for the X-ray.
 
 ### Sources, licences and required citations
 

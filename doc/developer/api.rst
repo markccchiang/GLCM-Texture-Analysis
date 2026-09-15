@@ -105,7 +105,14 @@ Main schemas
 
 **ImageInfo** — ``imageId``, ``name``, ``sizeBytes``, ``width``, ``height``, ``bitDepth`` (8 or 16),
 ``sourceChannels``, ``sha256``, ``transfer`` (``"raw"`` or ``"server"``), ``windowMin``, ``windowMax`` (0.5 and 99.5
-percentiles), ``histogram`` (256 bins), ``warnings``, ``createdAt``.
+percentiles), ``histogram`` (256 bins), ``pixelSpacing``, ``warnings``, ``createdAt``.
+
+**Pixel spacing** — ``{x, y}`` in millimetres per pixel. ``ImageInfo.pixelSpacing`` comes from the file's resolution
+(PNG ``pHYs``, JPEG JFIF, BMP, TIFF; ``null`` without one, or for 72/96 dpi on both axes). An ``AnalysisRequest`` may
+set ``pixelSpacing`` (a spacing, or ``null`` for none) to override it; ``AnalysisInfo.pixelSpacing`` records the value
+used, and the results document carries it as ``image.pixelSpacing``. Result documents with a spacing export an
+``areaMm2`` column and a ``# pixelSpacingMm=x;y`` comment; ``POST /exports/results`` groups documents by spacing too.
+Features never depend on the spacing.
 
 **ROI** — ``{id, name, color?, shape}`` where ``shape`` is one of:
 

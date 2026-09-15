@@ -1,12 +1,14 @@
 // State of the open image and the image viewer (doc/ui-design-plan.md, section 6.1).
 
-import type { ImageInfo } from '@glcm/api';
+import type { ImageInfo, PixelSpacing } from '@glcm/api';
 import { create } from 'zustand';
 import type { RawImage } from '../image/raw';
 import { shapeBounds, unionBounds } from '../rois/geometry';
 import { useRois } from '../rois/roiStore';
 import type { ToolName, ViewerAction } from '../viewer/keyboard';
 import { fitToView, imageFits, nextZoomStep, pan, zoomTo, zoomToRect, type Point, type Rect, type Size, type Viewport } from '../viewer/viewport';
+import { sameSpacing } from '../image/spacing';
+import { usePreferences } from './preferences';
 
 export type RendererKind = 'webgl2' | 'lut' | 'server';
 export type Tool = ToolName;
@@ -57,9 +59,13 @@ export interface ViewerState {
   rendererKind: RendererKind | null;
   /** Incremented whenever displaySource was redrawn */
   displayVersion: number;
+  /** Millimetres per pixel of the open image: chosen by the user for this image earlier, else from its file */
+  pixelSpacing: PixelSpacing | null;
 
   setLoading(loading: LoadingState | null): void;
   openImage(image: LoadedImage): void;
+  /** Sets the spacing of the open image and remembers it for the image; null: no spacing */
+  setPixelSpacing(spacing: PixelSpacing | null): void;
   closeImage(): void;
   setWindow(min: number, max: number): void;
   resetWindow(mode: 'auto' | 'full'): void;
@@ -83,6 +89,12 @@ export interface ViewerState {
 
 const INITIAL_VIEWPORT: Viewport = { scale: 1, x: 0, y: 0 };
 
+/** The spacing chosen for an image earlier, else the one from its file */
+export function spacingForImage(info: ImageInfo): PixelSpacing | null {
+  const chosen = usePreferences.getState().pixelSpacings[info.sha256];
+  return chosen !== undefined ? chosen : (info.pixelSpacing ?? null);
+}
+
 function viewCentre(size: Size): Point {
   return { x: size.width / 2, y: size.height / 2 };
 }
@@ -104,8 +116,19 @@ export const useViewer = create<ViewerState>()((set, get) => ({
   displaySource: null,
   rendererKind: null,
   displayVersion: 0,
+  pixelSpacing: null,
 
   setLoading: (loading) => set({ loading }),
+
+  setPixelSpacing: (spacing) => {
+    const info = get().image?.info;
+    if (!info) {
+      return;
+    }
+    // Choosing the file's own spacing again forgets the choice
+    usePreferences.getState().rememberPixelSpacing(info.sha256, sameSpacing(spacing, info.pixelSpacing) ? undefined : spacing);
+    set({ pixelSpacing: spacing });
+  },
 
   openImage: (image) => {
     const { viewSize, image: previous } = get();
@@ -124,6 +147,7 @@ export const useViewer = create<ViewerState>()((set, get) => ({
       hover: null,
       displaySource: null,
       rendererKind: null,
+      pixelSpacing: spacingForImage(image.info),
     });
   },
 

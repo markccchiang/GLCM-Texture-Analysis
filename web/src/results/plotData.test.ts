@@ -26,6 +26,7 @@ const run = (analysisId: string, imageName: string, results: Array<MeasurementRe
   analysisId,
   imageName,
   imageSha256: '',
+  pixelSpacing: null,
   settings: {} as AnalysisSettings,
   status: 'completed',
   timestamp: '',

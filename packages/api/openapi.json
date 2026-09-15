@@ -349,6 +349,7 @@
                     "height",
                     "bitDepth",
                     "sourceChannels",
+                    "pixelSpacing",
                     "sha256",
                     "transfer",
                     "windowMin",
@@ -395,6 +396,37 @@
                     "sourceChannels": {
                       "type": "integer",
                       "description": "Channels before grayscale conversion (1 or 3)"
+                    },
+                    "pixelSpacing": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "x",
+                            "y"
+                          ],
+                          "properties": {
+                            "x": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 1000000,
+                              "description": "Millimetres per pixel, horizontally"
+                            },
+                            "y": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 1000000,
+                              "description": "Millimetres per pixel, vertically"
+                            }
+                          },
+                          "additionalProperties": false,
+                          "description": "Physical size of one pixel"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "From the file's resolution metadata (PNG pHYs, JPEG JFIF, BMP, TIFF); null when the file has none, or only the 72/96 dpi default of image editors"
                     },
                     "sha256": {
                       "type": "string",
@@ -592,6 +624,7 @@
                           "height",
                           "bitDepth",
                           "sourceChannels",
+                          "pixelSpacing",
                           "sha256",
                           "transfer",
                           "windowMin",
@@ -638,6 +671,37 @@
                           "sourceChannels": {
                             "type": "integer",
                             "description": "Channels before grayscale conversion (1 or 3)"
+                          },
+                          "pixelSpacing": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "required": [
+                                  "x",
+                                  "y"
+                                ],
+                                "properties": {
+                                  "x": {
+                                    "type": "number",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 1000000,
+                                    "description": "Millimetres per pixel, horizontally"
+                                  },
+                                  "y": {
+                                    "type": "number",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 1000000,
+                                    "description": "Millimetres per pixel, vertically"
+                                  }
+                                },
+                                "additionalProperties": false,
+                                "description": "Physical size of one pixel"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "From the file's resolution metadata (PNG pHYs, JPEG JFIF, BMP, TIFF); null when the file has none, or only the 72/96 dpi default of image editors"
                           },
                           "sha256": {
                             "type": "string",
@@ -757,6 +821,7 @@
                     "height",
                     "bitDepth",
                     "sourceChannels",
+                    "pixelSpacing",
                     "sha256",
                     "transfer",
                     "windowMin",
@@ -803,6 +868,37 @@
                     "sourceChannels": {
                       "type": "integer",
                       "description": "Channels before grayscale conversion (1 or 3)"
+                    },
+                    "pixelSpacing": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "x",
+                            "y"
+                          ],
+                          "properties": {
+                            "x": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 1000000,
+                              "description": "Millimetres per pixel, horizontally"
+                            },
+                            "y": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 1000000,
+                              "description": "Millimetres per pixel, vertically"
+                            }
+                          },
+                          "additionalProperties": false,
+                          "description": "Physical size of one pixel"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "From the file's resolution metadata (PNG pHYs, JPEG JFIF, BMP, TIFF); null when the file has none, or only the 72/96 dpi default of image editors"
                     },
                     "sha256": {
                       "type": "string",
@@ -2147,6 +2243,37 @@
                         }
                       }
                     }
+                  },
+                  "pixelSpacing": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "required": [
+                          "x",
+                          "y"
+                        ],
+                        "properties": {
+                          "x": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "maximum": 1000000,
+                            "description": "Millimetres per pixel, horizontally"
+                          },
+                          "y": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "maximum": 1000000,
+                            "description": "Millimetres per pixel, vertically"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "description": "Physical size of one pixel"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Pixel spacing for the ROI areas in the results, e.g. entered by the user; null for none. Omitted: the image's own pixelSpacing"
                   }
                 }
               }
@@ -2172,7 +2299,8 @@
                     "createdAt",
                     "finishedAt",
                     "coreVersion",
-                    "settings"
+                    "settings",
+                    "pixelSpacing"
                   ],
                   "properties": {
                     "analysisId": {
@@ -2491,6 +2619,37 @@
                           }
                         }
                       }
+                    },
+                    "pixelSpacing": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "x",
+                            "y"
+                          ],
+                          "properties": {
+                            "x": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 1000000,
+                              "description": "Millimetres per pixel, horizontally"
+                            },
+                            "y": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 1000000,
+                              "description": "Millimetres per pixel, vertically"
+                            }
+                          },
+                          "additionalProperties": false,
+                          "description": "Physical size of one pixel"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Spacing of the analysis: from the request, else from the image"
                     }
                   }
                 }
@@ -2636,7 +2795,8 @@
                     "createdAt",
                     "finishedAt",
                     "coreVersion",
-                    "settings"
+                    "settings",
+                    "pixelSpacing"
                   ],
                   "properties": {
                     "analysisId": {
@@ -2955,6 +3115,37 @@
                           }
                         }
                       }
+                    },
+                    "pixelSpacing": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "x",
+                            "y"
+                          ],
+                          "properties": {
+                            "x": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 1000000,
+                              "description": "Millimetres per pixel, horizontally"
+                            },
+                            "y": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 1000000,
+                              "description": "Millimetres per pixel, vertically"
+                            }
+                          },
+                          "additionalProperties": false,
+                          "description": "Physical size of one pixel"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Spacing of the analysis: from the request, else from the image"
                     }
                   }
                 }
@@ -3196,6 +3387,29 @@
                         },
                         "sha256": {
                           "type": "string"
+                        },
+                        "pixelSpacing": {
+                          "type": "object",
+                          "required": [
+                            "x",
+                            "y"
+                          ],
+                          "properties": {
+                            "x": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 1000000,
+                              "description": "Millimetres per pixel, horizontally"
+                            },
+                            "y": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 1000000,
+                              "description": "Millimetres per pixel, vertically"
+                            }
+                          },
+                          "additionalProperties": false,
+                          "description": "Physical size of one pixel"
                         }
                       }
                     },
@@ -4060,6 +4274,29 @@
                             },
                             "sha256": {
                               "type": "string"
+                            },
+                            "pixelSpacing": {
+                              "type": "object",
+                              "required": [
+                                "x",
+                                "y"
+                              ],
+                              "properties": {
+                                "x": {
+                                  "type": "number",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 1000000,
+                                  "description": "Millimetres per pixel, horizontally"
+                                },
+                                "y": {
+                                  "type": "number",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 1000000,
+                                  "description": "Millimetres per pixel, vertically"
+                                }
+                              },
+                              "additionalProperties": false,
+                              "description": "Adds ROI areas in mm² to the export"
                             }
                           }
                         },

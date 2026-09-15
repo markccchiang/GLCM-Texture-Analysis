@@ -4,6 +4,7 @@
 #include <opencv2/imgproc.hpp>
 #include <optional>
 #include <stdexcept>
+#include <utility>
 
 #include "imaging/ImageHeader.hpp"
 
@@ -62,7 +63,7 @@ LoadedImage ToLoadedImage(const cv::Mat& decoded, int64_t max_pixels) {
     return result;
 }
 
-// The header without the pixel limit: only for the warnings below, so an unreadable one is left to the decoder to report
+// The header without the pixel limit: only for the metadata below, so an unreadable one is left to the decoder to report
 template <typename Read>
 std::optional<ImageSize> OptionalHeader(Read read) {
     try {
@@ -72,9 +73,20 @@ std::optional<ImageSize> OptionalHeader(Read read) {
     }
 }
 
-void AddHeaderWarnings(const std::optional<ImageSize>& header, LoadedImage& image) {
-    if (header && header->more_images) {
+void AddHeaderMetadata(const std::optional<ImageSize>& header, LoadedImage& image) {
+    if (!header) {
+        return;
+    }
+    if (header->more_images) {
         image.warnings.push_back("The TIFF file contains more than one image; only the first is used");
+    }
+    if (header->pixel_spacing) {
+        PixelSpacing spacing = *header->pixel_spacing;
+        // The EXIF orientation may have turned the image by 90°: the header's width is now the height
+        if (header->width != header->height && image.info.width == header->height && image.info.height == header->width) {
+            std::swap(spacing.x_mm, spacing.y_mm);
+        }
+        image.info.pixel_spacing = spacing;
     }
 }
 
@@ -97,7 +109,7 @@ LoadedImage LoadImageFile(const std::string& path, int64_t max_pixels) {
         throw std::runtime_error("Cannot read the image: " + path);
     }
     LoadedImage image = ToLoadedImage(decoded, max_pixels);
-    AddHeaderWarnings(header, image);
+    AddHeaderMetadata(header, image);
     return image;
 }
 
@@ -117,7 +129,7 @@ LoadedImage LoadImageBytes(const std::vector<uchar>& bytes, int64_t max_pixels) 
         throw std::runtime_error("Cannot decode the image data");
     }
     LoadedImage image = ToLoadedImage(decoded, max_pixels);
-    AddHeaderWarnings(header, image);
+    AddHeaderMetadata(header, image);
     return image;
 }
 

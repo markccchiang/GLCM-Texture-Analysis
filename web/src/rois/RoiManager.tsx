@@ -10,8 +10,10 @@ import { useViewer } from '../stores/viewerStore';
 import { ROI_COLORS, SHAPE_LABELS, shapeBounds, shapeKind } from './geometry';
 import { useRois, type ManagedRoi } from './roiStore';
 import { roiProblem, useRoiStatistics } from './useRoiStatistics';
+import { areaMm2, formatArea } from '../image/spacing';
 
 function RoiRow({ roi, pixelCount, problem }: { roi: ManagedRoi; pixelCount: number | undefined; problem: string | null }) {
+  const pixelSpacing = useViewer((state) => state.pixelSpacing);
   const selected = useRois((state) => state.selectedIds.includes(roi.id));
   const hovered = useRois((state) => state.hoveredId === roi.id);
   const renaming = useUi((state) => state.renamingRoiId === roi.id);
@@ -93,7 +95,10 @@ function RoiRow({ roi, pixelCount, problem }: { roi: ManagedRoi; pixelCount: num
         ) : pixelCount === undefined ? (
           '…'
         ) : (
-          `${pixelCount.toLocaleString()} px`
+          <>
+            {`${pixelCount.toLocaleString()} px`}
+            {pixelSpacing && <span className="roi-area">{formatArea(areaMm2(pixelCount, pixelSpacing))}</span>}
+          </>
         )}
       </Text>
       <Menu position="bottom-end" withinPortal>

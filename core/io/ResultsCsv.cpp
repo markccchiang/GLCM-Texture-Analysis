@@ -139,6 +139,9 @@ std::string ResultsToCsv(const std::vector<MeasurementResult>& results, const An
     out << "# timestamp=" << OneLine(context.timestamp) << "\n";
     out << "# image=" << OneLine(context.image_name) << "\n";
     out << "# imageSha256=" << OneLine(context.image_sha256) << "\n";
+    if (context.pixel_spacing) {
+        out << "# pixelSpacingMm=" << FormatNumber(context.pixel_spacing->x_mm) << ";" << FormatNumber(context.pixel_spacing->y_mm) << "\n";
+    }
     out << "# grayLevels=" << settings.gray_levels << "\n";
     out << "# quantization=" << QuantizationDescription(settings.quantization) << "\n";
     out << "# distances=" << Join(distances, ";") << "\n";
@@ -163,8 +166,12 @@ std::string ResultsToCsv(const std::vector<MeasurementResult>& results, const An
         }
     }
 
-    std::vector<std::string> header = {"timestamp", "image", "imageSha256", "roiName", "roiId", "status", "pixelCount", "grayLevels",
-        "quantization", "distance", "direction"};
+    // With a pixel spacing, the ROI area in mm² follows the pixel count
+    std::vector<std::string> header = {"timestamp", "image", "imageSha256", "roiName", "roiId", "status", "pixelCount"};
+    if (context.pixel_spacing) {
+        header.push_back("areaMm2");
+    }
+    header.insert(header.end(), {"grayLevels", "quantization", "distance", "direction"});
     for (const FeatureInfo* info : columns) {
         header.push_back(info->non_standard ? info->name + " [non-standard]" : info->name);
     }
@@ -178,9 +185,12 @@ std::string ResultsToCsv(const std::vector<MeasurementResult>& results, const An
     const std::vector<RowKind> kinds = RowKinds(settings);
 
     for (const MeasurementResult& result : results) {
-        const std::vector<std::string> common = {TextField(context.timestamp), TextField(context.image_name),
-            TextField(context.image_sha256), TextField(result.roi_name), TextField(result.roi_id), MeasurementStatusId(result.status),
-            std::to_string(result.pixel_count), std::to_string(settings.gray_levels), quantization, std::to_string(result.distance)};
+        std::vector<std::string> common = {TextField(context.timestamp), TextField(context.image_name), TextField(context.image_sha256),
+            TextField(result.roi_name), TextField(result.roi_id), MeasurementStatusId(result.status), std::to_string(result.pixel_count)};
+        if (context.pixel_spacing) {
+            common.push_back(FormatNumber(result.pixel_count * context.pixel_spacing->x_mm * context.pixel_spacing->y_mm));
+        }
+        common.insert(common.end(), {std::to_string(settings.gray_levels), quantization, std::to_string(result.distance)});
 
         std::vector<std::string> notes = result.warnings;
         if (!result.error.empty()) {

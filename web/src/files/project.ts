@@ -1,6 +1,7 @@
 // Project files (*.glcmproj, doc/ui-design-plan.md, section 6.4): image reference (optionally with the image embedded),
 // ROIs, settings and results.
 
+import type { PixelSpacing } from '@glcm/api';
 import { ProjectDocument, type AnalysisSettings, type ImageInfo, type MeasurementResult } from '@glcm/api';
 import type { AnalysisRun } from '../results/resultsStore';
 import type { ManagedRoi } from '../rois/roiStore';
@@ -31,6 +32,8 @@ export interface ProjectContents {
   rois: readonly ManagedRoi[];
   settings: AnalysisSettings | null;
   runs: readonly AnalysisRun[];
+  /** The spacing in use (null: none); omitted: not saved, so the image's own applies */
+  pixelSpacing?: PixelSpacing | null;
   coreVersion: string;
   /** The uploaded image file, to embed */
   imageBytes?: Uint8Array;
@@ -38,7 +41,7 @@ export interface ProjectContents {
 }
 
 /** Only finished analyses are saved, with the results that finished */
-export function buildProject({ info, rois, settings, runs, coreVersion, imageBytes, createdAt }: ProjectContents): ProjectDocument {
+export function buildProject({ info, rois, settings, runs, pixelSpacing, coreVersion, imageBytes, createdAt }: ProjectContents): ProjectDocument {
   return {
     format: 'glcm-project',
     version: 1,
@@ -50,6 +53,7 @@ export function buildProject({ info, rois, settings, runs, coreVersion, imageByt
       height: info.height,
       bitDepth: info.bitDepth,
       sha256: info.sha256,
+      ...(pixelSpacing !== undefined ? { pixelSpacing } : {}),
       ...(imageBytes ? { data: bytesToBase64(imageBytes) } : {}),
     },
     rois: rois.map(({ id, name, color, visible, shape }) => ({ id, name, color, visible, shape })),
@@ -63,6 +67,7 @@ export function buildProject({ info, rois, settings, runs, coreVersion, imageByt
         status: run.status,
         timestamp: run.timestamp,
         settings: run.settings,
+        ...(run.pixelSpacing ? { pixelSpacing: run.pixelSpacing } : {}),
         results: run.results.filter((result): result is MeasurementResult => result !== undefined),
       })),
   };
@@ -82,6 +87,7 @@ export function runsFromProject(project: ProjectDocument): AnalysisRun[] {
     imageName: run.imageName,
     imageSha256: run.imageSha256,
     settings: run.settings,
+    pixelSpacing: run.pixelSpacing ?? null,
     status: run.status,
     timestamp: run.timestamp,
     completed: run.results.length,

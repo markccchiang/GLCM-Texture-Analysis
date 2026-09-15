@@ -13,6 +13,7 @@ const info: ImageInfo = {
   height: 366,
   bitDepth: 8,
   sourceChannels: 3,
+  pixelSpacing: null,
   sha256: 'c'.repeat(64),
   transfer: 'raw',
   windowMin: 28,
@@ -52,7 +53,7 @@ const rois: ManagedRoi[] = [
   { id: 'r1', name: 'ROI 1', color: '#FFD400', visible: false, shape: { type: 'ellipse', cx: 1 / 3, cy: 2, rx: 3, ry: 4, angle: -12.5 } },
 ];
 
-const run = (status: AnalysisRun['status'], results: Array<MeasurementResult | undefined>): AnalysisRun => ({
+const run = (status: AnalysisRun['status'], results: Array<MeasurementResult | undefined>): AnalysisRun => ({ pixelSpacing: null,
   analysisId: `ana_${status}`,
   imageName: 'camera.png',
   imageSha256: 'c'.repeat(64),
