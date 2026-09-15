@@ -1,12 +1,16 @@
-GLCM Texture Equations
-======================
+Texture Feature Equations
+=========================
 
-This page lists the equations exactly as they are implemented in ``core/analysis/TextureAnalysis.cpp``. Where the
-implementation differs from the usual literature definition, the difference is noted.
+This page lists the equations exactly as they are implemented in the C++ core: ``core/analysis/TextureAnalysis.cpp``
+(the co-occurrence features), ``FirstOrder.cpp``, ``RunLength.cpp``, ``SizeZone.cpp``, ``GrayToneDifference.cpp`` and
+``LocalBinaryPattern.cpp``. Where the implementation differs from the usual literature definition, the difference is
+noted.
 
-Every feature is computed separately for each direction and returned as a ``glcm::Features`` value with the fields
-``H``, ``V``, ``LD`` and ``RD``. ``glcm::TextureOptions`` can restrict the directions; the others then hold NaN.
-``Features::Avg()`` and ``Features::Range()`` are the mean and the range (maximum − minimum) over the computed
+Every feature is returned as a ``glcm::Features`` value with one field per direction: ``H``, ``V``, ``LD`` and ``RD``.
+Co-occurrence and run length features are computed separately for each direction; first-order statistics and the size
+zone, gray tone difference and local binary pattern features have no direction and repeat the same value. The
+directions setting (``glcm::TextureOptions`` in ``TextureAnalysis``) can restrict the directions; the others then hold
+NaN. ``Features::Avg()`` and ``Features::Range()`` are the mean and the range (maximum − minimum) over the computed
 directions.
 
 .. contents:: On this page
@@ -185,7 +189,9 @@ are skipped (:math:`0 \log 0 = 0`).
 Features
 --------
 
-The first column is the ``glcm::Type`` value passed to ``TextureAnalysis::Calculate()``.
+Each entry starts with the feature's ``glcm::Type`` value, which is also its id in the API and in exported files. The
+co-occurrence features are computed by ``TextureAnalysis::Calculate()``, the other families by the functions named in
+their sections.
 
 .. _region-statistics:
 

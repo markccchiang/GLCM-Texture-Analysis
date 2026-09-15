@@ -24,24 +24,30 @@ sessions, and results already in the table keep the settings they were measured 
      - Meaning
    * - **Preset**
      - A named set of features: *Haralick F1–F14*, *Clausi (2002): Contrast, Correlation, Entropy*, *Basic*,
-       *Score (Mean, Entropy, Contrast)* (the inputs of the age-based score, with the score switched on) or *All
-       features*. Changing the features by hand shows *Custom*. The presets are also in *Analyze ▸ Presets*.
+       *Score (Mean, Entropy, Contrast)* (the inputs of the age-based score, with the score switched on), one preset
+       per feature family (*First-order statistics*, *Run length (GLRLM)*, *Size zone (GLSZM)*, *Gray tone difference
+       (NGTDM)* and *Local binary patterns (LBP)*), or *All features*. Changing the features by hand shows *Custom*.
+       The presets are also in *Analyze ▸ Presets*.
    * - **Features**
      - The features to compute. **N selected…** opens the feature picker.
    * - **Gray levels (Ng)**
-     - How many gray levels the intensities are reduced to before the co-occurrence matrix is built: 2–256; the menu
-       in the field offers 8, 16, 32, 64, 128 and 256. More levels keep more detail but need larger regions for
-       stable values.
+     - How many gray levels the intensities are reduced to for the co-occurrence, run length, size zone and gray tone
+       difference features and for first-order entropy and uniformity: 2–256; the menu in the field offers 8, 16, 32,
+       64, 128 and 256. More levels keep more detail but need larger regions for stable values. The other first-order
+       statistics and the local binary patterns use the original intensities.
    * - **Quantization**
      - How intensities are mapped to gray levels: **Fixed range** (from *Min* to *Max*, the same for every ROI —
        usually the full range of the image), **ROI min–max** (from the lowest to the highest intensity inside each
        ROI), **Fixed bin width** (a fixed number of intensities per gray level) or **None** (intensities are used
        directly and must be below Ng).
    * - **Distances**
-     - The distances in pixels between the two pixels of a pair, e.g. ``1, 2, 4``. Each distance is measured
-       separately.
+     - Distances in pixels, e.g. ``1, 2, 4``; each distance is measured separately. The distance is the gap between the
+       two pixels of a co-occurrence pair, the ring of neighbours of the gray tone difference features and the radius
+       of the local binary patterns. First-order statistics, run length and size zone features give the same values at
+       every distance.
    * - **Directions**
-     - The directions of pixel pairs: 0° (horizontal), 45°, 90° (vertical) and 135°.
+     - The directions of co-occurrence pairs and runs: 0° (horizontal), 45°, 90° (vertical) and 135°. The other
+       features have no direction and report the same value for each selected direction.
    * - **Aggregation**
      - Which rows the results show per ROI and distance: **Per direction + mean**, **Mean only**, or **Mean + range**
        (mean and range over the directions, as proposed by Haralick in 1973).
@@ -60,8 +66,9 @@ including choosing a preset or resetting to the defaults. Opening a project star
 :kbd:`Ctrl+Z` keeps undoing ROI changes only.
 
 .. figure:: images/feature-picker.png
-   :alt: The feature picker with a search field and checkboxes grouped into region statistics, Haralick and other
-         features; Correlation III and Sum of Squares are marked non-standard.
+   :alt: The feature picker with a search field and checkboxes grouped into first-order statistics, Haralick features,
+         other co-occurrence features, run length (GLRLM), size zone (GLSZM), gray tone difference (NGTDM) and local
+         binary pattern (LBP) features; Correlation III and Sum of Squares are marked non-standard.
    :align: center
 
    The feature picker.

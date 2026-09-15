@@ -193,6 +193,11 @@ Testing
    * - GoogleTest
      - system package
      - Core unit tests
+   * - PyRadiomics, scikit-image (Python 3.12)
+     - 3.1.0 (git tag), 0.26.0
+     - Reference values for the first-order and texture features: ``scripts/radiomics-reference.py`` (packages pinned
+       in ``scripts/requirements-radiomics.txt``) writes ``core/tests/data/*.json``, which the core tests compare
+       against. Only regenerating those files needs Python; the tests and the application do not run it.
 
 Documentation, build and deployment
 -----------------------------------
