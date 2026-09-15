@@ -98,6 +98,11 @@ Namespace ``glcm``; include paths are relative to ``core/``.
      - ``ComputeSizeZoneMatrix`` (8-connected zones of equal gray levels, stored only for the sizes that occur) and
        ``ComputeSizeZoneFeatures``: the 16 gray level size zone matrix features of PyRadiomics, without a direction.
        ``SizeZoneTest`` compares them with ``core/tests/data/pyradiomics-glszm.json``.
+   * - ``analysis/GrayToneDifference``
+     - ``ComputeGrayToneDifferenceMatrix`` (per pixel, the difference from the average of its neighbours on the ring at a
+       distance, summed with prefix sums) and ``ComputeGrayToneDifferenceFeatures``: the 5 NGTDM features of
+       PyRadiomics, without a direction. ``GrayToneDifferenceTest`` compares them with
+       ``core/tests/data/pyradiomics-ngtdm.json``.
    * - ``analysis/Score``
      - The age-based score from mean, entropy and contrast with configurable ``ScoreCoefficients``.
    * - ``roi/Roi``
@@ -116,7 +121,7 @@ Namespace ``glcm``; include paths are relative to ``core/``.
        ``DefaultSettings`` and ``ValidateSettings``.
    * - ``pipeline/AnalysisRunner``
      - ``RunAnalysis`` measures every ROI at every distance: region statistics, first-order statistics, run length and
-       size zone features (once per ROI)
+       size zone features (once per ROI), gray tone difference features (per distance)
        from the original intensities, quantization, texture features, the score (calibration or current-settings profile), warnings, and
        ``Skipped``/``Failed`` results instead of exceptions for single ROIs.
    * - ``io/``

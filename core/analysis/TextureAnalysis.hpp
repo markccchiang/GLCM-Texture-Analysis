@@ -96,6 +96,12 @@ enum class Type {
     GlszmSmallAreaHighGrayLevelEmphasis,
     GlszmLargeAreaLowGrayLevelEmphasis,
     GlszmLargeAreaHighGrayLevelEmphasis,
+    // Neighbourhood gray tone difference matrix features (analysis/GrayToneDifference)
+    NgtdmCoarseness,
+    NgtdmContrast,
+    NgtdmBusyness,
+    NgtdmComplexity,
+    NgtdmStrength,
     // Not texture features: added by CalculateScore
     Score,
     Age

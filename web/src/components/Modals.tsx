@@ -214,6 +214,7 @@ const FEATURE_GROUP_LABELS: Record<string, string> = {
   other: 'Other co-occurrence features',
   runLength: 'Run length features (GLRLM)',
   sizeZone: 'Size zone features (GLSZM)',
+  grayToneDifference: 'Neighbourhood gray tone difference features (NGTDM)',
 };
 
 /** Where the server serves the built Sphinx documentation (GLCM_DOCS_DIR) */

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Reference values of first-order statistics, run length and size zone features from PyRadiomics, for the core tests.
+"""Reference values of first-order statistics and texture features from PyRadiomics, for the core tests.
 
-Writes core/tests/data/pyradiomics-firstorder.json (FirstOrderTest), pyradiomics-glrlm.json (RunLengthTest) and
-pyradiomics-glszm.json (SizeZoneTest): for rectangle ROIs on sample images, the values of PyRadiomics' first-order,
-GLRLM and GLSZM feature classes. Rectangles avoid differences in mask rasterization (the core covers the pixels whose
-centres lie inside). Entropy and uniformity are computed with a bin width of 1 on 8-bit images, which matches the core
-with quantization "none" and 256 gray levels; 16-bit cases only list the features that use the original intensities.
-GLRLM and GLSZM use 8-bit images with a bin width of 1 in 2D (four in-plane directions, 8-connected zones), matching
-the core's fixed bin width of 1.
+Writes core/tests/data/pyradiomics-firstorder.json (FirstOrderTest), pyradiomics-glrlm.json (RunLengthTest),
+pyradiomics-glszm.json (SizeZoneTest) and pyradiomics-ngtdm.json (GrayToneDifferenceTest): for rectangle ROIs on sample
+images, the values of PyRadiomics' first-order, GLRLM, GLSZM and NGTDM feature classes. Rectangles avoid differences in
+mask rasterization (the core covers the pixels whose centres lie inside). Entropy and uniformity are computed with a bin
+width of 1 on 8-bit images, which matches the core with quantization "none" and 256 gray levels; 16-bit cases only list
+the features that use the original intensities. The texture classes use 8-bit images with a bin width of 1 in 2D (four
+in-plane directions, 8-connected zones, NGTDM rings at distances 1 and 2), matching the core's fixed bin width of 1.
 
 Only developers run this script, to regenerate the reference data; the application and the tests never call Python.
 
@@ -23,12 +23,13 @@ from pathlib import Path
 import numpy as np
 import radiomics
 import SimpleITK as sitk
-from radiomics import firstorder, glrlm, glszm
+from radiomics import firstorder, glrlm, glszm, ngtdm
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / 'core' / 'tests' / 'data' / 'pyradiomics-firstorder.json'
 GLRLM_OUTPUT = ROOT / 'core' / 'tests' / 'data' / 'pyradiomics-glrlm.json'
 GLSZM_OUTPUT = ROOT / 'core' / 'tests' / 'data' / 'pyradiomics-glszm.json'
+NGTDM_OUTPUT = ROOT / 'core' / 'tests' / 'data' / 'pyradiomics-ngtdm.json'
 
 # PyRadiomics feature name -> core feature id
 FEATURES = {
@@ -85,7 +86,7 @@ def reference(image_path: str, rectangle: tuple[int, int, int, int]) -> dict:
     }
 
 
-def texture_reference(feature_class, image_path: str, rectangle: tuple[int, int, int, int]) -> dict:
+def texture_reference(feature_class, image_path: str, rectangle: tuple[int, int, int, int], distance: int = 1) -> dict:
     """PyRadiomics values of a texture feature class in 2D with a bin width of 1, on an 8-bit image"""
     pixels = sitk.GetArrayFromImage(sitk.ReadImage(str(ROOT / 'samples' / image_path)))
     assert pixels.dtype == np.uint8, image_path
@@ -94,15 +95,19 @@ def texture_reference(feature_class, image_path: str, rectangle: tuple[int, int,
     mask[y : y + height, x : x + width] = 1
     image = sitk.GetImageFromArray(pixels[np.newaxis])
     label = sitk.GetImageFromArray(mask[np.newaxis])
-    features = feature_class(image, label, binWidth=1, force2D=True, force2Ddimension=0)
+    features = feature_class(image, label, binWidth=1, force2D=True, force2Ddimension=0, distances=[distance])
     features.enableAllFeatures()
     values = features.execute()
-    # Feature names without the core's prefix ("Glrlm", "Glszm")
-    return {
+    # Feature names without the core's prefix ("Glrlm", "Glszm", "Ngtdm")
+    reference = {
         'image': image_path,
         'rectangle': list(rectangle),
         'features': {name: float(value) for name, value in sorted(values.items())},
     }
+    # Only the NGTDM depends on the distance: its neighbourhood is the ring at that distance
+    if feature_class is ngtdm.RadiomicsNGTDM:
+        reference['distance'] = distance
+    return reference
 
 
 def main() -> None:
@@ -133,6 +138,18 @@ def main() -> None:
     }
     GLSZM_OUTPUT.write_text(json.dumps(size_zones, indent=2) + '\n')
     print(f'{GLSZM_OUTPUT.relative_to(ROOT)}: {len(size_zones["cases"])} cases')
+
+    gray_tones = {
+        'source': document['source'],
+        'settings': {'binWidth': 1, 'force2D': True, 'force2Ddimension': 0},
+        'cases': [
+            texture_reference(ngtdm.RadiomicsNGTDM, image, rectangle, distance)
+            for image, rectangle in EIGHT_BIT_CASES
+            for distance in (1, 2)
+        ],
+    }
+    NGTDM_OUTPUT.write_text(json.dumps(gray_tones, indent=2) + '\n')
+    print(f'{NGTDM_OUTPUT.relative_to(ROOT)}: {len(gray_tones["cases"])} cases')
 
 
 if __name__ == '__main__':

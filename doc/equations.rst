@@ -553,6 +553,49 @@ With :math:`N_z = \sum_{i,j} Z(i, j)` zones, :math:`N_p` pixels in :math:`\Omega
 ``GlszmLargeAreaHighGrayLevelEmphasis`` — Large Area High Gray Level Emphasis
    .. math:: f = \frac{1}{N_z} \sum_{i,j} Z(i, j) \, i^2 j^2
 
+Neighbourhood gray tone difference features (NGTDM)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These compare each pixel of :math:`\Omega` with its **neighbourhood**: the pixels of :math:`\Omega` at a Chebyshev
+distance of exactly :math:`d` (a ring of :math:`8d` positions; 8 neighbours for :math:`d = 1`), where :math:`d` is the
+distance setting. Gray levels are numbered from 1 (:math:`i = \text{level} + 1`). For a pixel of gray level :math:`i`
+whose neighbours have the average gray level :math:`\bar{A}`, the difference is :math:`|i - \bar{A}|`; a pixel without
+neighbours in :math:`\Omega` contributes a difference of 0. The features have no direction, so the same value is
+reported for every direction; each distance gives its own values.
+
+The definitions follow PyRadiomics' NGTDM [vanGriethuysen2017]_ and are checked against it in the core tests (distances
+1 and 2, fixed bin width of 1). They differ from the IBSI [Zwanenburg2020]_ in two ways that follow PyRadiomics: the
+neighbourhood is the ring at distance :math:`d` rather than the whole square within it, and pixels without neighbours
+still count in :math:`n_i`. ``ComputeGrayToneDifferenceFeatures`` (``core/analysis/GrayToneDifference``) computes them;
+all values are NaN for an empty region.
+
+For gray level :math:`i`, :math:`n_i` is its number of pixels and :math:`s_i` the sum of their differences. With
+:math:`N_{v,p} = \sum_i n_i` (the pixels of :math:`\Omega`), :math:`p_i = n_i / N_{v,p}`, and :math:`N_{g,p}` the number
+of gray levels with :math:`p_i \neq 0`; all sums below run over those gray levels:
+
+``NgtdmCoarseness`` — Coarseness
+   .. math:: f = \frac{1}{\sum_i p_i s_i}
+
+   :math:`10^6` if :math:`\sum_i p_i s_i = 0` (a region without any difference).
+
+``NgtdmContrast`` — Contrast (NGTDM)
+   .. math:: f = \left(\frac{1}{N_{g,p} (N_{g,p} - 1)} \sum_{i,j} p_i p_j (i - j)^2\right) \left(\frac{1}{N_{v,p}} \sum_i s_i\right)
+
+   0 if :math:`N_{g,p} = 1`.
+
+``NgtdmBusyness`` — Busyness
+   .. math:: f = \frac{\sum_i p_i s_i}{\sum_{i,j} |i \, p_i - j \, p_j|}
+
+   0 if the denominator is 0.
+
+``NgtdmComplexity`` — Complexity
+   .. math:: f = \frac{1}{N_{v,p}} \sum_{i,j} |i - j| \, \frac{p_i s_i + p_j s_j}{p_i + p_j}
+
+``NgtdmStrength`` — Strength
+   .. math:: f = \frac{\sum_{i,j} (p_i + p_j)(i - j)^2}{\sum_i s_i}
+
+   0 if :math:`\sum_i s_i = 0`.
+
 Score
 ~~~~~
 

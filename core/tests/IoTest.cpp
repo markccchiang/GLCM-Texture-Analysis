@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "analysis/FirstOrder.hpp"
+#include "analysis/GrayToneDifference.hpp"
 #include "analysis/RunLength.hpp"
 #include "analysis/SizeZone.hpp"
 #include "imaging/Quantizer.hpp"
@@ -587,6 +588,31 @@ TEST(AnalysisRunnerSizeZoneTest, ReportsSizeZoneFeaturesInEveryDirection) {
         EXPECT_EQ(result.values.at(type).H, value);
         EXPECT_EQ(result.values.at(type).LD, value);
         EXPECT_TRUE(std::isnan(result.values.at(type).V));
+    }
+}
+
+TEST(AnalysisRunnerGrayToneTest, ReportsGrayToneDifferenceFeaturesPerDistanceInEveryDirection) {
+    AnalysisSettings settings = DefaultSettings(8);
+    settings.features = {Type::NgtdmCoarseness, Type::NgtdmStrength, Type::Contrast};
+    settings.directions = {Direction::V, Direction::RD};
+    settings.distances = {1, 2};
+    const cv::Mat image = Pattern8(30, 30);
+    const AnalysisOutput output = RunAnalysis(image, {MakeRoi("r1", "A", RectangleRoi{2, 3, 20, 10})}, settings);
+    ASSERT_EQ(output.results.size(), 2u);
+
+    const cv::Rect box(2, 3, 20, 10);
+    const cv::Mat mask(box.size(), CV_8UC1, cv::Scalar(255));
+    const QuantizationResult quantized = Quantize(image(box), mask, settings.gray_levels, settings.quantization);
+    for (const MeasurementResult& result : output.results) {
+        SCOPED_TRACE(result.distance);
+        ASSERT_EQ(result.status, MeasurementStatus::Ok);
+        const auto expected = ComputeGrayToneDifferenceFeatures(quantized.image, mask, settings.gray_levels, result.distance,
+            {Type::NgtdmCoarseness, Type::NgtdmStrength});
+        for (const auto& [type, value] : expected) {
+            EXPECT_EQ(result.values.at(type).V, value);
+            EXPECT_EQ(result.values.at(type).RD, value);
+            EXPECT_TRUE(std::isnan(result.values.at(type).H));
+        }
     }
 }
 

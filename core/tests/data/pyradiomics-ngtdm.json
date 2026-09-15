@@ -1,0 +1,78 @@
+{
+  "source": "PyRadiomics 3.1.0a2.post8+g6a761c4, NumPy 2.5.3, SimpleITK 2.5.6",
+  "settings": {
+    "binWidth": 1,
+    "force2D": true,
+    "force2Ddimension": 0
+  },
+  "cases": [
+    {
+      "image": "textures/camera.png",
+      "rectangle": [
+        100,
+        100,
+        64,
+        48
+      ],
+      "features": {
+        "Busyness": 0.010408576609305711,
+        "Coarseness": 0.004468959876865027,
+        "Complexity": 49567.159107773885,
+        "Contrast": 3.1076473540061134,
+        "Strength": 301.1602658385379
+      },
+      "distance": 1
+    },
+    {
+      "image": "textures/camera.png",
+      "rectangle": [
+        100,
+        100,
+        64,
+        48
+      ],
+      "features": {
+        "Busyness": 0.025630392671868063,
+        "Coarseness": 0.0018148575340914891,
+        "Complexity": 109894.26051297812,
+        "Contrast": 6.244095044598596,
+        "Strength": 149.88559536333491
+      },
+      "distance": 2
+    },
+    {
+      "image": "textures/brick.png",
+      "rectangle": [
+        200,
+        150,
+        90,
+        70
+      ],
+      "features": {
+        "Busyness": 0.06055786110290598,
+        "Coarseness": 0.0021351951270802754,
+        "Complexity": 21927.189206576753,
+        "Contrast": 0.23973742834419143,
+        "Strength": 43.026016260271085
+      },
+      "distance": 1
+    },
+    {
+      "image": "textures/brick.png",
+      "rectangle": [
+        200,
+        150,
+        90,
+        70
+      ],
+      "features": {
+        "Busyness": 0.13837227026937715,
+        "Coarseness": 0.0009344563739657362,
+        "Complexity": 51229.31480673239,
+        "Contrast": 0.5497353665547072,
+        "Strength": 18.763476242720973
+      },
+      "distance": 2
+    }
+  ]
+}

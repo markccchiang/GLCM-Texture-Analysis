@@ -162,6 +162,12 @@
                                 "enum": [
                                   "sizeZone"
                                 ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "grayToneDifference"
+                                ]
                               }
                             ]
                           },

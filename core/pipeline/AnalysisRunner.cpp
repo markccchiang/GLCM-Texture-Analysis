@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 #include "analysis/FirstOrder.hpp"
+#include "analysis/GrayToneDifference.hpp"
 #include "analysis/RunLength.hpp"
 #include "analysis/Score.hpp"
 #include "analysis/SizeZone.hpp"
@@ -167,7 +168,7 @@ void Measure(const cv::Mat& gray, const cv::Mat& mask, const PreparedRegion& pre
     std::set<Type> texture_types;
     for (Type type : settings.features) {
         if (type != Type::Mean && type != Type::Std && !IsFirstOrderStatistic(type) && !IsRunLengthFeature(type) &&
-            !IsSizeZoneFeature(type)) {
+            !IsSizeZoneFeature(type) && !IsGrayToneDifferenceFeature(type)) {
             texture_types.insert(type);
         }
     }
@@ -194,6 +195,18 @@ void Measure(const cv::Mat& gray, const cv::Mat& mask, const PreparedRegion& pre
     }
     for (const auto& [type, value] : prepared.size_zone) {
         result.values[type] = Uniform(value, settings.directions);
+    }
+    // Gray tone difference features take their neighbourhood from the distance, but have no direction
+    std::set<Type> gray_tone;
+    for (Type type : settings.features) {
+        if (IsGrayToneDifferenceFeature(type)) {
+            gray_tone.insert(type);
+        }
+    }
+    if (!gray_tone.empty()) {
+        for (const auto& [type, value] : ComputeGrayToneDifferenceFeatures(quantized.image, mask, settings.gray_levels, distance, gray_tone)) {
+            result.values[type] = Uniform(value, settings.directions);
+        }
     }
     for (Type type : texture_types) {
         result.values[type] = values.at(type);

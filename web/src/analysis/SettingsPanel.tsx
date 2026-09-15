@@ -48,6 +48,7 @@ const GROUP_LABELS: Record<string, string> = {
   other: 'Other',
   runLength: 'Run length (GLRLM)',
   sizeZone: 'Size zone (GLSZM)',
+  grayToneDifference: 'Gray tone difference (NGTDM)',
 };
 
 const QUANTIZATION_OPTIONS: Array<{ value: QuantizationMethod; label: string }> = [

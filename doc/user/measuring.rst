@@ -180,7 +180,8 @@ series are named after the image and the ROI. **Save SVG** saves the chart as an
 .. note::
 
    The first-order statistics (Mean, Std, Minimum to Kurtosis) are computed from the original intensities of the ROI.
-   First-order Entropy and Uniformity, the co-occurrence features, and the run length and size zone features use the
-   quantized gray levels, so they depend on the gray levels and quantization settings. Run length and size zone features
-   do not depend on the distance: every distance gives the same values. Size zone features have no direction either. The formulas are listed in
+   First-order Entropy and Uniformity and all texture features (co-occurrence, run length, size zone and gray tone
+   difference) use the quantized gray levels, so they depend on the gray levels and quantization settings. Run length
+   and size zone features do not depend on the distance: every distance gives the same values. Size zone and gray tone
+   difference features have no direction; for gray tone difference features, the distance sets the neighbourhood. The formulas are listed in
    :doc:`../equations`.

@@ -909,6 +909,16 @@ std::string TextureAnalysis::TypeToString(Type type) {
             return "Large Area Low Gray Level Emphasis";
         case Type::GlszmLargeAreaHighGrayLevelEmphasis:
             return "Large Area High Gray Level Emphasis";
+        case Type::NgtdmCoarseness:
+            return "Coarseness";
+        case Type::NgtdmContrast:
+            return "Contrast (NGTDM)";
+        case Type::NgtdmBusyness:
+            return "Busyness";
+        case Type::NgtdmComplexity:
+            return "Complexity";
+        case Type::NgtdmStrength:
+            return "Strength";
         case Type::Score:
             return "Score";
         case Type::Age:

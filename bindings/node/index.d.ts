@@ -2,7 +2,7 @@
 // Rejected promises and thrown errors carry `code`: INVALID_ARGUMENT, UNSUPPORTED_IMAGE, IMAGE_TOO_LARGE,
 // DECODE_FAILED or INTERNAL_ERROR. Invalid argument types throw a TypeError synchronously.
 
-export type FeatureGroupId = 'regionStatistics' | 'haralick' | 'other' | 'runLength' | 'sizeZone';
+export type FeatureGroupId = 'regionStatistics' | 'haralick' | 'other' | 'runLength' | 'sizeZone' | 'grayToneDifference';
 
 export interface NativeFeatureInfo {
   id: string;
