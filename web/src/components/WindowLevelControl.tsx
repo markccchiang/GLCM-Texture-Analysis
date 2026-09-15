@@ -1,6 +1,7 @@
-import { ActionIcon, Button, Group, NumberInput, Popover, RangeSlider, Stack, Text, TextInput } from '@mantine/core';
+import { ActionIcon, Button, Group, NumberInput, Popover, RangeSlider, Stack, Text, TextInput, UnstyledButton } from '@mantine/core';
 import { IconAdjustmentsHorizontal, IconX } from '@tabler/icons-react';
 import { useState } from 'react';
+import { colorStops, colorTableById, COLOR_TABLES, cssGradient } from '../image/colorTables';
 import { histogramPath, valueToHistogramX } from '../image/histogram';
 import { usePreferences } from '../stores/preferences';
 import { useUi } from '../stores/uiStore';
@@ -78,9 +79,38 @@ function SavedWindows({ bitDepth, min, max, maxValue }: { bitDepth: number; min:
   );
 }
 
+/** The colour tables of the display, each with a swatch */
+function ColorTablePicker() {
+  const current = useViewer((state) => state.colorTable);
+  return (
+    <Stack gap={4}>
+      <Text size="xs" fw={500}>
+        Colour table
+      </Text>
+      <Group gap={4} role="radiogroup" aria-label="Colour table" wrap="nowrap">
+        {COLOR_TABLES.map((table) => (
+          <UnstyledButton
+            key={table.id}
+            role="radio"
+            aria-checked={current === table.id}
+            aria-label={table.name}
+            className="colour-table-option"
+            data-selected={current === table.id || undefined}
+            onClick={() => useViewer.getState().setColorTable(table.id)}
+          >
+            <span className="colour-table-swatch" style={{ background: cssGradient(table) }} />
+            <Text size="xs">{table.name}</Text>
+          </UnstyledButton>
+        ))}
+      </Group>
+    </Stack>
+  );
+}
+
 function WindowLevelPanel() {
   const image = useViewer((state) => state.image);
   const window = useViewer((state) => state.window);
+  const colorTable = useViewer((state) => state.colorTable);
   const viewer = useViewer.getState;
   if (!image) {
     return null;
@@ -99,6 +129,17 @@ function WindowLevelPanel() {
         <path d={histogramPath(image.info.histogram, HISTOGRAM_WIDTH, HISTOGRAM_HEIGHT)} fill="#adb5bd" />
         <line x1={minX} x2={minX} y1={0} y2={HISTOGRAM_HEIGHT} stroke="#228be6" />
         <line x1={maxX} x2={maxX} y1={0} y2={HISTOGRAM_HEIGHT} stroke="#228be6" />
+      </svg>
+      {/* The display colours along the histogram: the first colour below the window, the last above it */}
+      <svg width={HISTOGRAM_WIDTH} height={10} aria-hidden="true" data-testid="window-colours">
+        <defs>
+          <linearGradient id="window-colours-gradient" gradientUnits="userSpaceOnUse" x1={minX} x2={Math.max(maxX, minX + 1)} y1={0} y2={0}>
+            {colorStops(colorTableById(colorTable)).map(({ offset, color }) => (
+              <stop key={offset} offset={offset} stopColor={color} />
+            ))}
+          </linearGradient>
+        </defs>
+        <rect width={HISTOGRAM_WIDTH} height={10} rx={2} fill="url(#window-colours-gradient)" />
       </svg>
       <Group gap="xs" grow>
         <NumberInput
@@ -131,6 +172,7 @@ function WindowLevelPanel() {
       <Text size="xs" c="dimmed">
         Auto = 0.5–99.5 percentiles ({image.info.windowMin}–{image.info.windowMax})
       </Text>
+      <ColorTablePicker />
       <SavedWindows bitDepth={image.info.bitDepth} min={window.min} max={window.max} maxValue={maxValue} />
     </Stack>
   );

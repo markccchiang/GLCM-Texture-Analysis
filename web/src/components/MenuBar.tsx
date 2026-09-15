@@ -16,6 +16,7 @@ import { cancelImageLoad } from '../stores/imageLoader';
 import { MOD_KEY, useUi } from '../stores/uiStore';
 import { isNavigatorVisible, useViewer, type Tool } from '../stores/viewerStore';
 import { usePreferences } from '../stores/preferences';
+import { COLOR_TABLES } from '../image/colorTables';
 
 function Shortcut({ children }: { children: ReactNode }) {
   return (
@@ -57,6 +58,7 @@ export function MenuBar() {
   const hasResults = useResults((state) => state.rows.length > 0);
   const showLabels = useUi((state) => state.showRoiLabels);
   const showScaleBar = usePreferences((state) => state.showScaleBar);
+  const colorTable = useViewer((state) => state.colorTable);
   const hasToken = useAuth((state) => state.token !== null);
   const catalog = useQuery(CATALOG_QUERY);
   const settings = useAnalysisSettings((state) => state.settings);
@@ -154,6 +156,22 @@ export function MenuBar() {
         <Menu.Item disabled={!hasImage} onClick={() => ui().setWindowPanelOpen(true)}>
           Custom…
         </Menu.Item>
+        <Menu.Sub>
+          <Menu.Sub.Target>
+            <Menu.Sub.Item disabled={!hasImage}>Colour Table</Menu.Sub.Item>
+          </Menu.Sub.Target>
+          <Menu.Sub.Dropdown>
+            {COLOR_TABLES.map((table) => (
+              <Menu.Item
+                key={table.id}
+                leftSection={colorTable === table.id ? <IconCheck size={14} /> : <span style={{ width: 14 }} />}
+                onClick={() => viewer().setColorTable(table.id)}
+              >
+                {table.name}
+              </Menu.Item>
+            ))}
+          </Menu.Sub.Dropdown>
+        </Menu.Sub>
         <Menu.Divider />
         <Menu.Item
           disabled={!hasImage}

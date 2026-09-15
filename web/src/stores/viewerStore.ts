@@ -10,6 +10,7 @@ import { fitToView, imageFits, nextZoomStep, pan, zoomTo, zoomToRect, type Point
 import { sameSpacing } from '../image/spacing';
 import { usePreferences } from './preferences';
 import type { RulerLine } from '../viewer/ruler';
+import type { ColorTableId } from '../image/colorTables';
 
 export type RendererKind = 'webgl2' | 'lut' | 'server';
 export type Tool = ToolName;
@@ -64,6 +65,8 @@ export interface ViewerState {
   pixelSpacing: PixelSpacing | null;
   /** The ruler line in image coordinates: one at a time, not saved */
   ruler: RulerLine | null;
+  /** Colour table of the display; kept when another image opens */
+  colorTable: ColorTableId;
 
   setLoading(loading: LoadingState | null): void;
   openImage(image: LoadedImage): void;
@@ -84,6 +87,7 @@ export interface ViewerState {
   panBy(dx: number, dy: number): void;
   setTool(tool: Tool): void;
   setRuler(ruler: RulerLine | null): void;
+  setColorTable(colorTable: ColorTableId): void;
   toggleNavigator(): void;
   setHover(hover: HoverState | null): void;
   setDisplaySource(source: CanvasImageSource | null, kind: RendererKind | null): void;
@@ -122,6 +126,7 @@ export const useViewer = create<ViewerState>()((set, get) => ({
   displayVersion: 0,
   pixelSpacing: null,
   ruler: null,
+  colorTable: 'gray',
 
   setLoading: (loading) => set({ loading }),
 
@@ -239,6 +244,8 @@ export const useViewer = create<ViewerState>()((set, get) => ({
   setTool: (tool) => set(tool === get().tool ? { tool } : { tool, ruler: null }),
 
   setRuler: (ruler) => set({ ruler }),
+
+  setColorTable: (colorTable) => set({ colorTable }),
 
   toggleNavigator: () => set({ navigatorMode: isNavigatorVisible(get()) ? 'hidden' : 'shown' }),
 

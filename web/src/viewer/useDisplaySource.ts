@@ -5,6 +5,7 @@ import { notifications } from '@mantine/notifications';
 import { useEffect, useState } from 'react';
 import { fetchDisplayBlob } from '../api/client';
 import { BlobUrlCache } from '../image/blobUrlCache';
+import { colorizeRgba, colorTableById } from '../image/colorTables';
 import { createRenderer, type ImageRenderer } from '../image/renderer';
 import { usePreferences } from '../stores/preferences';
 import { useViewer } from '../stores/viewerStore';
@@ -15,6 +16,7 @@ const displayUrls = new BlobUrlCache(20);
 export function useDisplaySource(): void {
   const image = useViewer((state) => state.image);
   const windowRange = useViewer((state) => state.window);
+  const colorTable = useViewer((state) => state.colorTable);
   const useWebGl = usePreferences((state) => state.useWebGl);
   const [renderer, setRenderer] = useState<ImageRenderer | null>(null);
   const [rendererFailed, setRendererFailed] = useState(false);
@@ -54,17 +56,17 @@ export function useDisplaySource(): void {
     };
   }, [image, useWebGl, webGlLost]);
 
-  // Redraw at most once per frame when the window changes
+  // Redraw at most once per frame when the window or the colour table changes
   useEffect(() => {
     if (!renderer) {
       return;
     }
     const frame = requestAnimationFrame(() => {
-      renderer.render(windowRange.min, windowRange.max);
+      renderer.render(windowRange.min, windowRange.max, colorTableById(colorTable).rgb);
       useViewer.getState().setDisplaySource(renderer.canvas, renderer.kind);
     });
     return () => cancelAnimationFrame(frame);
-  }, [renderer, windowRange]);
+  }, [renderer, windowRange, colorTable]);
 
   // display.png for images without raw samples
   const serverRendering = image !== null && (image.raw === null || rendererFailed);
@@ -77,12 +79,27 @@ export function useDisplaySource(): void {
     const key = `${imageId}:${min}:${max}`;
     const controller = new AbortController();
 
+    // display.png is gray; other colour tables are applied in the browser, so the server rendering stays the same
     const show = (url: string) => {
       const element = new Image();
       element.onload = () => {
-        if (!controller.signal.aborted && useViewer.getState().image === image) {
-          useViewer.getState().setDisplaySource(element, 'server');
+        if (controller.signal.aborted || useViewer.getState().image !== image) {
+          return;
         }
+        const table = colorTableById(colorTable);
+        const canvas = document.createElement('canvas');
+        const context = table.id === 'gray' ? null : canvas.getContext('2d');
+        if (!context) {
+          useViewer.getState().setDisplaySource(element, 'server');
+          return;
+        }
+        canvas.width = element.naturalWidth;
+        canvas.height = element.naturalHeight;
+        context.drawImage(element, 0, 0);
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+        colorizeRgba(pixels.data, table);
+        context.putImageData(pixels, 0, 0);
+        useViewer.getState().setDisplaySource(canvas, 'server');
       };
       element.src = url;
     };
@@ -109,5 +126,5 @@ export function useDisplaySource(): void {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [image, serverRendering, windowRange]);
+  }, [image, serverRendering, windowRange, colorTable]);
 }

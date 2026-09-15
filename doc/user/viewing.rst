@@ -100,8 +100,8 @@ The display window chooses which intensities are shown from black to white. Inte
 those above it white. Changing the window **only changes the display**; measurements always use the stored intensities.
 
 .. figure:: images/window-level.png
-   :alt: The window slider in the toolbar and the window settings with the histogram, minimum and maximum, and the
-         Auto and Full range buttons.
+   :alt: The window slider in the toolbar and the window settings with the histogram, the colour strip, minimum and
+         maximum, the Auto and Full range buttons, and the colour tables.
    :align: center
 
    The window slider and its settings.
@@ -118,6 +118,23 @@ those above it white. Changing the window **only changes the display**; measurem
   They are kept in your browser.
 
 The histogram uses a logarithmic scale so that rare intensities stay visible; the shaded band is the window.
+
+Colour tables
+~~~~~~~~~~~~~
+
+A **colour table** replaces the black-to-white display by other colours. Choose one under **Colour table** in the window
+settings, or in *Image ▸ Colour Table*:
+
+- **Gray** — black to white (the default);
+- **Inverted** — white to black, for example for radiographs viewed as film;
+- **Viridis** and **Magma** — pseudo-colour tables that change brightness evenly and stay readable with colour-vision
+  deficiencies;
+- **Hot** — black through red and yellow to white.
+
+The window still decides which intensity gets which colour: intensities below the window get the first colour of the
+table, those above it the last. The strip under the histogram shows the colours across the intensities. The colour table
+only changes the display, like the window; it is kept when you open another image and applies to server-rendered images
+too.
 
 .. note::
 

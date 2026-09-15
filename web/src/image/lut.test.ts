@@ -28,6 +28,18 @@ describe('buildLut', () => {
   });
 });
 
+describe('renderToRgba with a colour table', () => {
+  it('looks the display value up in the table', () => {
+    const table = new Uint8Array(768);
+    for (let value = 0; value < 256; value += 1) {
+      table.set([value, 255 - value, 7], value * 3);
+    }
+    const samples = new Uint8Array([0, 128, 255]);
+    const rgba = renderToRgba({ width: 3, height: 1, bitDepth: 8, samples }, 0, 255, undefined, table);
+    expect(Array.from(rgba)).toEqual([0, 255, 7, 255, 128, 127, 7, 255, 255, 0, 7, 255]);
+  });
+});
+
 describe('renderToRgba', () => {
   it('renders opaque gray pixels with the window/level mapping', () => {
     const samples = new Uint16Array([0, 500, 1000, 1500, 2000, 65535]);

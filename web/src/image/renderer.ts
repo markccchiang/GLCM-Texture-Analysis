@@ -1,7 +1,8 @@
 // Window/level renderers for images with raw transfer (doc/ui-design-plan.md, section 6.1).
 //
 // The WebGL2 renderer uploads the samples once as an unsigned-integer texture and evaluates the integer window/level
-// formula in the fragment shader, so its output equals windowLevel() exactly. The LUT renderer is the fallback.
+// formula in the fragment shader, so its output equals windowLevel() exactly. The display value then selects a colour
+// from the colour table, a 256 × 1 RGB texture. The LUT renderer is the fallback.
 
 import { renderToRgba } from './lut';
 import type { RawImage } from './raw';
@@ -10,7 +11,8 @@ export interface ImageRenderer {
   readonly kind: 'webgl2' | 'lut';
   /** Canvas of the image size holding the last rendering; used as the Konva image source */
   readonly canvas: HTMLCanvasElement;
-  render(windowMin: number, windowMax: number): void;
+  /** table: 256 RGB bytes for the display values (colorTables.ts) */
+  render(windowMin: number, windowMax: number, table: Uint8Array): void;
   dispose(): void;
 }
 
@@ -27,7 +29,9 @@ const FRAGMENT_SHADER = `#version 300 es
 precision highp float;
 precision highp int;
 precision highp usampler2D;
+precision highp sampler2D;
 uniform usampler2D u_image;
+uniform sampler2D u_table;
 uniform uint u_min;
 uniform uint u_max;
 out vec4 out_color;
@@ -46,7 +50,8 @@ void main() {
     uint range = u_max - u_min;
     display = ((value - u_min) * 510u + range) / (2u * range);
   }
-  out_color = vec4(vec3(float(display) / 255.0), 1.0);
+  // An RGB8 texel is byte / 255, which the 8-bit canvas stores as the same byte
+  out_color = vec4(texelFetch(u_table, ivec2(int(display), 0), 0).rgb, 1.0);
 }
 `;
 
@@ -128,6 +133,16 @@ export function createWebGlRenderer(image: RawImage, onContextLost?: () => void)
   }
 
   gl.uniform1i(gl.getUniformLocation(program, 'u_image'), 0);
+
+  const tableTexture = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, tableTexture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.uniform1i(gl.getUniformLocation(program, 'u_table'), 1);
+  let uploadedTable: Uint8Array | null = null;
   const minLocation = gl.getUniformLocation(program, 'u_min');
   const maxLocation = gl.getUniformLocation(program, 'u_max');
   gl.viewport(0, 0, image.width, image.height);
@@ -144,9 +159,14 @@ export function createWebGlRenderer(image: RawImage, onContextLost?: () => void)
   return {
     kind: 'webgl2',
     canvas,
-    render(windowMin, windowMax) {
+    render(windowMin, windowMax, table) {
       if (gl.isContextLost()) {
         return;
+      }
+      if (table !== uploadedTable) {
+        gl.activeTexture(gl.TEXTURE1);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB8, 256, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, table);
+        uploadedTable = table;
       }
       gl.uniform1ui(minLocation, windowMin);
       gl.uniform1ui(maxLocation, windowMax);
@@ -156,6 +176,7 @@ export function createWebGlRenderer(image: RawImage, onContextLost?: () => void)
       disposed = true;
       canvas.removeEventListener('webglcontextlost', onLost);
       gl.deleteTexture(texture);
+      gl.deleteTexture(tableTexture);
       gl.deleteBuffer(buffer);
       gl.deleteProgram(program);
       gl.deleteShader(vertexShader);
@@ -176,8 +197,8 @@ export function createLutRenderer(image: RawImage): ImageRenderer {
   return {
     kind: 'lut',
     canvas,
-    render(windowMin, windowMax) {
-      renderToRgba(image, windowMin, windowMax, imageData.data);
+    render(windowMin, windowMax, table) {
+      renderToRgba(image, windowMin, windowMax, imageData.data, table);
       context.putImageData(imageData, 0, 0);
     },
     dispose() {

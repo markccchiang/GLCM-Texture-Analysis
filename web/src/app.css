@@ -140,6 +140,27 @@ body,
   inset: 0;
 }
 
+.colour-table-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+
+.colour-table-option[data-selected] {
+  border-color: var(--mantine-color-blue-filled);
+}
+
+.colour-table-swatch {
+  display: block;
+  width: 40px;
+  height: 10px;
+  border-radius: 2px;
+}
+
 .scale-bar {
   position: absolute;
   left: 12px;

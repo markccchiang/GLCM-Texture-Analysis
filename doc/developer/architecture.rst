@@ -259,11 +259,12 @@ How the image reaches the canvas depends on its size:
 
 - **Up to 4096 × 4096 pixels:** the raw samples are downloaded once (``GET /images/{id}/raw``, compressed) and rendered
   in the browser. ``image/renderer.ts`` uploads them as an unsigned-integer WebGL2 texture (``R8UI``/``R16UI``) and
-  evaluates the window/level formula in a fragment shader, so moving the window slider needs no requests. Without
+  evaluates the window/level formula in a fragment shader, so moving the window slider needs no requests. The 8-bit
+  display value then selects a colour from the chosen colour table (``image/colorTables.ts``), a 256 × 1 RGB texture. Without
   WebGL2, a lookup table on a 2D canvas is used; the same happens when the browser takes the WebGL context away (GPU
   reset, driver update, too many contexts), so the image does not go blank.
-- **Larger images:** the server renders ``display.png`` for each window (debounced, cached), and hover values come from
-  ``GET /images/{id}/pixel``.
+- **Larger images:** the server renders a gray ``display.png`` for each window (debounced, cached), which the browser
+  colours with the colour table, and hover values come from ``GET /images/{id}/pixel``.
 
 The formula ``out = floor(((v − min) × 510 + (max − min)) / (2 × (max − min)))`` (clamped, with a threshold when
 ``min = max``) uses only integers, so the C++ renderer, the TypeScript lookup table and the shader produce identical

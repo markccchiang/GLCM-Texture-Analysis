@@ -98,7 +98,8 @@ Menus
    * - Edit
      - Undo, Redo, Select All ROIs, Delete ROI, Preferences…
    * - Image
-     - Zoom In, Zoom Out, Zoom 100 %, Fit to Window, Zoom to Selection, Window/Level (Auto, Full Range, Custom…), Ruler,
+     - Zoom In, Zoom Out, Zoom 100 %, Fit to Window, Zoom to Selection, Window/Level (Auto, Full Range, Custom…), Colour Table (Gray,
+       Inverted, Viridis, Magma, Hot), Ruler,
        Image Info
    * - ROI
      - Rectangle, Ellipse, Polygon, Freehand, Add to Manager, Duplicate, Rename, Import ROI Set…, Export ROI Set…,
