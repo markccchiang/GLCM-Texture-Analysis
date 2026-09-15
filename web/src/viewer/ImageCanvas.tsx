@@ -29,6 +29,8 @@ import { useViewer } from '../stores/viewerStore';
 import { keyToAction } from './keyboard';
 import { Navigator } from './Navigator';
 import { ROI_NODE_NAME, RoiLayer, VERTEX_NODE_NAME, type PolygonDraft } from './RoiLayer';
+import { snapRuler } from './ruler';
+import { RulerLayer } from './RulerLayer';
 import { useDisplaySource } from './useDisplaySource';
 import { imageToScreen, pixelAt, screenToImage, zoomAt, type Point } from './viewport';
 import { classifyWheel } from './wheel';
@@ -53,7 +55,8 @@ type Gesture =
   | { kind: 'drag'; pointerId: number; tool: 'rectangle' | 'ellipse'; start: Point }
   | { kind: 'freehand'; pointerId: number; path: Array<[number, number]> }
   | { kind: 'move'; pointerId: number; start: Point; shapes: Map<string, RoiShape> }
-  | { kind: 'vertex'; pointerId: number; roiId: string; index: number };
+  | { kind: 'vertex'; pointerId: number; roiId: string; index: number }
+  | { kind: 'ruler'; pointerId: number; start: Point };
 
 type Hit = { kind: 'roi'; roiId: string } | { kind: 'vertex'; roiId: string; index: number } | { kind: 'transformer' };
 
@@ -433,6 +436,11 @@ export function ImageCanvas() {
         setDraft({ points: [...current.points, [point.x, point.y]], cursor: point });
         return;
       }
+      case 'ruler':
+        capture();
+        state.setRuler({ start: point, end: point });
+        setGesture({ kind: 'ruler', pointerId: event.pointerId, start: point });
+        return;
       case 'pointer': {
         const hit = hitTest(local);
         const additive = event.shiftKey || event.metaKey || event.ctrlKey;
@@ -524,6 +532,9 @@ export function ImageCanvas() {
           }
           break;
         }
+        case 'ruler':
+          state.setRuler({ start: gesture.start, end: event.shiftKey ? snapRuler(gesture.start, point) : point });
+          break;
       }
       return;
     }
@@ -561,6 +572,14 @@ export function ImageCanvas() {
       case 'vertex':
         roiStore.endEdit();
         break;
+      case 'ruler': {
+        // A click without a drag removes the ruler
+        const { ruler, setRuler } = useViewer.getState();
+        if (ruler && ruler.start.x === ruler.end.x && ruler.start.y === ruler.end.y) {
+          setRuler(null);
+        }
+        break;
+      }
       default:
         break;
     }
@@ -646,6 +665,7 @@ export function ImageCanvas() {
             )}
           </Layer>
           {info && <RoiLayer viewport={viewport} draft={draft} interactive={tool === 'pointer' && !spaceHeld} />}
+          {info && <RulerLayer viewport={viewport} />}
         </Stage>
       )}
       {tooltip && tooltipRoi && (

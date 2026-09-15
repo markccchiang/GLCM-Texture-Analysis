@@ -9,6 +9,7 @@ import type { ToolName, ViewerAction } from '../viewer/keyboard';
 import { fitToView, imageFits, nextZoomStep, pan, zoomTo, zoomToRect, type Point, type Rect, type Size, type Viewport } from '../viewer/viewport';
 import { sameSpacing } from '../image/spacing';
 import { usePreferences } from './preferences';
+import type { RulerLine } from '../viewer/ruler';
 
 export type RendererKind = 'webgl2' | 'lut' | 'server';
 export type Tool = ToolName;
@@ -61,6 +62,8 @@ export interface ViewerState {
   displayVersion: number;
   /** Millimetres per pixel of the open image: chosen by the user for this image earlier, else from its file */
   pixelSpacing: PixelSpacing | null;
+  /** The ruler line in image coordinates: one at a time, not saved */
+  ruler: RulerLine | null;
 
   setLoading(loading: LoadingState | null): void;
   openImage(image: LoadedImage): void;
@@ -80,6 +83,7 @@ export interface ViewerState {
   zoomToSelection(): boolean;
   panBy(dx: number, dy: number): void;
   setTool(tool: Tool): void;
+  setRuler(ruler: RulerLine | null): void;
   toggleNavigator(): void;
   setHover(hover: HoverState | null): void;
   setDisplaySource(source: CanvasImageSource | null, kind: RendererKind | null): void;
@@ -117,6 +121,7 @@ export const useViewer = create<ViewerState>()((set, get) => ({
   rendererKind: null,
   displayVersion: 0,
   pixelSpacing: null,
+  ruler: null,
 
   setLoading: (loading) => set({ loading }),
 
@@ -148,12 +153,13 @@ export const useViewer = create<ViewerState>()((set, get) => ({
       displaySource: null,
       rendererKind: null,
       pixelSpacing: spacingForImage(image.info),
+      ruler: null,
     });
   },
 
   closeImage: () => {
     useRois.getState().reset();
-    set({ image: null, hover: null, displaySource: null, rendererKind: null, viewport: INITIAL_VIEWPORT, needsFit: false });
+    set({ image: null, hover: null, displaySource: null, rendererKind: null, viewport: INITIAL_VIEWPORT, needsFit: false, ruler: null });
   },
 
   setWindow: (min, max) => {
@@ -229,7 +235,10 @@ export const useViewer = create<ViewerState>()((set, get) => ({
 
   panBy: (dx, dy) => set({ viewport: pan(get().viewport, dx, dy) }),
 
-  setTool: (tool) => set({ tool }),
+  // Choosing another tool removes the ruler
+  setTool: (tool) => set(tool === get().tool ? { tool } : { tool, ruler: null }),
+
+  setRuler: (ruler) => set({ ruler }),
 
   toggleNavigator: () => set({ navigatorMode: isNavigatorVisible(get()) ? 'hidden' : 'shown' }),
 

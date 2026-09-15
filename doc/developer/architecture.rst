@@ -250,7 +250,7 @@ All API calls go through ``api/client.ts`` and ``apiFetch``, which adds the acce
 (``viewer/RoiLayer.tsx``). The viewport maps image coordinates to the screen (``screen = image × scale + offset``), and
 all pure viewport, wheel and keyboard logic is in tested modules (``viewer/viewport.ts``, ``wheel.ts``,
 ``keyboard.ts``). Every pointer event goes through one handler that hit-tests the stage and runs a gesture: pan, drag to
-draw a rectangle or ellipse, freehand, polygon clicks, moving ROIs or dragging polygon vertices. Only the Konva
+draw a rectangle or ellipse, freehand, polygon clicks, drawing the ruler, moving ROIs or dragging polygon vertices. Only the Konva
 ``Transformer`` (resize and rotate handles) handles its own events.
 
 .. rubric:: Rendering and window/level

@@ -155,6 +155,14 @@ export function MenuBar() {
           Custom…
         </Menu.Item>
         <Menu.Divider />
+        <Menu.Item
+          disabled={!hasImage}
+          leftSection={tool === 'ruler' ? <IconCheck size={14} /> : <span style={{ width: 14 }} />}
+          rightSection={<Shortcut>L</Shortcut>}
+          onClick={() => viewer().setTool('ruler')}
+        >
+          Ruler
+        </Menu.Item>
         <Menu.Item disabled={!hasImage} onClick={() => ui().setModal('imageInfo')}>
           Image Info
         </Menu.Item>

@@ -44,6 +44,7 @@ describe('keyToAction', () => {
     expect(keyToAction(key('E', { shiftKey: true }), context)).toEqual({ kind: 'tool', tool: 'ellipse' });
     expect(keyToAction(key('p'), context)).toEqual({ kind: 'tool', tool: 'polygon' });
     expect(keyToAction(key('f'), context)).toEqual({ kind: 'tool', tool: 'freehand' });
+    expect(keyToAction(key('l'), context)).toEqual({ kind: 'tool', tool: 'ruler' });
     expect(keyToAction(key('t'), context)).toEqual({ kind: 'addRoi' });
     expect(keyToAction(key('m'), context)).toEqual({ kind: 'measure', scope: 'selected' });
     expect(keyToAction(key('M', { shiftKey: true }), context)).toEqual({ kind: 'measure', scope: 'all' });

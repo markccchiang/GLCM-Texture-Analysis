@@ -79,6 +79,18 @@ pixels are not square, the Analysis Settings panel shows how far the neighbours 
 direction, for example 1 mm at 0° and 1.33 mm at 90°: directional values, and their mean, then mix different physical
 lengths. The scale bar gives the horizontal scale.
 
+Measuring distances
+-------------------
+
+The **ruler** (:kbd:`L`, the ruler button in the toolbar, or *Image ▸ Ruler*) measures a distance on the image: drag
+from one point to the other. Hold :kbd:`Shift` to keep the line at a multiple of 45°. The line is labelled with its
+length in pixels, in millimetres when the image has a pixel spacing, and its angle in degrees counter-clockwise from the
+horizontal; the status bar shows the same values. With non-square pixels, the length in millimetres and the angle are
+those on the object, using the pixel width and height.
+
+There is one ruler at a time: drawing again replaces it, and :kbd:`Esc`, a click without dragging, choosing another tool
+or opening another image removes it. Rulers are not saved in projects or exported.
+
 .. _window-level:
 
 Display window (window/level)

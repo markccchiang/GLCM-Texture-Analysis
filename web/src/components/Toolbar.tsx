@@ -7,6 +7,7 @@ import {
   IconPlayerPlay,
   IconPointer,
   IconPolygon,
+  IconRuler,
   IconScribble,
   IconSquare,
   IconZoomIn,
@@ -60,6 +61,9 @@ export function Toolbar() {
           {icon}
         </ToolButton>
       ))}
+      <ToolButton label="Ruler (L): drag to measure a distance; Shift = 45° steps" active={tool === 'ruler'} disabled={!hasImage} onClick={selectTool('ruler')}>
+        <IconRuler size={18} />
+      </ToolButton>
 
       <Divider orientation="vertical" my={8} />
       <ToolButton label="Zoom out (−)" disabled={!hasImage} onClick={() => viewer().zoomStep(-1)}>

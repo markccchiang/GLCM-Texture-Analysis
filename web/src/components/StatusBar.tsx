@@ -6,6 +6,7 @@ import { isRunning, useResults } from '../results/resultsStore';
 import { useRois } from '../rois/roiStore';
 import { useRoiStatistics } from '../rois/useRoiStatistics';
 import { useViewer, type RendererKind } from '../stores/viewerStore';
+import { formatRuler, measureRuler } from '../viewer/ruler';
 
 const RENDERER_LABELS: Record<RendererKind, string> = {
   webgl2: 'WebGL2',
@@ -19,6 +20,7 @@ export function StatusBar() {
   const scale = useViewer((state) => state.viewport.scale);
   const rendererKind = useViewer((state) => state.rendererKind);
   const pixelSpacing = useViewer((state) => state.pixelSpacing);
+  const ruler = useViewer((state) => state.ruler);
   // Select the stored array and filter here: Zustand selectors must return stable references
   const runs = useResults((state) => state.runs).filter(isRunning);
   const rois = useRois((state) => state.rois);
@@ -51,6 +53,11 @@ export function StatusBar() {
         </Text>
       )}
       {selectedIds.length > 1 && <Text size="xs">{selectedIds.length} ROIs selected</Text>}
+      {ruler && (
+        <Text size="xs" className="mono" data-testid="ruler-readout">
+          ruler {formatRuler(measureRuler(ruler, pixelSpacing))}
+        </Text>
+      )}
       <span style={{ marginLeft: 'auto' }} />
       {runs.length > 0 && (
         <span className="status-jobs" data-testid="measurement-progress">

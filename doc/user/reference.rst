@@ -23,6 +23,8 @@ Keyboard
      - Preferences
    * - :kbd:`R` :kbd:`E` :kbd:`P` :kbd:`F`
      - Rectangle, ellipse, polygon, freehand tool
+   * - :kbd:`L`
+     - Ruler: measure a distance (:kbd:`Shift` for 45° steps)
    * - :kbd:`T`
      - Add the active ROI to the ROI Manager
    * - :kbd:`Enter`
@@ -96,8 +98,8 @@ Menus
    * - Edit
      - Undo, Redo, Select All ROIs, Delete ROI, Preferences…
    * - Image
-     - Zoom In, Zoom Out, Zoom 100 %, Fit to Window, Zoom to Selection, Window/Level (Auto, Full Range, Custom…), Image
-       Info
+     - Zoom In, Zoom Out, Zoom 100 %, Fit to Window, Zoom to Selection, Window/Level (Auto, Full Range, Custom…), Ruler,
+       Image Info
    * - ROI
      - Rectangle, Ellipse, Polygon, Freehand, Add to Manager, Duplicate, Rename, Import ROI Set…, Export ROI Set…,
        Export ROI Images…

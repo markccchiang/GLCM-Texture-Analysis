@@ -21,6 +21,7 @@ export function runAppAction(action: ViewerAction): void {
     case 'cancel':
       rois.setActiveShape(null);
       rois.select([]);
+      useViewer.getState().setRuler(null);
       break;
     case 'removeLastVertex':
       // Handled by the canvas, which owns the polygon being drawn

@@ -172,6 +172,7 @@ const SHORTCUTS: [string, string][] = [
   [`${MOD_KEY}O`, 'Open image'],
   [`${MOD_KEY}S`, 'Save project'],
   ['R / E / P / F', 'Rectangle, ellipse, polygon, freehand tool'],
+  ['L', 'Ruler: drag to measure a distance (Shift: 45° steps)'],
   ['T', 'Add the drawn ROI to the ROI Manager'],
   ['M / ⇧M', 'Measure selected / all ROIs'],
   [`${MOD_KEY}Z / ${MOD_KEY}⇧Z`, 'Undo / redo ROI edits'],
