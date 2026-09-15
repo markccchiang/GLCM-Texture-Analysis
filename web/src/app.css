@@ -439,3 +439,15 @@ body,
   border-radius: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
+
+.roi-class-tag {
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-xs);
+}
+
+.roi-class-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}

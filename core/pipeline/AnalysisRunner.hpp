@@ -38,6 +38,7 @@ enum class MeasurementStatus {
 struct MeasurementResult {
     std::string roi_id;
     std::string roi_name;
+    std::string roi_class; // the ROI's class; empty when it has none
     int distance = 0;
     MeasurementStatus status = MeasurementStatus::Ok;
     std::string error; // reason for Skipped / Failed

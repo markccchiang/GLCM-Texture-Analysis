@@ -44,6 +44,8 @@ Exporting results
 - Then follows a header row and one row per ROI, distance and direction (or mean and range), with the timestamp, image,
   ROI name and id, status, pixel count, gray levels, quantization, distance, direction, one column per feature, the
   score and the warnings.
+- When a measured ROI has a class (see :ref:`roi-classes`), a ``roiClass`` column follows the ROI id; it is empty for
+  ROIs without a class. JSON results carry the class as ``roiClass``.
 - With a pixel spacing, a ``# pixelSpacingMm=`` line gives it (width;height), and an ``areaMm2`` column follows the
   pixel count: the pixel count × pixel width × pixel height.
 - Columns of non-standard features end with ``[non-standard]``.
@@ -70,13 +72,15 @@ own file, and the files are delivered together as a ZIP archive.
 ROI sets
 --------
 
-*ROI ▸ Export ROI Set…* saves the ROIs of the ROI Manager — names, colors and exact shapes — together with the name,
-size and checksum of the image. *ROI ▸ Import ROI Set…* adds the ROIs of such a file to the open image:
+*ROI ▸ Export ROI Set…* saves the ROIs of the ROI Manager — names, colors, classes and exact shapes — together with the
+name, size and checksum of the image and the list of classes. *ROI ▸ Import ROI Set…* adds the ROIs of such a file to
+the open image:
 
 - If the ROIs were drawn on a different image (other size, bit depth or file), a warning says so; the ROIs are imported
   anyway.
 - ROIs that extend beyond the image are cut at its border; ROIs completely outside it are skipped, and the notification
   lists them.
+- Classes of the file that the class list does not have yet are added to it; the ROIs keep their classes.
 - The import is one step that :kbd:`⌘Z` / :kbd:`Ctrl+Z` undoes.
 
 This way the same regions can be measured on several images of the same size, or again later with other settings.
@@ -107,8 +111,8 @@ Exporting ROI images
 Projects
 --------
 
-A project keeps a complete session: the image reference, the pixel spacing in use, the ROIs (including hidden ones), the
-analysis settings and all finished results.
+A project keeps a complete session: the image reference, the pixel spacing in use, the ROIs (including hidden ones) with
+their classes and the class list, the analysis settings and all finished results.
 
 .. figure:: images/save-project.png
    :alt: The Save Project dialog with the option Embed the image.
@@ -122,7 +126,7 @@ analysis settings and all finished results.
   the image.
 - *File ▸ Open Project…* opens a project. If the server still has the image, it is used; otherwise an embedded image is
   uploaded again; otherwise the application asks you to choose the image file. The ROIs, settings and results table of
-  the project replace the current ones.
+  the project, and its class list, replace the current ones.
 
 Project and ROI set files can also be dragged onto the window. Files ending in ``.glcmproj`` are opened as projects,
 other ``.json`` files are imported as ROI sets.

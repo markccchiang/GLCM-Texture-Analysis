@@ -92,7 +92,7 @@ export async function runBatch(input: BatchInput, deps: BatchDependencies, onCha
       const started = await deps.startAnalysis({
         imageId: info.imageId,
         // ROIs imported without a colour have an empty one, which the API does not accept
-        rois: prepared.rois.map(({ id, name, color, shape }) => ({ id, name, ...(color ? { color } : {}), shape })),
+        rois: prepared.rois.map(({ id, name, color, shape, className }) => ({ id, name, ...(color ? { color } : {}), ...(className ? { class: className } : {}), shape })),
         settings: requestSettings(settings, bitDepth, { min: info.windowMin, max: info.windowMax }),
         ...(pixelSpacing !== undefined ? { pixelSpacing } : {}),
       });

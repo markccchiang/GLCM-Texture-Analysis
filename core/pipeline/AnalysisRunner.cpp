@@ -326,6 +326,7 @@ AnalysisOutput RunAnalysis(
             MeasurementResult result;
             result.roi_id = roi.id;
             result.roi_name = roi.name;
+            result.roi_class = roi.class_name;
             result.distance = distance;
             result.pixel_count = pixel_count;
 

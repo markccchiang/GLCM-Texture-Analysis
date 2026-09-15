@@ -39,6 +39,7 @@ struct Roi {
     std::string name;
     std::string color; // "#RRGGBB"
     RoiShape shape;
+    std::string class_name; // class of the ROI, e.g. "lesion"; empty when it has none. Carried into results and exports.
 };
 
 // Mask of the pixels whose centre lies inside the shape: CV_8UC1 of the given size, 255 inside and 0 outside.

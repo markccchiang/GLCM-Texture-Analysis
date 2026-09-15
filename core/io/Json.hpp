@@ -22,9 +22,17 @@ struct ImageReference {
     std::string sha256;
 };
 
-// {"format": "glcm-roi-set", "version": 1, "image": {...}, "rois": [...]} (doc/ui-design-plan.md, section 8.4)
+// A class that ROIs can belong to
+struct RoiClass {
+    std::string name;  // unique, not empty
+    std::string color; // "#RRGGBB", may be empty
+};
+
+// {"format": "glcm-roi-set", "version": 1, "image": {...}, "classes": [...], "rois": [...]} (doc/ui-design-plan.md,
+// section 8.4). "classes" is written only when there are classes, and each ROI's "class" only when it has one.
 struct RoiSetDocument {
     ImageReference image;
+    std::vector<RoiClass> classes;
     std::vector<Roi> rois;
 };
 

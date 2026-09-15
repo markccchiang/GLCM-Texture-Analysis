@@ -16,6 +16,8 @@ export type ViewerAction =
   /** Move the selected ROIs by dx, dy image pixels */
   | { kind: 'nudge'; dx: number; dy: number }
   | { kind: 'tool'; tool: ToolName }
+  /** Give the selected ROIs the class with this index (⇧1 = 0), or remove their class (null, ⇧0) */
+  | { kind: 'assignClass'; index: number | null }
   /** Add the active ROI to the ROI Manager */
   | { kind: 'addRoi' }
   | { kind: 'measure'; scope: 'selected' | 'all' }
@@ -27,6 +29,8 @@ export type ViewerAction =
 
 export interface KeyInput {
   key: string;
+  /** Physical key, e.g. "Digit1"; the key value of ⇧1 depends on the keyboard layout */
+  code?: string;
   shiftKey: boolean;
   ctrlKey: boolean;
   metaKey: boolean;
@@ -71,6 +75,11 @@ const TOOL_KEYS: Record<string, ToolName> = {
 export function keyToAction(input: KeyInput, context: KeyContext): ViewerAction | null {
   if (input.ctrlKey || input.metaKey || input.altKey) {
     return null;
+  }
+
+  const digit = input.shiftKey && input.code?.startsWith('Digit') ? Number(input.code.slice('Digit'.length)) : Number.NaN;
+  if (Number.isInteger(digit)) {
+    return context.hasSelection ? { kind: 'assignClass', index: digit === 0 ? null : digit - 1 } : null;
   }
 
   const arrow = ARROWS[input.key];

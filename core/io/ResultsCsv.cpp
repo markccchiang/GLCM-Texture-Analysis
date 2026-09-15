@@ -1,5 +1,6 @@
 #include "io/ResultsCsv.hpp"
 
+#include <algorithm>
 #include <charconv>
 #include <cmath>
 #include <functional>
@@ -168,6 +169,13 @@ std::string ResultsToCsv(const std::vector<MeasurementResult>& results, const An
 
     // With a pixel spacing, the ROI area in mm² follows the pixel count
     std::vector<std::string> header = {"timestamp", "image", "imageSha256", "roiName", "roiId", "status", "pixelCount"};
+    // The class column follows roiId, and only when an ROI has a class, so files without classes stay as before
+    const bool with_classes =
+        std::any_of(results.begin(), results.end(), [](const MeasurementResult& result) { return !result.roi_class.empty(); });
+    const auto class_position = 5;
+    if (with_classes) {
+        header.insert(header.begin() + class_position, "roiClass");
+    }
     if (context.pixel_spacing) {
         header.push_back("areaMm2");
     }
@@ -187,6 +195,9 @@ std::string ResultsToCsv(const std::vector<MeasurementResult>& results, const An
     for (const MeasurementResult& result : results) {
         std::vector<std::string> common = {TextField(context.timestamp), TextField(context.image_name), TextField(context.image_sha256),
             TextField(result.roi_name), TextField(result.roi_id), MeasurementStatusId(result.status), std::to_string(result.pixel_count)};
+        if (with_classes) {
+            common.insert(common.begin() + class_position, TextField(result.roi_class));
+        }
         if (context.pixel_spacing) {
             common.push_back(FormatNumber(result.pixel_count * context.pixel_spacing->x_mm * context.pixel_spacing->y_mm));
         }

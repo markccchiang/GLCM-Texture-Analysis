@@ -64,7 +64,7 @@ export function BatchContent({ onClose }: { onClose(): void }) {
     }
     let roiSet: RoiSetDocument;
     try {
-      roiSet = source === 'manager' ? buildRoiSet(image!.info, useRois.getState().rois) : parseRoiSet(await roiFile!.text());
+      roiSet = source === 'manager' ? buildRoiSet(image!.info, useRois.getState().rois, useRois.getState().classes) : parseRoiSet(await roiFile!.text());
     } catch (error) {
       notifications.show({ color: 'red', title: 'Could not read the ROI set', message: (error as Error).message });
       return;

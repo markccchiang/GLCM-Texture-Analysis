@@ -65,6 +65,7 @@ if (GLCM_BUILD_TESTS)
                 tests/IoTest.cpp
                 tests/PipelineTest.cpp
                 tests/RegionSelectionTest.cpp
+                tests/RoiClassTest.cpp
                 tests/RoiOperationsTest.cpp
                 tests/RoiTest.cpp
                 tests/TextureOptionsTest.cpp)

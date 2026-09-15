@@ -74,11 +74,18 @@ export const RoiSetImage = Type.Object({
 });
 export type RoiSetImage = Static<typeof RoiSetImage>;
 
+export const RoiClass = Type.Object({
+  name: Type.String({ minLength: 1, maxLength: 100 }),
+  color: Type.Optional(Type.String({ description: '"#RRGGBB", or empty' })),
+});
+export type RoiClass = Static<typeof RoiClass>;
+
 /** *.roi.json; the same format as glcm::RoiSetToJson */
 export const RoiSetDocument = Type.Object({
   format: Type.Literal('glcm-roi-set'),
   version: Type.Literal(1),
   image: Type.Optional(RoiSetImage),
+  classes: Type.Optional(Type.Array(RoiClass, { maxItems: 100, description: 'The classes ROIs can belong to' })),
   rois: Type.Array(Roi, { maxItems: MAX_ROIS_PER_REQUEST }),
 });
 export type RoiSetDocument = Static<typeof RoiSetDocument>;
@@ -115,6 +122,7 @@ export const ProjectDocument = Type.Object({
     ),
     data: Type.Optional(Type.String({ description: 'The uploaded file, base64-encoded, when embedded for portability' })),
   }),
+  classes: Type.Optional(Type.Array(RoiClass, { maxItems: 100 })),
   rois: Type.Array(ProjectRoi, { maxItems: MAX_ROIS_PER_REQUEST }),
   settings: Type.Union([AnalysisSettings, Type.Null()]),
   results: Type.Array(ProjectRun),

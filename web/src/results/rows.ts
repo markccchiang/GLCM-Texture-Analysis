@@ -12,6 +12,8 @@ export interface ResultRow {
   imageName: string;
   roiId: string;
   roiName: string;
+  /** Empty when the ROI has no class */
+  roiClass: string;
   distance: number;
   /** null for skipped and failed measurements */
   direction: RowDirection | null;
@@ -54,6 +56,7 @@ export function rowsForResult(
     imageName: context.imageName,
     roiId: result.roiId,
     roiName: result.roiName,
+    roiClass: result.roiClass ?? '',
     distance: result.distance,
     status: result.status,
     error: result.error,
@@ -106,6 +109,7 @@ export function columnsForRows(rows: readonly ResultRow[], features: readonly Fe
     // Only needed once the rows come from more than one image, e.g. after a batch
     ...(new Set(rows.map((row) => row.imageName)).size > 1 ? [{ id: 'image', label: 'Image', numeric: false, value: (row: ResultRow) => row.imageName }] : []),
     { id: 'roi', label: 'ROI', numeric: false, value: (row) => row.roiName },
+    ...(rows.some((row) => row.roiClass) ? [{ id: 'class', label: 'Class', numeric: false, value: (row: ResultRow) => row.roiClass }] : []),
     { id: 'distance', label: 'd', numeric: true, value: (row) => row.distance },
     { id: 'direction', label: 'Dir', numeric: false, value: (row) => (row.direction ? DIRECTION_LABELS[row.direction] : '') },
     { id: 'pixels', label: 'Pixels', numeric: true, value: (row) => row.pixelCount },

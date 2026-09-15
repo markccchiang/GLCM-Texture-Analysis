@@ -19,16 +19,20 @@ export interface Measurement {
   imageName: string;
   roiId: string;
   roiName: string;
+  /** Empty when the ROI has no class */
+  roiClass: string;
   distance: number;
   values: FeatureValues;
 }
 
-/** One line, bar or box: an ROI on one image */
+/** One line, bar or box: an ROI on one image, or every ROI of a class */
 export interface Series {
   key: string;
   label: string;
   imageName: string;
   roiId: string;
+  /** Set for the series of a class ('' for ROIs without a class) */
+  className?: string;
   /** Sorted by distance */
   measurements: Measurement[];
 }
@@ -68,6 +72,7 @@ export function latestMeasurements(runs: readonly AnalysisRun[], featureId: stri
         imageName: run.imageName,
         roiId: result.roiId,
         roiName: result.roiName,
+        roiClass: result.roiClass ?? '',
         distance: result.distance,
         values,
       });
@@ -92,6 +97,29 @@ export function seriesOf(measurements: readonly Measurement[]): Series[] {
     }
   }
   return [...series.values()].map((entry) => ({ ...entry, measurements: [...entry.measurements].sort((a, b) => a.distance - b.distance) }));
+}
+
+/** One series per class with the measurements of all its ROIs (on every image), classes in name order and ROIs without a class last */
+export function classSeriesOf(measurements: readonly Measurement[]): Series[] {
+  const series = new Map<string, Series>();
+  for (const measurement of measurements) {
+    const existing = series.get(measurement.roiClass);
+    if (existing) {
+      existing.measurements.push(measurement);
+    } else {
+      series.set(measurement.roiClass, {
+        key: `class:${measurement.roiClass}`,
+        label: measurement.roiClass || 'No class',
+        imageName: '',
+        roiId: '',
+        className: measurement.roiClass,
+        measurements: [measurement],
+      });
+    }
+  }
+  return [...series.values()]
+    .sort((a, b) => (a.className === '' ? 1 : b.className === '' ? -1 : a.label.localeCompare(b.label)))
+    .map((entry) => ({ ...entry, measurements: [...entry.measurements].sort((a, b) => a.distance - b.distance) }));
 }
 
 export function distancesOf(measurements: readonly Measurement[]): number[] {

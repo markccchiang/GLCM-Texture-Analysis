@@ -89,6 +89,7 @@ function failedResult(job: Job, message: string): MeasurementResult {
   return {
     roiId: job.roi.id,
     roiName: job.roi.name,
+    ...(job.roi.class ? { roiClass: job.roi.class } : {}),
     distance: job.distance,
     status: 'failed',
     error: message,

@@ -3390,6 +3390,12 @@
                           "type": "string",
                           "pattern": "^#[0-9A-Fa-f]{6}$"
                         },
+                        "class": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100,
+                          "description": "Class of the ROI, e.g. \"lesion\"; carried into the results and exports"
+                        },
                         "shape": {
                           "anyOf": [
                             {
@@ -5164,6 +5170,10 @@
                           },
                           "roiName": {
                             "type": "string"
+                          },
+                          "roiClass": {
+                            "type": "string",
+                            "description": "The ROI's class; omitted when it has none"
                           },
                           "distance": {
                             "type": "integer"
@@ -7132,6 +7142,10 @@
                               "roiName": {
                                 "type": "string"
                               },
+                              "roiClass": {
+                                "type": "string",
+                                "description": "The ROI's class; omitted when it has none"
+                              },
                               "distance": {
                                 "type": "integer"
                               },
@@ -7478,6 +7492,12 @@
                         "color": {
                           "type": "string",
                           "pattern": "^#[0-9A-Fa-f]{6}$"
+                        },
+                        "class": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100,
+                          "description": "Class of the ROI, e.g. \"lesion\"; carried into the results and exports"
                         },
                         "shape": {
                           "anyOf": [

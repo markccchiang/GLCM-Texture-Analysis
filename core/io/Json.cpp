@@ -17,6 +17,8 @@ using json_detail::Json;
 
 namespace {
 
+const size_t MAX_CLASS_NAME_LENGTH = 100;
+
 [[noreturn]] void Fail(const std::string& path, const std::string& problem) {
     throw std::invalid_argument((path.empty() ? std::string("document") : path) + " " + problem);
 }
@@ -118,7 +120,13 @@ Json RoiToJson(const Roi& roi) {
         }
         shape = {{"type", "polygon"}, {"points", points}, {"freehand", polygon.freehand}};
     }
-    return {{"id", roi.id}, {"name", roi.name}, {"color", roi.color}, {"shape", shape}};
+    Json result = {{"id", roi.id}, {"name", roi.name}, {"color", roi.color}};
+    // Written only for ROIs with a class, so documents without classes stay as before
+    if (!roi.class_name.empty()) {
+        result["class"] = roi.class_name;
+    }
+    result["shape"] = shape;
+    return result;
 }
 
 Roi RoiFromJson(const Json& value, const std::string& path) {
@@ -135,6 +143,13 @@ Roi RoiFromJson(const Json& value, const std::string& path) {
     }
     if (value.contains("color")) {
         roi.color = Text(value.at("color"), Child(path, "color"));
+    }
+    if (value.contains("class")) {
+        const std::string class_path = Child(path, "class");
+        roi.class_name = Text(value.at("class"), class_path);
+        if (roi.class_name.empty() || roi.class_name.size() > MAX_CLASS_NAME_LENGTH) {
+            Fail(class_path, "must be between 1 and " + std::to_string(MAX_CLASS_NAME_LENGTH) + " characters");
+        }
     }
 
     const Json& shape = Field(value, "shape", path);
@@ -366,6 +381,9 @@ MeasurementResult MeasurementFromJson(const Json& value, const std::string& path
     MeasurementResult result;
     result.roi_id = text("roiId");
     result.roi_name = text("roiName");
+    if (value.contains("roiClass")) {
+        result.roi_class = Text(value.at("roiClass"), Child(path, "roiClass"));
+    }
     result.distance = integer("distance");
     result.pixel_count = integer("pixelCount");
 
@@ -435,6 +453,13 @@ std::string RoiSetToJson(const RoiSetDocument& document) {
     result["version"] = 1;
     result["image"] = {{"name", document.image.name}, {"width", document.image.width}, {"height", document.image.height},
         {"bitDepth", document.image.bit_depth}, {"sha256", document.image.sha256}};
+    if (!document.classes.empty()) {
+        Json classes = Json::array();
+        for (const RoiClass& roi_class : document.classes) {
+            classes.push_back({{"name", roi_class.name}, {"color", roi_class.color}});
+        }
+        result["classes"] = classes;
+    }
     result["rois"] = rois;
     return result.dump(2);
 }
@@ -464,6 +489,29 @@ RoiSetDocument RoiSetFromJson(const std::string& text) {
             }
             if (image.contains("sha256")) {
                 result.image.sha256 = Text(image.at("sha256"), "image.sha256");
+            }
+        }
+
+        if (document.contains("classes")) {
+            const std::string classes_path = "classes";
+            const Json& classes = Array(document.at("classes"), classes_path);
+            for (size_t i = 0; i < classes.size(); ++i) {
+                const std::string item_path = Index(classes_path, i);
+                const std::string name_path = Child(item_path, "name");
+                RoiClass roi_class;
+                roi_class.name = Text(Field(classes[i], "name", item_path), name_path);
+                if (roi_class.name.empty() || roi_class.name.size() > MAX_CLASS_NAME_LENGTH) {
+                    Fail(name_path, "must be between 1 and " + std::to_string(MAX_CLASS_NAME_LENGTH) + " characters");
+                }
+                if (classes[i].contains("color")) {
+                    roi_class.color = Text(classes[i].at("color"), Child(item_path, "color"));
+                }
+                for (const RoiClass& earlier : result.classes) {
+                    if (earlier.name == roi_class.name) {
+                        Fail(name_path, "\"" + roi_class.name + "\" is listed more than once");
+                    }
+                }
+                result.classes.push_back(roi_class);
             }
         }
 
@@ -566,6 +614,9 @@ std::string ResultsToJson(const std::vector<MeasurementResult>& results, const A
         Json item = Json::object();
         item["roiId"] = result.roi_id;
         item["roiName"] = result.roi_name;
+        if (!result.roi_class.empty()) {
+            item["roiClass"] = result.roi_class;
+        }
         item["distance"] = result.distance;
         item["status"] = MeasurementStatusId(result.status);
         item["error"] = result.error;

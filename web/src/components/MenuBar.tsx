@@ -225,6 +225,7 @@ export function MenuBar() {
         <Menu.Item disabled={selectedCount !== 1} onClick={renameSelectedRoi}>
           Rename
         </Menu.Item>
+        <Menu.Item onClick={() => ui().setModal('roiClasses')}>ROI Classes…</Menu.Item>
         <Menu.Divider />
         <Menu.Item disabled={!hasImage} onClick={() => ui().requestFile('roiSet')}>
           Import ROI Set…

@@ -1,17 +1,18 @@
 // ROI set files (*.roi.json, doc/ui-design-plan.md, sections 6.4 and 8.4).
 
 import { RoiSetDocument, type ImageInfo, type RoiSetImage, type RoiShape } from '@glcm/api';
-import type { ManagedRoi } from '../rois/roiStore';
+import type { ManagedRoi, RoiClass } from '../rois/roiStore';
 import type { Size } from '../viewer/viewport';
 import { fileStem } from './download';
 import { parseAppFile } from './validate';
 
-export function buildRoiSet(info: ImageInfo, rois: readonly ManagedRoi[]): RoiSetDocument {
+export function buildRoiSet(info: ImageInfo, rois: readonly ManagedRoi[], classes: readonly RoiClass[] = []): RoiSetDocument {
   return {
     format: 'glcm-roi-set',
     version: 1,
     image: { name: info.name, width: info.width, height: info.height, bitDepth: info.bitDepth, sha256: info.sha256 },
-    rois: rois.map(({ id, name, color, shape }) => ({ id, name, color, shape })),
+    ...(classes.length > 0 ? { classes: classes.map(({ name, color }) => ({ name, color })) } : {}),
+    rois: rois.map(({ id, name, color, shape, className }) => ({ id, name, color, ...(className ? { class: className } : {}), shape })),
   };
 }
 
@@ -116,7 +117,9 @@ export function clipShape(shape: RoiShape, size: Size): ClipOutcome {
 }
 
 export interface PreparedImport {
-  rois: Array<{ id: string; name: string; color: string; shape: RoiShape }>;
+  rois: Array<{ id: string; name: string; color: string; shape: RoiShape; className?: string }>;
+  /** The set's classes, and classes its ROIs use without the set listing them */
+  classes: RoiClass[];
   warnings: string[];
 }
 
@@ -135,7 +138,7 @@ export function prepareRoiImport(document: RoiSetDocument, info: ImageInfo): Pre
     if (outcome.clipped) {
       clipped += 1;
     }
-    rois.push({ id: roi.id, name: roi.name, color: roi.color ?? '', shape: outcome.shape });
+    rois.push({ id: roi.id, name: roi.name, color: roi.color ?? '', shape: outcome.shape, ...(roi.class ? { className: roi.class } : {}) });
   }
   if (clipped > 0) {
     warnings.push(`${clipped} ROI${clipped === 1 ? ' was' : 's were'} clipped to the image.`);
@@ -143,5 +146,11 @@ export function prepareRoiImport(document: RoiSetDocument, info: ImageInfo): Pre
   if (skipped.length > 0) {
     warnings.push(`Skipped ${skipped.length} ROI${skipped.length === 1 ? '' : 's'} outside the image: ${skipped.join(', ')}.`);
   }
-  return { rois, warnings };
+  const classes: RoiClass[] = (document.classes ?? []).map(({ name, color }) => ({ name, color: color ?? '' }));
+  for (const roi of rois) {
+    if (roi.className && !classes.some((roiClass) => roiClass.name === roi.className)) {
+      classes.push({ name: roi.className, color: roi.color });
+    }
+  }
+  return { rois, classes, warnings };
 }

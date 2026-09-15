@@ -23,6 +23,15 @@ export function runAppAction(action: ViewerAction): void {
       rois.select([]);
       useViewer.getState().setRuler(null);
       break;
+    case 'assignClass': {
+      const roiClass = action.index === null ? null : rois.classes[action.index];
+      if (action.index === null) {
+        rois.assignClass(rois.selectedIds, null);
+      } else if (roiClass) {
+        rois.assignClass(rois.selectedIds, roiClass.name);
+      }
+      break;
+    }
     case 'removeLastVertex':
       // Handled by the canvas, which owns the polygon being drawn
       break;

@@ -2,7 +2,7 @@
 // rows near the visible area, and each row follows the hovered ROI itself, so hovering does not re-render the table.
 // The Plot view (ResultsPlot) charts the same measurements.
 
-import { ActionIcon, Button, Checkbox, Group, Menu, SegmentedControl, Table, Text, Tooltip } from '@mantine/core';
+import { ActionIcon, Button, Checkbox, Group, Menu, SegmentedControl, Select, Table, Text, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconClipboard, IconColumns, IconDownload, IconTrash } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
@@ -99,12 +99,17 @@ export function ResultsPanel() {
   const catalog = useQuery(CATALOG_QUERY);
   const [sort, setSort] = useState<{ id: string; direction: SortDirection } | null>(null);
   const [view, setView] = useState<'table' | 'plot'>('table');
+  /** null: every class; '' rows without a class */
+  const [classFilter, setClassFilter] = useState<string | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
 
   const columns = useMemo(() => columnsForRows(rows, catalog.data?.features ?? []), [rows, catalog.data]);
   const visible = useMemo(() => columns.filter((column) => !hiddenColumns.includes(column.id)), [columns, hiddenColumns]);
   const sortColumn = sort ? columns.find((column) => column.id === sort.id) : undefined;
-  const sorted = useMemo(() => (sort && sortColumn ? sortRows(rows, sortColumn, sort.direction) : rows), [rows, sort, sortColumn]);
+  const rowClasses = useMemo(() => [...new Set(rows.map((row) => row.roiClass))].sort((a, b) => a.localeCompare(b)), [rows]);
+  const activeFilter = classFilter !== null && rowClasses.includes(classFilter) && rowClasses.length > 1 ? classFilter : null;
+  const filtered = useMemo(() => (activeFilter === null ? rows : rows.filter((row) => row.roiClass === activeFilter)), [rows, activeFilter]);
+  const sorted = useMemo(() => (sort && sortColumn ? sortRows(filtered, sortColumn, sort.direction) : filtered), [filtered, sort, sortColumn]);
 
   const toggleSort = (id: string) =>
     setSort((current) => (current?.id !== id ? { id, direction: 'asc' } : current.direction === 'asc' ? { id, direction: 'desc' } : null));
@@ -152,6 +157,17 @@ export function ResultsPanel() {
               { value: 'plot', label: 'Plot' },
             ]}
           />
+          {view === 'table' && rowClasses.some(Boolean) && rowClasses.length > 1 && (
+            <Select
+              size="xs"
+              w={130}
+              aria-label="Class filter"
+              allowDeselect={false}
+              data={[{ value: 'all', label: 'All classes' }, ...rowClasses.map((name) => ({ value: `class:${name}`, label: name || 'No class' }))]}
+              value={activeFilter === null ? 'all' : `class:${activeFilter}`}
+              onChange={(value) => setClassFilter(value === null || value === 'all' ? null : value.slice('class:'.length))}
+            />
+          )}
           {view === 'table' && (
             <>
           <Menu position="bottom-end" closeOnItemClick={false}>

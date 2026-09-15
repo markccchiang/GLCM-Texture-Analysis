@@ -1,7 +1,7 @@
 // Plot view of the Results panel: one feature per ROI as bars or box plots, per direction as a polar plot, or against
 // the distance d. Drawn as plain SVG from the per-direction values of the latest measurement of each ROI.
 
-import { Button, Group, SegmentedControl, Select, Text } from '@mantine/core';
+import { Button, Group, SegmentedControl, Select, Switch, Text } from '@mantine/core';
 import { useElementSize } from '@mantine/hooks';
 import { IconDownload } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
@@ -13,6 +13,7 @@ import { useRois } from '../rois/roiStore';
 import { useViewer } from '../stores/viewerStore';
 import {
   boxStats,
+  classSeriesOf,
   directionValues,
   distancesOf,
   isFiniteNumber,
@@ -119,12 +120,24 @@ function Legend({ series, colors, width, seriesProps }: Pick<ChartProps, 'series
 
 function BarsChart({ width, height, series, colors, distance, featureName, seriesProps }: ChartProps) {
   const bars = series.map((entry) => {
-    const measurement = entry.measurements.find((candidate) => candidate.distance === distance);
+    const atDistance = entry.measurements.filter((candidate) => candidate.distance === distance);
+    if (entry.className !== undefined) {
+      // A class: the mean of its ROIs' means, with whiskers over the ROI means
+      const means = atDistance.map((measurement) => measurement.values.mean).filter(isFiniteNumber);
+      return {
+        mean: means.length > 0 ? means.reduce((sum, value) => sum + value, 0) / means.length : null,
+        low: means.length > 0 ? Math.min(...means) : null,
+        high: means.length > 0 ? Math.max(...means) : null,
+        spread: 'ROI means',
+      };
+    }
+    const measurement = atDistance[0];
     const directions = measurement ? directionValues(measurement.values).map(({ value }) => value) : [];
     return {
       mean: measurement && isFiniteNumber(measurement.values.mean) ? measurement.values.mean : null,
       low: directions.length > 0 ? Math.min(...directions) : null,
       high: directions.length > 0 ? Math.max(...directions) : null,
+      spread: 'directions',
     };
   });
   const scale = niceScale(bars.flatMap((bar) => [bar.mean, bar.low, bar.high]).filter(isFiniteNumber), { includeZero: true });
@@ -143,7 +156,7 @@ function BarsChart({ width, height, series, colors, distance, featureName, serie
         }
         return (
           <g key={entry.key} {...seriesProps(entry, index)}>
-            <title>{`${entry.label}: mean ${formatValue(bar.mean)}${bar.low !== null ? `, directions ${formatValue(bar.low)} to ${formatValue(bar.high)}` : ''}`}</title>
+            <title>{`${entry.label}: mean ${formatValue(bar.mean)}${bar.low !== null ? `, ${bar.spread} ${formatValue(bar.low)} to ${formatValue(bar.high)}` : ''}`}</title>
             <rect
               data-testid="plot-bar"
               data-value={bar.mean}
@@ -336,12 +349,14 @@ function DistanceChart({ width, height, series, colors, featureName, seriesProps
 
 const CHARTS: Record<ChartKind, (props: ChartProps) => React.JSX.Element> = { bars: BarsChart, box: BoxChart, polar: PolarChart, distance: DistanceChart };
 
-function caption(kind: ChartKind, distance: number, distances: number): string {
+function caption(kind: ChartKind, distance: number, distances: number, byClass: boolean): string {
   switch (kind) {
     case 'bars':
-      return `Mean over the directions at d = ${distance}; whiskers span the direction values.`;
+      return byClass
+        ? `Mean over the ROIs of each class of their means at d = ${distance}; whiskers span the ROI means.`
+        : `Mean over the directions at d = ${distance}; whiskers span the direction values.`;
     case 'box':
-      return 'Direction values at every distance: median, quartiles and range.';
+      return byClass ? 'Direction values of every ROI of each class at every distance: median, quartiles and range.' : 'Direction values at every distance: median, quartiles and range.';
     case 'polar':
       return `Value per direction at d = ${distance}; θ and θ + 180° are the same.`;
     default:
@@ -352,6 +367,8 @@ function caption(kind: ChartKind, distance: number, distances: number): string {
 export function ResultsPlot() {
   const runs = useResults((state) => state.runs);
   const rois = useRois((state) => state.rois);
+  const classes = useRois((state) => state.classes);
+  const [groupByClass, setGroupByClass] = useState(false);
   const hoveredId = useRois((state) => state.hoveredId);
   const imageName = useViewer((state) => state.image?.info.name ?? null);
   const catalog = useQuery(CATALOG_QUERY);
@@ -364,12 +381,21 @@ export function ResultsPlot() {
   const features = useMemo(() => plotFeatures(runs, catalog.data?.features ?? []), [runs, catalog.data]);
   const feature = features.find((candidate) => candidate.id === featureChoice) ?? features[0] ?? null;
   const measurements = useMemo(() => (feature ? latestMeasurements(runs, feature.id) : []), [runs, feature]);
-  const series = useMemo(() => seriesOf(measurements), [measurements]);
+  const hasClasses = measurements.some((measurement) => measurement.roiClass);
+  const byClass = groupByClass && hasClasses && (kind === 'bars' || kind === 'box');
+  const series = useMemo(() => (byClass ? classSeriesOf(measurements) : seriesOf(measurements)), [measurements, byClass]);
   const distances = useMemo(() => distancesOf(measurements), [measurements]);
   const distance = distanceChoice !== null && distances.includes(distanceChoice) ? distanceChoice : (distances[0] ?? 1);
 
   // ROIs of the open image keep their colour from the ROI Manager
-  const colors = series.map((entry, index) => (entry.imageName === imageName ? rois.find((roi) => roi.id === entry.roiId)?.color : undefined) || roiColor(index));
+  const colors = series.map(
+    (entry, index) =>
+      (entry.className !== undefined
+        ? classes.find((roiClass) => roiClass.name === entry.className)?.color
+        : entry.imageName === imageName
+          ? rois.find((roi) => roi.id === entry.roiId)?.color
+          : undefined) || roiColor(index),
+  );
   const hoverable = (entry: Series) => entry.imageName === imageName && rois.some((roi) => roi.id === entry.roiId);
   const emphasised = series.some((entry) => hoverable(entry) && entry.roiId === hoveredId);
   const seriesProps: SeriesProps = (entry) => ({
@@ -424,8 +450,11 @@ export function ResultsPlot() {
             onChange={(value) => setDistanceChoice(value === null ? null : Number(value))}
           />
         )}
+        {hasClasses && (kind === 'bars' || kind === 'box') && (
+          <Switch size="xs" label="Group by class" checked={groupByClass} onChange={(event) => setGroupByClass(event.currentTarget.checked)} />
+        )}
         <Text size="xs" c="dimmed" style={{ flex: 1, minWidth: 160 }}>
-          {caption(kind, distance, distances.length)}
+          {caption(kind, distance, distances.length, byClass)}
         </Text>
         <Button size="compact-xs" variant="subtle" color="gray" leftSection={<IconDownload size={12} />} disabled={series.length === 0} onClick={save}>
           Save SVG

@@ -5,7 +5,7 @@
 
 import type { RoiShape } from '@glcm/api';
 import { create } from 'zustand';
-import { roiColor, translateShape } from './geometry';
+import { ROI_COLORS, roiColor, translateShape } from './geometry';
 
 export interface ManagedRoi {
   id: string;
@@ -13,7 +13,17 @@ export interface ManagedRoi {
   color: string;
   visible: boolean;
   shape: RoiShape;
+  /** Name of the ROI's class; absent when it has none */
+  className?: string;
 }
+
+/** A class ROIs can belong to, e.g. lesion or normal */
+export interface RoiClass {
+  name: string;
+  color: string;
+}
+
+export const MAX_CLASS_NAME_LENGTH = 100;
 
 export const HISTORY_LIMIT = 200;
 
@@ -29,6 +39,8 @@ export interface RoiState {
   editSnapshot: ManagedRoi[] | null;
   /** The shape just drawn, not yet in the ROI Manager (doc/ui-design-plan.md, section 6.2: active vs managed) */
   activeShape: RoiShape | null;
+  /** Classes in the order of their shortcuts (⇧1–⇧9); kept when another image opens */
+  classes: RoiClass[];
 
   setActiveShape(shape: RoiShape | null): void;
   /** Moves the active shape into the manager; returns its id, or null without an active shape */
@@ -46,6 +58,19 @@ export interface RoiState {
   nudgeRois(ids: readonly string[], dx: number, dy: number): void;
   setVisible(id: string, visible: boolean): void;
   setAllVisible(visible: boolean): void;
+
+  /** Replaces the class list (opening a project) */
+  setClasses(classes: readonly RoiClass[]): void;
+  /** Adds a class named "Class n" with the next colour and returns it */
+  addClass(): RoiClass;
+  /** Renames or recolours a class; its ROIs follow, as one undo step. Throws for an empty, too long or taken name. */
+  updateClass(name: string, change: Partial<RoiClass>): void;
+  /** Removes a class; its ROIs keep their colour but lose the class (undoable) */
+  removeClass(name: string): void;
+  /** Adds the classes whose names are not in the list yet (importing ROI sets) */
+  mergeClasses(classes: readonly RoiClass[]): void;
+  /** Gives ROIs a class and its colour, or removes their class (null), as one undo step */
+  assignClass(ids: readonly string[], className: string | null): void;
 
   beginEdit(): void;
   updateShapeLive(id: string, shape: RoiShape): void;
@@ -90,6 +115,7 @@ export const useRois = create<RoiState>()((set, get) => {
     future: [],
     editSnapshot: null,
     activeShape: null,
+    classes: [],
 
     setActiveShape: (activeShape) => set({ activeShape }),
 
@@ -117,7 +143,14 @@ export const useRois = create<RoiState>()((set, get) => {
       const added = imported.map((roi, i) => {
         const id = roi.id && !existing.has(roi.id) ? roi.id : newRoiId();
         existing.add(id);
-        return { id, name: roi.name, color: roi.color || roiColor(nextNumber - 1 + i), visible: roi.visible ?? true, shape: roi.shape };
+        return {
+          id,
+          name: roi.name,
+          color: roi.color || roiColor(nextNumber - 1 + i),
+          visible: roi.visible ?? true,
+          shape: roi.shape,
+          ...(roi.className ? { className: roi.className } : {}),
+        };
       });
       commit([...rois, ...added], { selectedIds: added.map((roi) => roi.id), nextNumber: nextNumber + added.length });
       return added.map((roi) => roi.id);
@@ -140,7 +173,8 @@ export const useRois = create<RoiState>()((set, get) => {
           ...roi,
           id: newRoiId(),
           name: `${roi.name} copy`,
-          color: roiColor(nextNumber - 1 + i),
+          // Copies keep the colour of their class
+          color: roi.className ? roi.color : roiColor(nextNumber - 1 + i),
           shape: translateShape(roi.shape, DUPLICATE_OFFSET, DUPLICATE_OFFSET),
         }));
       if (copies.length > 0) {
@@ -181,6 +215,94 @@ export const useRois = create<RoiState>()((set, get) => {
         return;
       }
       commit(get().rois.map((roi) => (ids.includes(roi.id) ? { ...roi, shape: translateShape(roi.shape, dx, dy) } : roi)));
+    },
+
+    setClasses: (classes) => set({ classes: classes.map(({ name, color }) => ({ name, color })) }),
+
+    addClass: () => {
+      const { classes } = get();
+      let number = classes.length + 1;
+      while (classes.some((roiClass) => roiClass.name === `Class ${number}`)) {
+        number += 1;
+      }
+      const added = { name: `Class ${number}`, color: ROI_COLORS[classes.length % ROI_COLORS.length] };
+      set({ classes: [...classes, added] });
+      return added;
+    },
+
+    updateClass: (name, change) => {
+      const { classes, rois } = get();
+      const current = classes.find((roiClass) => roiClass.name === name);
+      if (!current) {
+        return;
+      }
+      const next = { name: change.name?.trim() ?? current.name, color: change.color ?? current.color };
+      if (next.name.length === 0 || next.name.length > MAX_CLASS_NAME_LENGTH) {
+        throw new Error(`A class name must have 1 to ${MAX_CLASS_NAME_LENGTH} characters`);
+      }
+      if (next.name !== name && classes.some((roiClass) => roiClass.name === next.name)) {
+        throw new Error(`There is already a class named ${next.name}`);
+      }
+      const updatedClasses = classes.map((roiClass) => (roiClass.name === name ? next : roiClass));
+      if (rois.some((roi) => roi.className === name) && (next.name !== name || next.color !== current.color)) {
+        commit(
+          rois.map((roi) => (roi.className === name ? { ...roi, className: next.name, color: next.color !== current.color ? next.color : roi.color } : roi)),
+          { classes: updatedClasses },
+        );
+      } else {
+        set({ classes: updatedClasses });
+      }
+    },
+
+    removeClass: (name) => {
+      const { classes, rois } = get();
+      const remaining = classes.filter((roiClass) => roiClass.name !== name);
+      if (rois.some((roi) => roi.className === name)) {
+        commit(
+          rois.map((roi) => {
+            if (roi.className !== name) {
+              return roi;
+            }
+            const { className: _removed, ...rest } = roi;
+            return rest;
+          }),
+          { classes: remaining },
+        );
+      } else {
+        set({ classes: remaining });
+      }
+    },
+
+    mergeClasses: (incoming) => {
+      const { classes } = get();
+      const added = incoming.filter((roiClass, i) => !classes.some((existing) => existing.name === roiClass.name) && incoming.findIndex((other) => other.name === roiClass.name) === i);
+      if (added.length > 0) {
+        set({ classes: [...classes, ...added.map(({ name, color }, i) => ({ name, color: color || ROI_COLORS[(classes.length + i) % ROI_COLORS.length] }))] });
+      }
+    },
+
+    assignClass: (ids, className) => {
+      const { rois, classes } = get();
+      const target = className === null ? null : classes.find((roiClass) => roiClass.name === className);
+      if (className !== null && !target) {
+        return;
+      }
+      const chosen = new Set(ids);
+      if (!rois.some((roi) => chosen.has(roi.id))) {
+        return;
+      }
+      commit(
+        rois.map((roi) => {
+          if (!chosen.has(roi.id)) {
+            return roi;
+          }
+          if (!target) {
+            const { className: _removed, ...rest } = roi;
+            return rest;
+          }
+          return { ...roi, className: target.name, color: target.color || roi.color };
+        }),
+      );
     },
 
     // Visibility is a view setting, not an edit, so it is not undoable

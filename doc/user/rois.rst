@@ -110,6 +110,27 @@ Holes inside a region are filled: they belong to the ROI, and so does anything l
 An ROI may have at most 10,000 vertices. A longer outline, for example around a large noisy region, is simplified to
 fit, and a message says so; its edges then no longer follow the pixels exactly.
 
+.. _roi-classes:
+
+ROI classes
+-----------
+
+A **class** groups ROIs that belong together, such as *lesion* and *normal* regions, so that the groups can be compared.
+Each ROI has at most one class.
+
+- *ROI ▸ ROI Classes…* (or **Manage Classes…** in the ROI Manager's menus) lists the classes. **Add class** adds one;
+  change its name in the field and pick its colour from the swatches. The number on the left is its shortcut. Deleting
+  a class removes it from its ROIs, which keep their colour.
+- To give ROIs a class, select them and press :kbd:`⇧` with the class number (:kbd:`⇧1` for the first class, up to
+  :kbd:`⇧9`), or choose the class in an ROI's **⋯** menu in the ROI Manager. :kbd:`⇧0` (or **No class**) removes it.
+  ROIs take the colour of their class, and the ROI Manager shows the class after the ROI's name. Assigning a class can be
+  undone.
+- Renaming or recolouring a class changes its ROIs too. The class list is kept when you open another image.
+
+Measurements record each ROI's class. The Results table then shows a **Class** column and can show one class at a time,
+the plots can combine the ROIs of each class (see :doc:`measuring`), and exported results, ROI sets and projects include
+the classes (see :doc:`files`).
+
 .. _editing-rois:
 
 Painting and combining ROIs

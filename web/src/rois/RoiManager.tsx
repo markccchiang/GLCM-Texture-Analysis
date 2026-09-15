@@ -18,6 +18,7 @@ function RoiRow({ roi, pixelCount, problem }: { roi: ManagedRoi; pixelCount: num
   const selected = useRois((state) => state.selectedIds.includes(roi.id));
   const hovered = useRois((state) => state.hoveredId === roi.id);
   const renaming = useUi((state) => state.renamingRoiId === roi.id);
+  const classes = useRois((state) => state.classes);
   const store = useRois.getState;
 
   const onClick = (event: MouseEvent) => {
@@ -79,8 +80,14 @@ function RoiRow({ roi, pixelCount, problem }: { roi: ManagedRoi; pixelCount: num
           }}
         />
       ) : (
-        <Text size="sm" truncate title={roi.name}>
+        <Text size="sm" truncate title={roi.className ? `${roi.name} (${roi.className})` : roi.name}>
           {roi.name}
+          {roi.className && (
+            <span className="roi-class-tag" data-testid="roi-class-tag">
+              {' '}
+              · {roi.className}
+            </span>
+          )}
         </Text>
       )}
       <Text size="xs" c="dimmed">
@@ -132,6 +139,21 @@ function RoiRow({ roi, pixelCount, problem }: { roi: ManagedRoi; pixelCount: num
               />
             ))}
           </div>
+          <Menu.Label>Class</Menu.Label>
+          <Menu.Item onClick={() => store().assignClass([roi.id], null)} fw={roi.className ? undefined : 600}>
+            No class
+          </Menu.Item>
+          {classes.map((roiClass) => (
+            <Menu.Item
+              key={roiClass.name}
+              leftSection={<span className="roi-swatch" style={{ background: roiClass.color }} />}
+              fw={roi.className === roiClass.name ? 600 : undefined}
+              onClick={() => store().assignClass([roi.id], roiClass.name)}
+            >
+              {roiClass.name}
+            </Menu.Item>
+          ))}
+          <Menu.Item onClick={() => useUi.getState().setModal('roiClasses')}>Manage Classes…</Menu.Item>
           <Menu.Divider />
           <Menu.Item onClick={() => store().duplicateRois([roi.id])}>Duplicate</Menu.Item>
           <Menu.Item color="red" onClick={() => store().deleteRois([roi.id])}>
@@ -170,6 +192,8 @@ export function RoiManager() {
             <Menu.Item disabled={rois.length === 0} onClick={() => store().setAllVisible(false)}>
               Hide all
             </Menu.Item>
+            <Menu.Divider />
+            <Menu.Item onClick={() => useUi.getState().setModal('roiClasses')}>Manage Classes…</Menu.Item>
             <Menu.Divider />
             <Menu.Item disabled={selectedCount < 2} onClick={() => void combineSelectedRois('union')}>
               Union

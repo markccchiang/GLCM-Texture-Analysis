@@ -4,7 +4,7 @@
 import type { PixelSpacing } from '@glcm/api';
 import { ProjectDocument, type AnalysisSettings, type ImageInfo, type MeasurementResult } from '@glcm/api';
 import type { AnalysisRun } from '../results/resultsStore';
-import type { ManagedRoi } from '../rois/roiStore';
+import type { ManagedRoi, RoiClass } from '../rois/roiStore';
 import { fileStem } from './download';
 import { parseAppFile } from './validate';
 
@@ -30,6 +30,7 @@ export function base64ToBytes(text: string): Uint8Array {
 export interface ProjectContents {
   info: ImageInfo;
   rois: readonly ManagedRoi[];
+  classes?: readonly RoiClass[];
   settings: AnalysisSettings | null;
   runs: readonly AnalysisRun[];
   /** The spacing in use (null: none); omitted: not saved, so the image's own applies */
@@ -41,7 +42,7 @@ export interface ProjectContents {
 }
 
 /** Only finished analyses are saved, with the results that finished */
-export function buildProject({ info, rois, settings, runs, pixelSpacing, coreVersion, imageBytes, createdAt }: ProjectContents): ProjectDocument {
+export function buildProject({ info, rois, classes = [], settings, runs, pixelSpacing, coreVersion, imageBytes, createdAt }: ProjectContents): ProjectDocument {
   return {
     format: 'glcm-project',
     version: 1,
@@ -56,7 +57,8 @@ export function buildProject({ info, rois, settings, runs, pixelSpacing, coreVer
       ...(pixelSpacing !== undefined ? { pixelSpacing } : {}),
       ...(imageBytes ? { data: bytesToBase64(imageBytes) } : {}),
     },
-    rois: rois.map(({ id, name, color, visible, shape }) => ({ id, name, color, visible, shape })),
+    ...(classes.length > 0 ? { classes: classes.map(({ name, color }) => ({ name, color })) } : {}),
+    rois: rois.map(({ id, name, color, visible, shape, className }) => ({ id, name, color, visible, ...(className ? { class: className } : {}), shape })),
     settings,
     results: runs
       .filter((run) => run.status !== 'queued' && run.status !== 'running')

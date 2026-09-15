@@ -47,6 +47,7 @@ export const Roi = Type.Object({
   id: Type.String({ maxLength: 100 }),
   name: Type.String({ maxLength: 200 }),
   color: Type.Optional(Type.String({ pattern: '^#[0-9A-Fa-f]{6}$' })),
+  class: Type.Optional(Type.String({ minLength: 1, maxLength: 100, description: 'Class of the ROI, e.g. "lesion"; carried into the results and exports' })),
   shape: RoiShape,
 });
 export type Roi = Static<typeof Roi>;
@@ -265,6 +266,7 @@ export type MeasurementStatus = Static<typeof MeasurementStatus>;
 export const MeasurementResult = Type.Object({
   roiId: Type.String(),
   roiName: Type.String(),
+  roiClass: Type.Optional(Type.String({ description: "The ROI's class; omitted when it has none" })),
   distance: Type.Integer(),
   status: MeasurementStatus,
   error: Type.String({ description: 'Reason for skipped or failed results' }),

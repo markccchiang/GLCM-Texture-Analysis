@@ -186,6 +186,7 @@ Every measurement adds rows to the **Results** table:
   :doc:`viewing`), the **gray levels** and one column per feature. The **Score** column
   appears when a measurement included the score.
 - Values are shown with six significant digits; copied and exported values have full precision.
+- Once a measured ROI has a class (see :ref:`roi-classes`), a **Class** column follows the ROI name.
 - **Status** is empty for normal results, **⚠** when the result has warnings, or *skipped* / *failed* with the reason —
   for example an ROI with fewer than 2 pixels, or intensities above the gray levels when quantization is *None*.
 - Hover a row to see the image and settings it was measured with, and its warnings. Hovering also highlights the ROI
@@ -196,6 +197,8 @@ Use the buttons above the table to work with it:
 - Click a **column header** to sort by it; click again to reverse the order, and a third time to restore the order of
   measurement.
 - **Columns** shows or hides columns.
+- When the rows come from ROIs of more than one class, a class list shows **All classes** or the rows of one class
+  (or those without a class). Copy then copies the rows shown.
 - **Copy** copies the table (visible columns, current order) as tab-separated text, ready to paste into a spreadsheet.
   Text cells starting with ``=``, ``+``, ``-`` or ``@`` get a leading apostrophe, so the spreadsheet does not run them
   as formulas.
@@ -226,6 +229,11 @@ from the list next to the chart types:
 Each ROI keeps its colour from the ROI Manager, and hovering its bar, box or line highlights the ROI on the canvas.
 When an ROI was measured more than once at the same distance, the latest measurement is plotted; after a batch, the
 series are named after the image and the ROI. **Save SVG** saves the chart as an SVG file.
+
+When measured ROIs have classes, **Group by class** appears for the Bars and Box charts. Bars then shows one bar per
+class: the mean of its ROIs' means at the chosen distance, with whiskers spanning the ROI means. Box shows the direction
+values of all ROIs of each class at every distance. Classes are drawn in their colours, and ROIs without a class form a
+*No class* group.
 
 .. note::
 

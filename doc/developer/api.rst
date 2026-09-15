@@ -196,7 +196,7 @@ A request may contain up to 1000 ROIs; a polygon up to 10 000 vertices.
 .. code-block:: json
 
    {
-     "roiId": "7f3c", "roiName": "ROI 1", "distance": 1,
+     "roiId": "7f3c", "roiName": "ROI 1", "roiClass": "lesion", "distance": 1,
      "status": "ok", "error": "", "pixelCount": 4096,
      "pairCounts": {"0": 8064, "45": 7938, "90": 8064, "135": 7938},
      "quantization": {"lower": 0, "upper": 255},
@@ -205,7 +205,7 @@ A request may contain up to 1000 ROIs; a polygon up to 10 000 vertices.
      "warnings": []
    }
 
-Values are ``null`` for directions that were not selected. ``status`` is ``skipped`` (e.g. fewer than 2 pixels) or
+``roiClass`` is the ROI's class and is omitted for ROIs without one. Values are ``null`` for directions that were not selected. ``status`` is ``skipped`` (e.g. fewer than 2 pixels) or
 ``failed`` (e.g. intensities outside the gray levels without quantization) with ``error`` explaining why.
 
 .. _api-events:
@@ -482,8 +482,8 @@ Every JSON file has ``format`` and an integer ``version``; readers reject other 
      - Contents
    * - ``glcm-roi-set``
      - ``*.roi.json``
-     - ``image`` (name, width, height, bitDepth, sha256) and ``rois``; written by the web app and by
-       ``glcm::RoiSetToJson``
+     - ``image`` (name, width, height, bitDepth, sha256), optional ``classes`` (``[{name, color}]``) and ``rois``
+       (each with an optional ``class``); written by the web app and by ``glcm::RoiSetToJson``
    * - ``glcm-results``
      - ``*-results.json``
      - ``coreVersion``, ``timestamp``, ``image`` (name, sha256), ``settings`` and ``results``
@@ -491,7 +491,8 @@ Every JSON file has ``format`` and an integer ``version``; readers reject other 
    * - ``glcm-results-csv``
      - ``*-results.csv``
      - ``# key=value`` lines with the format, versions, image and settings, then a header row and one row per ROI ×
-       distance × direction (or per aggregation). Non-standard feature columns end with ``[non-standard]``; numbers
+       distance × direction (or per aggregation); a ``roiClass`` column follows ``roiId`` when an ROI has a class.
+       Non-standard feature columns end with ``[non-standard]``; numbers
        use the shortest text that reads back to the same double; fields are quoted per RFC 4180; text fields starting
        with ``=``, ``+``, ``-``, ``@``, tab or carriage return get a leading ``'`` (CSV injection)
    * - ``glcm-roi-images``
@@ -499,7 +500,8 @@ Every JSON file has ``format`` and an integer ``version``; readers reject other 
      - One entry per ROI with its geometry, bounding box, pixel count and file names, or why it was skipped
    * - ``glcm-project``
      - ``*.glcmproj``
-     - ``image`` (name, size, bit depth, sha256, optional base64 ``data``), ``rois`` (with visibility), ``settings``
+     - ``image`` (name, size, bit depth, sha256, optional base64 ``data``), optional ``classes``, ``rois`` (with
+       visibility and class), ``settings``
        and ``results`` (finished analyses with their settings)
 
 Example ROI set:
@@ -510,8 +512,9 @@ Example ROI set:
      "format": "glcm-roi-set",
      "version": 1,
      "image": {"name": "mri16.tif", "width": 512, "height": 512, "bitDepth": 16, "sha256": "…"},
+     "classes": [{"name": "lesion", "color": "#FF3B3B"}, {"name": "normal", "color": "#39FF6A"}],
      "rois": [
-       {"id": "7f3c", "name": "ROI 1", "color": "#FFD400",
+       {"id": "7f3c", "name": "ROI 1", "color": "#FF3B3B", "class": "lesion",
         "shape": {"type": "rectangle", "x": 100, "y": 100, "width": 64, "height": 64}}
      ]
    }

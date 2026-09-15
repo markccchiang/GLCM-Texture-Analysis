@@ -62,7 +62,7 @@ export function exportRoiSetFile(): void {
     inform('Nothing to export', 'Add ROIs to the ROI Manager first.');
     return;
   }
-  downloadText(`${JSON.stringify(buildRoiSet(image.info, rois), null, 2)}\n`, roiSetFileName(image.info.name));
+  downloadText(`${JSON.stringify(buildRoiSet(image.info, rois, useRois.getState().classes), null, 2)}\n`, roiSetFileName(image.info.name));
 }
 
 export async function importRoiSetFile(file: File): Promise<void> {
@@ -72,11 +72,12 @@ export async function importRoiSetFile(file: File): Promise<void> {
     return;
   }
   try {
-    const { rois, warnings } = prepareRoiImport(parseRoiSet(await file.text()), image.info);
+    const { rois, classes, warnings } = prepareRoiImport(parseRoiSet(await file.text()), image.info);
     if (rois.length === 0) {
       notifications.show({ color: 'yellow', title: 'No ROIs imported', message: warnings.join(' ') || `${file.name} contains no ROIs.` });
       return;
     }
+    useRois.getState().mergeClasses(classes);
     useRois.getState().importRois(rois);
     notifications.show({
       color: warnings.length > 0 ? 'yellow' : 'green',
@@ -133,6 +134,7 @@ export async function saveProjectFile({ embedImage }: { embedImage: boolean }): 
   try {
     const [coreVersion, imageBytes] = await Promise.all([getCoreVersion(), embedImage ? downloadOriginal(image.info.imageId) : undefined]);
     const project = buildProject({
+      classes: useRois.getState().classes,
       info: image.info,
       pixelSpacing: useViewer.getState().pixelSpacing,
       rois: useRois.getState().rois,
@@ -155,7 +157,10 @@ let pendingProject: ProjectDocument | null = null;
 function restoreProject(project: ProjectDocument, info: ImageInfo): void {
   const rois = useRois.getState();
   rois.reset();
-  rois.importRois(project.rois.map(({ id, name, color, visible, shape }) => ({ id, name, color: color ?? '', visible, shape })));
+  rois.setClasses((project.classes ?? []).map(({ name, color }) => ({ name, color: color ?? '' })));
+  rois.importRois(
+    project.rois.map(({ id, name, color, visible, shape, class: className }) => ({ id, name, color: color ?? '', visible, shape, ...(className ? { className } : {}) })),
+  );
   // Opening a project is not an undoable edit
   useRois.setState({ past: [], future: [], selectedIds: [] });
   if (project.settings) {
