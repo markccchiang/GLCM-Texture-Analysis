@@ -6,12 +6,13 @@ User guide
 Texture Workbench measures the texture of regions in grayscale images. A typical session has five steps:
 
 #. **Open an image** — PNG, JPEG, BMP or TIFF, 8 or 16 bits per pixel (:ref:`getting-started`).
-#. **Look at it** — zoom, pan and adjust the display window to see the structures you want to measure
-   (:ref:`viewing`).
+#. **Look at it** — zoom, pan, adjust the display window and choose a colour table to see the structures you want to
+   measure (:ref:`viewing`).
 #. **Draw regions of interest (ROIs)** — rectangles, ellipses, polygons or freehand outlines, collected in the ROI
    Manager (:ref:`rois`).
 #. **Measure** — choose the texture features and the analysis settings, and measure the selected or all ROIs, or the
-   same ROIs on a batch of images; the results appear in a table and as plots (:ref:`measuring`).
+   same ROIs on a batch of images; the results appear in a table and as plots. A feature map shows one feature across
+   the whole image (:ref:`measuring`).
 #. **Save and export** — export the results as CSV or JSON, save the ROIs for another session, export the ROI images,
    or save everything as a project (:ref:`files`).
 

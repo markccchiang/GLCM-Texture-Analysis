@@ -123,6 +123,12 @@ Namespace ``glcm``; include paths are relative to ``core/``.
    * - ``pipeline/AnalysisSettings``
      - Features, gray levels, quantization, distances, directions, aggregation, log base and score settings, with
        ``DefaultSettings`` and ``ValidateSettings``.
+   * - ``pipeline/FeatureMap``
+     - ``ComputeFeatureMapRows``: one co-occurrence feature (not the Maximal Correlation Coefficient) in an odd window,
+       clipped at the image edges, around the points of a grid over the whole image, as the mean over the selected
+       directions (NaN without pixel pairs). ``ResolveFeatureMapGrid`` chooses the step (at most 512 points per side
+       automatically, 2048 by hand). The image is quantized as a whole, so any band of rows gives the same values as
+       the whole map.
    * - ``pipeline/AnalysisRunner``
      - ``RunAnalysis`` measures every ROI at every distance: region statistics, first-order statistics, run length and
        size zone features (once per ROI), gray tone difference and local binary pattern features (per distance; LBP

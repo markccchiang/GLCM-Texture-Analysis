@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600" role="img" aria-labelledby="title desc"
      font-family="'Inter', 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
   <title id="title">Texture Workbench architecture</title>
-  <desc id="desc">The web app in the browser calls the API server over HTTP with JSON, binary pixel data and Server-Sent Events. The server calls the Node-API addon, which calls the glcm_core C++ library. The server stores images, results and caches in the data directory. Shared TypeBox schemas define request validation, TypeScript types and the OpenAPI document for the web app and the server.</desc>
+  <desc id="desc">The web app in the browser calls the API server over HTTP with JSON, binary pixel data and Server-Sent Events. The server runs analysis jobs and feature maps with the Node-API addon, which calls the glcm_core C++ library. The server stores images, results and caches in the data directory. Shared TypeBox schemas define request validation, TypeScript types and the OpenAPI document for the web app and the server.</desc>
 
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -61,7 +61,7 @@
     <rect x="386" y="120" width="218" height="30" rx="8" fill="#ffffff" stroke="#b7e2c8"/>
     <text x="400" y="140" class="item">REST API /api/v1</text>
     <rect x="386" y="158" width="218" height="30" rx="8" fill="#ffffff" stroke="#b7e2c8"/>
-    <text x="400" y="178" class="item">Analysis jobs (ROI × distance)</text>
+    <text x="400" y="178" class="item">Analysis jobs · feature maps</text>
     <rect x="386" y="196" width="218" height="30" rx="8" fill="#ffffff" stroke="#b7e2c8"/>
     <text x="400" y="216" class="item">Progress events (SSE)</text>
     <rect x="386" y="234" width="218" height="30" rx="8" fill="#ffffff" stroke="#b7e2c8"/>

@@ -2,7 +2,7 @@
 
 Measures texture features of regions of interest (ROIs) in grayscale images: Haralick features from the Gray Level Co-occurrence Matrix (GLCM), first-order statistics, and run length (GLRLM), size zone (GLSZM), neighbourhood gray tone difference (NGTDM) and local binary pattern (LBP) features.
 
-Open an 8- or 16-bit image in the browser, draw rectangle, ellipse, polygon or freehand ROIs, choose the features and analysis settings (gray levels, quantization, distances, directions), and measure, one image or a batch. Results appear in a table and as plots, per direction and aggregated, optionally with an age-based score.
+Open an 8- or 16-bit image in the browser, draw rectangle, ellipse, polygon or freehand ROIs, choose the features and analysis settings (gray levels, quantization, distances, directions), and measure, one image or a batch. Results appear in a table and as plots, per direction and aggregated, optionally with an age-based score. Feature maps show a co-occurrence feature computed in a sliding window over the whole image as a colour overlay, and colour tables give inverted and pseudo-colour display.
 
 <p align="center">
   <img src="doc/user/images/app-window.png" alt="The Texture Workbench web app: the sample image with four ROIs (Sky, Coat, Grass, Hair) on the canvas, the ROI Manager with their pixel counts, the Analysis Settings panel, and the Results table with texture features per direction." width="900">
@@ -129,8 +129,9 @@ A typical session:
    - Arrow keys move selected ROIs (Shift: 10 px). `Z` zooms to the selection, and ⌘/Ctrl+Z undoes.
 3. **Choose settings:** in *Analysis Settings*, choose a preset or features, gray levels, quantization, distances, directions and aggregation. The age-based score is under *Advanced*. Non-standard features are marked ⚠.
 4. **Measure:** press `M` to measure the selected ROIs, or `⇧M` to measure all of them. Each ROI × distance pair is a job on the server; progress appears in the status bar, where the measurement can be cancelled.
-5. **Review results:** rows are appended to the Results table and keep the settings they were computed with (hover a row to see them). You can sort, choose columns, and copy the table as tab-separated text.
-6. **Save and export:**
+5. **Map a feature (optional):** *Analyze ▸ Feature Map…* computes a co-occurrence feature such as Contrast or Entropy in a sliding window over the whole image and draws it over the image, with its own window, colour table and opacity. Save it as a coloured PNG or a 32-bit float TIFF.
+6. **Review results:** rows are appended to the Results table and keep the settings they were computed with (hover a row to see them). You can sort, choose columns, and copy the table as tab-separated text.
+7. **Save and export:**
    - *File ▸ Export Results as CSV / JSON* writes the table with the core's exporter. CSV files repeat the settings as `# key=value` lines, and non-standard columns end with ` [non-standard]`. Results with different settings are exported as a ZIP with one file per settings group.
    - *ROI ▸ Export ROI Set* writes `<image>.roi.json`. *Import ROI Set* adds its ROIs (undoable), warns when they were drawn on a different image, and clips ROIs to the image.
    - *ROI ▸ Export ROI Images* writes a ZIP. Each ROI gets its bounding-box crop (PNG, or TIFF for 16-bit images), a mask and, optionally, the quantized gray levels; `manifest.json` describes the geometry.
@@ -198,6 +199,9 @@ Endpoints (full details in `packages/api/openapi.json`):
 | `GET /api/v1/analyses/{id}/events` | Server-Sent Events: `result`, `progress`, `finished` |
 | `GET /api/v1/analyses/{id}/results` | Results of the finished jobs (`glcm-results` JSON) |
 | `GET /api/v1/analyses/{id}/results.csv`, `results.json` | The same results as a downloadable file written by the core |
+| `POST /api/v1/feature-maps` | Start a feature map (image id, feature, window, step, settings); returns `202` |
+| `GET`, `DELETE /api/v1/feature-maps/{id}` | Status and progress; cancel a running map or forget a finished one |
+| `GET /api/v1/feature-maps/{id}/values` | The map's values as little-endian 32-bit floats, once completed |
 | `POST /api/v1/exports/results` | CSV or JSON for a list of results documents (e.g. the current table); a ZIP when their settings differ |
 | `POST /api/v1/exports/roi-images` | ZIP of ROI crops, masks, optional quantized images and `manifest.json` |
 | `GET /api/v1/images?sha256` | Stored images, optionally by SHA-256 of the uploaded file (used when opening projects) |
@@ -208,7 +212,7 @@ Endpoints (full details in `packages/api/openapi.json`):
 
 The `doc/` folder contains a [Sphinx](https://www.sphinx-doc.org/) site (theme: [sphinx_rtd_theme](https://sphinx-rtd-theme.readthedocs.io/)) with three parts:
 - **User guide:** opening and viewing images, drawing ROIs, measuring, and saving, importing and exporting, with screenshots and a keyboard, mouse and menu reference.
-- **Texture features:** every GLCM equation as implemented in `core/analysis/TextureAnalysis.cpp`, and a list of references.
+- **Texture features:** the equations of every feature family as implemented in `core/analysis/` (GLCM, first-order, GLRLM, GLSZM, NGTDM, LBP), and a list of references.
 - **Developer guide:** the architecture, the HTTP, Node.js addon and C++ APIs, the file formats, and the technologies and packages used.
 
 Build it in a Python virtual environment (requires Python 3):
@@ -236,7 +240,7 @@ To rebuild later, activate the environment again with `source .venv/bin/activate
 
 | Path | Contents |
 | --- | --- |
-| `core/` | `glcm_core` library: `analysis/` (GLCM features), `roi/` (ROI masks), `imaging/` (loading, quantization, display), `pipeline/` (settings, analysis runner), `io/` (JSON, CSV, ROI image export), `tests/` |
+| `core/` | `glcm_core` library: `analysis/` (GLCM features), `roi/` (ROI masks), `imaging/` (loading, quantization, display), `pipeline/` (settings, analysis runner, feature maps), `io/` (JSON, CSV, ROI image export), `tests/` |
 | `bindings/node/` | Node-API addon (`@glcm/native`) exposing `glcm_core` to the server |
 | `packages/api/` | Shared API schemas and types (`@glcm/api`) and the generated OpenAPI document |
 | `server/` | Fastify API server (`@glcm/server`); also serves the built web app and the sample images |

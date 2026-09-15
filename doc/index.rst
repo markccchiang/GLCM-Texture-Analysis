@@ -4,8 +4,9 @@ Texture Workbench
 Texture Workbench computes texture features of regions of interest (ROIs) in 8- and 16-bit grayscale images: Haralick
 features from the Gray Level Co-occurrence Matrix (GLCM), first-order statistics, and run length (GLRLM), size zone
 (GLSZM), neighbourhood gray tone difference (NGTDM) and local binary pattern (LBP) features. Users open an image in the
-browser, draw rectangle, ellipse, polygon or freehand ROIs, choose the features and analysis settings, measure, and
-export the results. The application runs on a
+browser, view it with a display window and colour tables, draw rectangle, ellipse, polygon or freehand ROIs, choose the
+features and analysis settings, measure, and export the results. A feature map shows how a co-occurrence feature changes
+across the whole image, computed in a sliding window and drawn in colour over the image. The application runs on a
 single computer (local mode) or on a server shared by several users (server mode).
 
 This documentation has three parts:
