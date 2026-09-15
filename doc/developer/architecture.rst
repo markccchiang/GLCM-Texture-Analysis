@@ -55,7 +55,7 @@ Repository layout
        ``storage/``, ``web.ts``; tests use ``fastify.inject``
    * - ``web/``
      - ``@glcm/web``: ``src/`` grouped by concern (``api/``, ``viewer/``, ``image/``, ``rois/``, ``analysis/``,
-       ``results/``, ``files/``, ``stores/``, ``components/``)
+       ``results/``, ``files/``, ``batch/``, ``stores/``, ``components/``)
    * - ``e2e/``
      - Playwright tests against the built app and real servers
    * - ``samples/``, ``scripts/``
@@ -199,12 +199,23 @@ stores are plain functions (``app/actions.ts``, ``analysis/measure.ts``, ``files
      - ROIs, selection, hover, the active (drawn but not yet added) shape, undo/redo snapshots (200 steps)
    * - ``results/resultsStore``
      - Analysis runs with their settings and results, and the table rows derived from them
+   * - ``batch/batchStore``
+     - The batch measurement in progress: one status per image; kept outside the dialog, so closing it does not stop the
+       batch
    * - ``analysis/settingsStore``
      - Analysis settings, persisted in ``localStorage``
    * - ``api/auth``
      - Access token (``sessionStorage``) and whether the token prompt is open
    * - ``stores/uiStore``, ``stores/preferences``
      - Open dialog, file dialog requests, ROI labels; scroll behaviour and renderer preference
+
+.. rubric:: Results table and plots
+
+``results/ResultsPanel.tsx`` shows the runs either as the table (rows from ``results/rows.ts``) or as plots
+(``results/ResultsPlot.tsx``). The plots are drawn as plain SVG, without a chart library. ``results/plotData.ts`` reads
+the per-direction values from the runs rather than the table rows, so every aggregation can be plotted; it keeps the
+latest measurement per image, ROI and distance, and computes box plot quartiles (linear interpolation) and axis scales.
+``results/svgExport.ts`` resolves the theme's CSS colours when a chart is saved as SVG.
 
 Server data that is not user state (feature catalog, sample list, ROI statistics) is loaded with **TanStack Query**.
 All API calls go through ``api/client.ts`` and ``apiFetch``, which adds the access token.
@@ -264,6 +275,29 @@ Data flows
    event: finished ◀──────────────────────── store results/<id>.json
    GET /analyses/{id}/results ─────────────▶ ordered results
    rows appended to the Results table
+
+.. rubric:: Batch measurement
+
+*Analyze ▸ Batch Measure…* measures one ROI set on many images with the existing endpoints; the server has no batch
+concept. ``batch/runBatch.ts`` handles one image at a time and receives the API calls as dependencies, so its unit tests
+use fakes:
+
+.. code-block:: text
+
+   for each image file:
+     SHA-256 in the browser (Web Crypto) ──▶ GET /images?sha256=      found: reuse the stored image
+                                             POST /images             otherwise: upload
+     prepareRoiImport: clip the ROIs to the image; none left → skipped
+     adaptToImage, checkSettings for its bit depth; invalid → failed
+     POST /analyses ───────────────────────▶ jobs as for Measure; the run is added to the Results table
+     GET /analyses/{id}/results (polled) ──▶ final results; cancel → DELETE /analyses/{id}
+   Download combined CSV:
+     GET /analyses/{id}/results.csv for each finished image
+     batch/mergeCsv.ts: files with equal settings comments and header become one CSV (# images=N);
+     several groups are zipped in the browser (fflate)
+
+A failure is recorded for its image and the batch goes on. Web Crypto needs a secure context (HTTPS or localhost);
+without it every image is uploaded.
 
 .. rubric:: Exporting and projects
 

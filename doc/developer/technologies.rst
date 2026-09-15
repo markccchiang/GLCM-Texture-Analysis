@@ -112,7 +112,8 @@ API server
      - Schemas shared by server and web app (``packages/api``); ``typebox/value`` validates files in the browser
    * - ``fflate``
      - 0.8.3
-     - ZIP archives of exports (server) and reading them in tests
+     - ZIP archives of exports (server), of batch results with several groups of settings (web app), and reading
+       them in tests
    * - ``tsx``
      - 4.23.13
      - Runs the TypeScript server without a separate compile step (also in the Docker image)
@@ -148,6 +149,9 @@ Web app
    * - ``@tanstack/react-query``
      - 5.102.8
      - Loading and caching server data (catalog, samples, ROI statistics)
+   * - ``@tanstack/react-virtual``
+     - 3.14.13
+     - Rendering only the visible rows of long Results tables
    * - ``konva``, ``react-konva``
      - 10.5.0, 19.2.7
      - The image canvas: image layer, ROI shapes, transform handles, labels, hit testing
@@ -157,8 +161,9 @@ Web app
 
 Browser APIs: **WebGL2** (unsigned-integer textures and a fragment shader for window/level), Canvas 2D (lookup-table
 fallback and the navigator thumbnail), ``fetch`` with streams (raw pixel download with progress, Server-Sent Events),
-``XMLHttpRequest`` (upload progress), ``sessionStorage`` (access token) and ``localStorage`` (settings, preferences,
-layout).
+``XMLHttpRequest`` (upload progress), Web Crypto (SHA-256 of batch images, to reuse images the server already has),
+``sessionStorage`` (access token) and ``localStorage`` (settings, preferences, layout). The Results plots are SVG drawn
+by React components, without a chart library.
 
 Testing
 -------
