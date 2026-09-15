@@ -168,3 +168,43 @@ test('exports ROI images as a ZIP', async ({ page }) => {
   const counts = await native.roiStats(camera.pixels, camera.width, camera.height, camera.bitDepth, JSON.stringify(rois));
   expect(manifest.entries.map((entry: { pixelCount: number }) => entry.pixelCount)).toEqual(counts.map((c) => c.pixelCount));
 });
+
+test('measures the ROIs of the ROI Manager on several images and downloads one CSV', async ({ page }) => {
+  await page.keyboard.press('r');
+  await drag(page, [120, 90], [190, 150]);
+  await page.keyboard.press('t');
+  const [roi] = await storedRois(page);
+
+  await chooseMenuItem(page, 'Analyze', 'Batch Measure…');
+  const dialog = page.getByRole('dialog');
+  const images = ['camera.png', 'brick.png'].map((name) => path.join(ROOT, 'samples', 'textures', name));
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), dialog.getByLabel('Images').click()]);
+  await chooser.setFiles(images);
+  await dialog.getByRole('button', { name: 'Measure 2 images' }).click();
+
+  const items = dialog.getByTestId('batch-items').locator('tbody tr');
+  await expect(items).toHaveCount(2);
+  await expect(items.and(page.locator('[data-status="done"]'))).toHaveCount(2);
+  // The open sample is already on the server, so it is not uploaded again (brick.png may be too: the browser projects
+  // share one server)
+  await expect(items.first()).toContainText('Already on the server.');
+
+  await expect(page.getByTestId('results-table').locator('tbody tr')).toHaveCount(10);
+  await expect(page.getByTestId('results-table').getByRole('columnheader', { name: 'Image' })).toBeVisible();
+
+  const csv = await download(page, () => dialog.getByRole('button', { name: 'Download combined CSV' }).click());
+  expect(csv.file.suggestedFilename()).toBe('batch-results.csv');
+  const { comments, header, rows } = parseCsv(await fs.readFile(csv.path, 'utf8'));
+  expect(comments).toContain('# images=2');
+  expect(comments.some((comment) => comment.startsWith('# image='))).toBe(false);
+  expect(rows).toHaveLength(10);
+  expect(rows.map((row) => row[header.indexOf('image')])).toEqual([...Array(5).fill('camera.png'), ...Array(5).fill('brick.png')]);
+
+  const brick = await native.decodeImageFile(images[1]);
+  const expected = JSON.parse(
+    await native.runAnalysis(brick.pixels, brick.width, brick.height, brick.bitDepth, JSON.stringify([{ id: roi.id, name: roi.name, shape: roi.shape }]), JSON.stringify(SETTINGS)),
+  ).results[0];
+  for (const row of rows.slice(5)) {
+    expect(Number(row[header.indexOf('Contrast')])).toBe(expected.values.Contrast[row[header.indexOf('direction')]]);
+  }
+});

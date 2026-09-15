@@ -11,6 +11,7 @@ import { PanelSection } from './components/PanelSection';
 import { StatusBar } from './components/StatusBar';
 import { Toolbar } from './components/Toolbar';
 import { continueProjectWithImage, importRoiSetFile, openProjectFile } from './files/actions';
+import { IMAGE_FILE_TYPES } from './files/fileTypes';
 import { layoutStorage } from './layout/layoutStorage';
 import { ResultsPanel } from './results/ResultsPanel';
 import { RoiManager } from './rois/RoiManager';
@@ -20,11 +21,9 @@ import { useUi, type FileKind } from './stores/uiStore';
 import { useViewer } from './stores/viewerStore';
 import { CanvasArea } from './viewer/CanvasArea';
 
-const IMAGE_TYPES = '.png,.jpg,.jpeg,.bmp,.tif,.tiff,image/png,image/jpeg,image/bmp,image/tiff';
-
 const ACCEPTED_TYPES: Record<FileKind, string> = {
-  image: IMAGE_TYPES,
-  projectImage: IMAGE_TYPES,
+  image: IMAGE_FILE_TYPES,
+  projectImage: IMAGE_FILE_TYPES,
   project: '.glcmproj,.json,application/json',
   roiSet: '.json,application/json',
 };
@@ -180,7 +179,7 @@ export function App() {
       <input
         ref={fileInputRef}
         type="file"
-        accept={IMAGE_TYPES}
+        accept={IMAGE_FILE_TYPES}
         hidden
         data-testid="file-input"
         onChange={(event) => {

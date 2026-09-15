@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type ModalName = 'imageInfo' | 'preferences' | 'shortcuts' | 'about' | 'samples' | 'saveProject' | 'exportRoiImages' | 'equations';
+export type ModalName = 'imageInfo' | 'preferences' | 'shortcuts' | 'about' | 'samples' | 'saveProject' | 'exportRoiImages' | 'equations' | 'batch';
 
 /** What a file chosen in the file dialog is used for */
 export type FileKind = 'image' | 'project' | 'roiSet' | 'projectImage';

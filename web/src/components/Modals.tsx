@@ -4,6 +4,7 @@ import { API_PREFIX } from '@glcm/api';
 import { useQuery } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { getSamples } from '../api/client';
+import { BatchContent } from '../batch/BatchDialog';
 import { CATALOG_QUERY } from '../api/queryClient';
 import { useAnalysisSettings } from '../analysis/settingsStore';
 import { exportRoiImagesFile, saveProjectFile } from '../files/actions';
@@ -414,17 +415,19 @@ const TITLES: Record<ModalName, string> = {
   saveProject: 'Save Project',
   exportRoiImages: 'Export ROI Images',
   equations: 'Feature Equations',
+  batch: 'Batch Measure',
 };
 
 export function AppModals() {
   const modal = useUi((state) => state.modal);
   const close = () => useUi.getState().setModal(null);
   return (
-    <Modal opened={modal !== null} onClose={close} title={modal ? TITLES[modal] : ''} size={modal === 'imageInfo' || modal === 'equations' ? 'lg' : 'md'}>
+    <Modal opened={modal !== null} onClose={close} title={modal ? TITLES[modal] : ''} size={modal === 'imageInfo' || modal === 'equations' || modal === 'batch' ? 'lg' : 'md'}>
       {modal === 'imageInfo' && <ImageInfoContent />}
       {modal === 'preferences' && <PreferencesContent />}
       {modal === 'shortcuts' && <ShortcutsContent />}
       {modal === 'equations' && <EquationsContent />}
+      {modal === 'batch' && <BatchContent onClose={close} />}
       {modal === 'about' && <AboutContent />}
       {modal === 'samples' && <SamplesContent onClose={close} />}
       {modal === 'saveProject' && <SaveProjectContent onClose={close} />}

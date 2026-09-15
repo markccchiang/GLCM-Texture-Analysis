@@ -102,7 +102,7 @@ Menus
      - Rectangle, Ellipse, Polygon, Freehand, Add to Manager, Duplicate, Rename, Import ROI Set…, Export ROI Set…,
        Export ROI Images…
    * - Analyze
-     - Measure Selected, Measure All, Presets (the feature presets of the Analysis Settings panel), Clear Results
+     - Measure Selected, Measure All, Batch Measure…, Presets (the feature presets of the Analysis Settings panel), Clear Results
    * - View
      - Show / Hide Navigator, Show ROI Labels, Reset Layout
    * - Help

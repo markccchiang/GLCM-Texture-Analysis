@@ -219,6 +219,15 @@ export function cancelAnalysis(analysisId: string): Promise<void> {
   return sendJson('DELETE', `${API_PREFIX}/analyses/${analysisId}`);
 }
 
+/** The results CSV written by glcm_core for one analysis */
+export async function getAnalysisCsv(analysisId: string): Promise<string> {
+  const response = await apiFetch(`${API_PREFIX}/analyses/${analysisId}/results.csv`);
+  if (!response.ok) {
+    throw await errorFromResponse(response);
+  }
+  return response.text();
+}
+
 export function analysisEventsUrl(analysisId: string): string {
   return `${API_PREFIX}/analyses/${analysisId}/events`;
 }

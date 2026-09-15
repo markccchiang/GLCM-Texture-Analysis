@@ -93,10 +93,12 @@ export interface Column {
   value(row: ResultRow): string | number | null;
 }
 
-/** Fixed columns, then the features present in the rows in catalog order, then the score if any row has one */
+/** Fixed columns (Image first when rows come from several images), then the features present in the rows in catalog order, then the score if any row has one */
 export function columnsForRows(rows: readonly ResultRow[], features: readonly FeatureInfo[]): Column[] {
   const present = new Set(rows.flatMap((row) => Object.keys(row.values)));
   const columns: Column[] = [
+    // Only needed once the rows come from more than one image, e.g. after a batch
+    ...(new Set(rows.map((row) => row.imageName)).size > 1 ? [{ id: 'image', label: 'Image', numeric: false, value: (row: ResultRow) => row.imageName }] : []),
     { id: 'roi', label: 'ROI', numeric: false, value: (row) => row.roiName },
     { id: 'distance', label: 'd', numeric: true, value: (row) => row.distance },
     { id: 'direction', label: 'Dir', numeric: false, value: (row) => (row.direction ? DIRECTION_LABELS[row.direction] : '') },

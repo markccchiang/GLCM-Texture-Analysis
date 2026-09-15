@@ -199,6 +199,9 @@ export function MenuBar() {
         <Menu.Item disabled={!hasImage} rightSection={<Shortcut>⇧M</Shortcut>} onClick={() => void measure('all')}>
           Measure All
         </Menu.Item>
+        <Menu.Item disabled={!settings || !catalog.data} onClick={() => ui().setModal('batch')}>
+          Batch Measure…
+        </Menu.Item>
         <Menu.Divider />
         <Menu.Sub>
           <Menu.Sub.Target>

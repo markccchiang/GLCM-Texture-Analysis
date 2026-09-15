@@ -92,6 +92,34 @@ Each ROI is measured at each distance as a separate job. While jobs run, the sta
 example *3/8 jobs*; the **×** next to it cancels the measurement (jobs already started still finish, and their results
 are kept). You can keep working — drawing ROIs or changing the settings does not affect a running measurement.
 
+Measuring many images
+---------------------
+
+*Analyze ▸ Batch Measure…* measures the same ROIs on several images with the current analysis settings:
+
+1. Choose where the ROIs come from: the **ROI Manager** (the ROIs of the open image) or an **ROI set file**
+   (``.roi.json``, see :doc:`files`).
+2. Choose the **Images** (PNG, JPEG, BMP or TIFF; several at once).
+3. Click **Measure N images**.
+
+The images are measured one after another. For each image the dialog lists its status (*Uploading*, *Measuring*,
+*Done*, *Skipped*, *Failed* or *Cancelled*) and the finished jobs:
+
+- An image the server already has (same SHA-256) is not uploaded again.
+- ROIs are clipped to images of another size, as when importing an ROI set; ROIs that lie entirely outside an image are
+  left out, and an image without any ROI on it is *Skipped*.
+- The settings are fitted to each image's bit depth, like when opening an image. An image whose settings are invalid,
+  or that cannot be read, is marked *Failed* and the batch goes on with the next one.
+
+Each measured image is added to the Results table; once the rows come from more than one image the table shows an
+**Image** column. **Cancel batch** stops the running measurement and the images after it. Closing the dialog does not
+stop the batch; reopen it to see the progress.
+
+**Download combined CSV** saves the results of every finished image as one CSV file, with the settings as comment lines
+once (``# images=`` gives the number of images) and the ``image`` and ``imageSha256`` columns telling the rows apart.
+If the images needed different settings, for example 8-bit and 16-bit images with a fixed quantization range, the
+download is a ZIP with one CSV per group of settings.
+
 Results
 -------
 

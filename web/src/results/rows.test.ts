@@ -98,6 +98,15 @@ describe('formatting, columns and export', () => {
     expect(tsv).toHaveLength(4);
   });
 
+  it('adds an Image column only when rows come from several images', () => {
+    const one = rowsForResult(ok, context);
+    expect(columnsForRows(one, features)[0].id).toBe('roi');
+    const two = [...one, ...rowsForResult(ok, { ...context, analysisId: 'ana_2', imageName: 'brick.png' })];
+    const columns = columnsForRows(two, features);
+    expect(columns[0]).toMatchObject({ id: 'image', label: 'Image' });
+    expect(columns[0].value(two[two.length - 1])).toBe('brick.png');
+  });
+
   it('keeps pasted text from running as a spreadsheet formula', () => {
     expect(spreadsheetText('=HYPERLINK("http://example.org")')).toBe(`'=HYPERLINK("http://example.org")`);
     for (const text of ['+1', '-left', '@SUM(A1)']) {
