@@ -1,7 +1,7 @@
-GLCM Texture Analysis
-=====================
+Texture Workbench
+=================
 
-GLCM Texture Analysis computes texture features of regions of interest (ROIs) in 8- and 16-bit grayscale images: Haralick
+Texture Workbench computes texture features of regions of interest (ROIs) in 8- and 16-bit grayscale images: Haralick
 features from the Gray Level Co-occurrence Matrix (GLCM), first-order statistics, and run length (GLRLM), size zone
 (GLSZM), neighbourhood gray tone difference (NGTDM) and local binary pattern (LBP) features. Users open an image in the
 browser, draw rectangle, ellipse, polygon or freehand ROIs, choose the features and analysis settings, measure, and

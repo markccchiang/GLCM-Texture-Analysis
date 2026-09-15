@@ -1,9 +1,9 @@
 {
-  "name": "glcm-texture-analysis",
+  "name": "texture-workbench",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "GLCM texture analysis: C++ core, Node-API addon, web API server",
+  "description": "Texture Workbench: C++ core, Node-API addon, web API server and web app",
   "workspaces": [
     "packages/api",
     "bindings/node",

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600" role="img" aria-labelledby="title desc"
      font-family="'Inter', 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
-  <title id="title">GLCM Texture Analysis architecture</title>
+  <title id="title">Texture Workbench architecture</title>
   <desc id="desc">The web app in the browser calls the API server over HTTP with JSON, binary pixel data and Server-Sent Events. The server calls the Node-API addon, which calls the glcm_core C++ library. The server stores images, results and caches in the data directory. Shared TypeBox schemas define request validation, TypeScript types and the OpenAPI document for the web app and the server.</desc>
 
   <defs>

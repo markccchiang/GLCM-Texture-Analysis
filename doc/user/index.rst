@@ -3,7 +3,7 @@
 User guide
 ==========
 
-GLCM Texture Analysis measures the texture of regions in grayscale images. A typical session has five steps:
+Texture Workbench measures the texture of regions in grayscale images. A typical session has five steps:
 
 #. **Open an image** — PNG, JPEG, BMP or TIFF, 8 or 16 bits per pixel (:ref:`getting-started`).
 #. **Look at it** — zoom, pan and adjust the display window to see the structures you want to measure

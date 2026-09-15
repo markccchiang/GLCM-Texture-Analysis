@@ -58,8 +58,8 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
     openapi: {
       openapi: '3.1.0',
       info: {
-        title: 'GLCM Texture Analysis API',
-        description: 'HTTP API of the GLCM texture analysis server (doc/ui-design-plan.md, section 8.5).',
+        title: 'Texture Workbench API',
+        description: 'HTTP API of the Texture Workbench server (doc/ui-design-plan.md, section 8.5).',
         version: native.coreVersion(),
       },
       components: {

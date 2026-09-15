@@ -69,7 +69,7 @@ export function MenuBar() {
   return (
     <nav className="menu-bar" aria-label="Main menu">
       <Text fw={700} size="sm" mr="sm">
-        ▣ GLCM Texture Analysis
+        ▣ Texture Workbench
       </Text>
 
       <TopMenu label="File">

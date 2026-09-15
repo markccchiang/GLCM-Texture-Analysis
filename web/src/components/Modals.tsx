@@ -301,7 +301,10 @@ function AboutContent() {
   });
   return (
     <Stack gap="xs">
-      <Text size="sm">Haralick GLCM texture features for regions of interest in grayscale images.</Text>
+      <Text size="sm">
+        Texture features of regions of interest in grayscale images: co-occurrence (Haralick) features, first-order statistics,
+        GLRLM, GLSZM, NGTDM and LBP.
+      </Text>
       <InfoRows rows={[['Core version', health.data?.coreVersion ?? '…']]} />
       <Text size="xs" c="dimmed">
         Feature equations and references are in the Sphinx documentation (doc/).
@@ -463,7 +466,7 @@ const TITLES: Record<ModalName, string> = {
   imageInfo: 'Image Info',
   preferences: 'Preferences',
   shortcuts: 'Keyboard Shortcuts',
-  about: 'About GLCM Texture Analysis',
+  about: 'About Texture Workbench',
   samples: 'Open Sample Image',
   saveProject: 'Save Project',
   exportRoiImages: 'Export ROI Images',

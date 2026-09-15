@@ -1,11 +1,11 @@
-# GLCM Texture Analysis
+# Texture Workbench
 
-Computes Haralick texture features from the Gray Level Co-occurrence Matrix (GLCM) of regions of interest (ROIs) in grayscale images.
+Measures texture features of regions of interest (ROIs) in grayscale images: Haralick features from the Gray Level Co-occurrence Matrix (GLCM), first-order statistics, and run length (GLRLM), size zone (GLSZM), neighbourhood gray tone difference (NGTDM) and local binary pattern (LBP) features.
 
-Open an 8- or 16-bit image in the browser, draw rectangle, ellipse, polygon or freehand ROIs, choose the features and GLCM settings (gray levels, quantization, distances, directions), and measure. Results appear in a table, per direction and aggregated, optionally with an age-based score.
+Open an 8- or 16-bit image in the browser, draw rectangle, ellipse, polygon or freehand ROIs, choose the features and analysis settings (gray levels, quantization, distances, directions), and measure, one image or a batch. Results appear in a table and as plots, per direction and aggregated, optionally with an age-based score.
 
 <p align="center">
-  <img src="doc/user/images/app-window.png" alt="The GLCM Texture Analysis web app: the sample image with four ROIs (Sky, Coat, Grass, Hair) on the canvas, the ROI Manager with their pixel counts, the Analysis Settings panel, and the Results table with texture features per direction." width="900">
+  <img src="doc/user/images/app-window.png" alt="The Texture Workbench web app: the sample image with four ROIs (Sky, Coat, Grass, Hair) on the canvas, the ROI Manager with their pixel counts, the Analysis Settings panel, and the Results table with texture features per direction." width="900">
 </p>
 
 The User guide of the documentation (`doc/user/`) explains every part of the window.
@@ -250,7 +250,7 @@ To rebuild later, activate the environment again with `source .venv/bin/activate
 
 ## License
 
-GLCM Texture Analysis is free and open-source software, released under the [MIT License](LICENSE). You may use, copy, modify and distribute it, including in commercial and closed-source software, as long as the copyright notice and the license text are kept.
+Texture Workbench is free and open-source software, released under the [MIT License](LICENSE). You may use, copy, modify and distribute it, including in commercial and closed-source software, as long as the copyright notice and the license text are kept.
 
 Exceptions:
 - **Sample images from other sources:** the images in `samples/textures/` come from scikit-image (CC0 or no known copyright restrictions), and those in `samples/medical/` from The Cancer Imaging Archive (CC BY 3.0 and CC BY 4.0, with required citations) and OpenNeuro (CC0). They keep their own licenses. See [`samples/README.md`](samples/README.md).

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Shared API schemas and types for the GLCM texture analysis server and web app",
+  "description": "Shared API schemas and types for the Texture Workbench server and web app",
   "exports": {
     ".": {
       "types": "./src/index.ts",

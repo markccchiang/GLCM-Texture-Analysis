@@ -1,4 +1,4 @@
-# glcm_core: GLCM texture analysis library with no UI dependencies. It is used by the web server's Node-API addon and
+# glcm_core: texture feature library of Texture Workbench, with no UI dependencies. It is used by the web server's Node-API addon and
 # can be built on its own or through the top-level CMakeLists.txt.
 cmake_minimum_required(VERSION 3.22)
 

@@ -116,6 +116,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const host = env.GLCM_HOST || DEFAULT_CONFIG.host;
   const mode = serverMode({ host });
   const defaults: Defaults = mode === 'server' ? { ...DEFAULT_CONFIG, ...SERVER_MODE_DEFAULTS } : DEFAULT_CONFIG;
+  // The local folder keeps the project's former name, so images and results stored before the rename are still found
   const defaultDataDir = mode === 'server' ? '/data' : path.join(os.homedir(), '.glcm-texture-analysis');
 
   return {

@@ -1,7 +1,7 @@
-# GLCM texture analysis server with the web app (doc/ui-design-plan.md, sections 8.2 and 8.6).
+# Texture Workbench server with the web app (doc/ui-design-plan.md, sections 8.2 and 8.6).
 #
-#   docker build -t glcm-texture-analysis .
-#   docker run -p 8080:8080 -v glcm-data:/data -e GLCM_API_TOKEN="$(openssl rand -base64 32)" glcm-texture-analysis
+#   docker build -t texture-workbench .
+#   docker run -p 8080:8080 -v glcm-data:/data -e GLCM_API_TOKEN="$(openssl rand -base64 32)" texture-workbench
 #
 # The container listens on 0.0.0.0, which is server mode: GLCM_API_TOKEN is required. Put a reverse proxy with HTTPS
 # in front of it (see doc/deployment.md).

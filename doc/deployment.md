@@ -1,6 +1,6 @@
 # Server deployment
 
-This guide runs the GLCM texture analysis server for several users, as in phase 5 of `doc/ui-design-plan.md`. For personal use on your own computer, `npm start` (local mode) is enough; see the README.
+This guide runs the Texture Workbench server for several users, as in phase 5 of `doc/ui-design-plan.md`. For personal use on your own computer, `npm start` (local mode) is enough; see the README.
 
 ## Local mode and server mode
 
@@ -32,8 +32,8 @@ docker compose logs -f glcm
 Or without Compose:
 
 ```bash
-docker build -t glcm-texture-analysis .
-docker run -d --name glcm -p 127.0.0.1:8080:8080 -v glcm-data:/data -e GLCM_API_TOKEN glcm-texture-analysis
+docker build -t texture-workbench .
+docker run -d --name glcm -p 127.0.0.1:8080:8080 -v glcm-data:/data -e GLCM_API_TOKEN texture-workbench
 node scripts/smoke-test.mjs http://127.0.0.1:8080   # uses GLCM_API_TOKEN from the environment
 ```
 

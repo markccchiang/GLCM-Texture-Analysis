@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "GLCM texture analysis API server",
+  "description": "Texture Workbench API server",
   "scripts": {
     "start": "UV_THREADPOOL_SIZE=${UV_THREADPOOL_SIZE:-16} tsx src/main.ts",
     "dev": "UV_THREADPOOL_SIZE=${UV_THREADPOOL_SIZE:-16} tsx watch src/main.ts",

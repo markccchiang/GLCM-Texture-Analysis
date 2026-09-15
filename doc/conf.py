@@ -1,7 +1,7 @@
-# Sphinx configuration for the GLCM Texture Analysis documentation.
+# Sphinx configuration for the Texture Workbench documentation.
 # Build with `make html` in this folder (see requirements.txt).
 
-project = "GLCM Texture Analysis"
+project = "Texture Workbench"
 author = "Cheng-Chin Chiang"
 copyright = "2026, Cheng-Chin Chiang"
 
