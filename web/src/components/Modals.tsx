@@ -215,6 +215,7 @@ const FEATURE_GROUP_LABELS: Record<string, string> = {
   runLength: 'Run length features (GLRLM)',
   sizeZone: 'Size zone features (GLSZM)',
   grayToneDifference: 'Neighbourhood gray tone difference features (NGTDM)',
+  localBinaryPattern: 'Local binary pattern features (LBP)',
 };
 
 /** Where the server serves the built Sphinx documentation (GLCM_DOCS_DIR) */

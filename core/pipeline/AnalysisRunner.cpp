@@ -6,6 +6,7 @@
 
 #include "analysis/FirstOrder.hpp"
 #include "analysis/GrayToneDifference.hpp"
+#include "analysis/LocalBinaryPattern.hpp"
 #include "analysis/RunLength.hpp"
 #include "analysis/Score.hpp"
 #include "analysis/SizeZone.hpp"
@@ -168,7 +169,8 @@ void Measure(const cv::Mat& gray, const cv::Mat& mask, const PreparedRegion& pre
     std::set<Type> texture_types;
     for (Type type : settings.features) {
         if (type != Type::Mean && type != Type::Std && !IsFirstOrderStatistic(type) && !IsRunLengthFeature(type) &&
-            !IsSizeZoneFeature(type) && !IsGrayToneDifferenceFeature(type)) {
+            !IsSizeZoneFeature(type) && !IsGrayToneDifferenceFeature(type) &&
+            !IsLocalBinaryPatternFeature(type)) {
             texture_types.insert(type);
         }
     }
@@ -222,6 +224,23 @@ void Measure(const cv::Mat& gray, const cv::Mat& mask, const PreparedRegion& pre
                 "The score coefficients were calibrated with Ng = 256, d = 1, all four directions and 8-bit images; "
                 "they may not apply to the current settings");
         }
+    }
+}
+
+// LBP samples the pixels around the ROI too, so it needs the whole image and the ROI's box; the radius is the distance
+void AddLocalBinaryPatternFeatures(const cv::Mat& gray, const cv::Rect& box, const cv::Mat& mask, int distance, const AnalysisSettings& settings,
+    MeasurementResult& result) {
+    std::set<Type> types;
+    for (Type type : settings.features) {
+        if (IsLocalBinaryPatternFeature(type)) {
+            types.insert(type);
+        }
+    }
+    if (types.empty()) {
+        return;
+    }
+    for (const auto& [type, value] : ComputeLocalBinaryPatternFeatures(gray, box, mask, distance, settings.log_base, types)) {
+        result.values[type] = Uniform(value, settings.directions);
     }
 }
 
@@ -322,6 +341,7 @@ AnalysisOutput RunAnalysis(
                         prepared = Prepare(region, mask, settings);
                     }
                     Measure(region, mask, *prepared, distance, settings, result);
+                    AddLocalBinaryPatternFeatures(gray, cropped.box, mask, distance, settings, result);
                     if (settings.score.enabled && settings.score.profile == ScoreProfile::Calibration) {
                         if (!calibration_score) {
                             calibration_score = CalibrationScore(region, mask, settings.score);

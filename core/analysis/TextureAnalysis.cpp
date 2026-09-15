@@ -919,6 +919,30 @@ std::string TextureAnalysis::TypeToString(Type type) {
             return "Complexity";
         case Type::NgtdmStrength:
             return "Strength";
+        case Type::LbpUniform0:
+            return "LBP Uniform 0";
+        case Type::LbpUniform1:
+            return "LBP Uniform 1";
+        case Type::LbpUniform2:
+            return "LBP Uniform 2";
+        case Type::LbpUniform3:
+            return "LBP Uniform 3";
+        case Type::LbpUniform4:
+            return "LBP Uniform 4";
+        case Type::LbpUniform5:
+            return "LBP Uniform 5";
+        case Type::LbpUniform6:
+            return "LBP Uniform 6";
+        case Type::LbpUniform7:
+            return "LBP Uniform 7";
+        case Type::LbpUniform8:
+            return "LBP Uniform 8";
+        case Type::LbpNonUniform:
+            return "LBP Non-Uniform";
+        case Type::LbpEntropy:
+            return "LBP Entropy";
+        case Type::LbpEnergy:
+            return "LBP Energy";
         case Type::Score:
             return "Score";
         case Type::Age:

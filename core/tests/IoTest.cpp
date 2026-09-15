@@ -13,6 +13,7 @@
 
 #include "analysis/FirstOrder.hpp"
 #include "analysis/GrayToneDifference.hpp"
+#include "analysis/LocalBinaryPattern.hpp"
 #include "analysis/RunLength.hpp"
 #include "analysis/SizeZone.hpp"
 #include "imaging/Quantizer.hpp"
@@ -612,6 +613,31 @@ TEST(AnalysisRunnerGrayToneTest, ReportsGrayToneDifferenceFeaturesPerDistanceInE
             EXPECT_EQ(result.values.at(type).V, value);
             EXPECT_EQ(result.values.at(type).RD, value);
             EXPECT_TRUE(std::isnan(result.values.at(type).H));
+        }
+    }
+}
+
+TEST(AnalysisRunnerLbpTest, SamplesThePixelsAroundTheRoiWithTheDistanceAsRadius) {
+    AnalysisSettings settings = DefaultSettings(8);
+    settings.features = {Type::LbpEntropy, Type::LbpUniform8, Type::LbpNonUniform, Type::Contrast};
+    settings.directions = {Direction::H, Direction::V};
+    settings.distances = {1, 2};
+    const cv::Mat image = Pattern8(30, 30);
+    const AnalysisOutput output = RunAnalysis(image, {MakeRoi("r1", "A", RectangleRoi{2, 3, 20, 10})}, settings);
+    ASSERT_EQ(output.results.size(), 2u);
+
+    const cv::Rect box(2, 3, 20, 10);
+    const cv::Mat mask(box.size(), CV_8UC1, cv::Scalar(255));
+    for (const MeasurementResult& result : output.results) {
+        SCOPED_TRACE(result.distance);
+        ASSERT_EQ(result.status, MeasurementStatus::Ok);
+        // The whole image and the ROI's box: the codes near the ROI's edge use pixels outside it
+        const auto expected = ComputeLocalBinaryPatternFeatures(image, box, mask, result.distance, settings.log_base,
+            {Type::LbpEntropy, Type::LbpUniform8, Type::LbpNonUniform});
+        for (const auto& [type, value] : expected) {
+            EXPECT_EQ(result.values.at(type).H, value);
+            EXPECT_EQ(result.values.at(type).V, value);
+            EXPECT_TRUE(std::isnan(result.values.at(type).LD));
         }
     }
 }

@@ -596,6 +596,46 @@ of gray levels with :math:`p_i \neq 0`; all sums below run over those gray level
 
    0 if :math:`\sum_i s_i = 0`.
 
+Local binary pattern features (LBP)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Local binary patterns [Ojala2002]_ describe which neighbours of a pixel are at least as bright as the pixel. They use
+the **original intensities**, not the gray levels, so the quantization does not affect them. For a pixel with value
+:math:`v_c`, :math:`P = 8` samples lie on a circle of radius :math:`R = d` (the distance setting) at the offsets
+
+.. math:: r_k = -R \sin\frac{2\pi k}{P}, \qquad c_k = R \cos\frac{2\pi k}{P}, \qquad k = 0, \dots, P - 1
+
+(rows downward, columns to the right), each rounded to 5 decimals. The value :math:`v_k` of a sample is interpolated
+bilinearly between the four pixels around it. Samples may lie outside the ROI: they use the image around it, and
+positions outside the image count as 0. A sample is set, :math:`b_k = 1`, when :math:`v_k - v_c \ge 0`.
+
+The pattern is **uniform** when the sequence :math:`b_0, \dots, b_{P-1}` changes at most twice between consecutive
+samples; its code is then the number of set samples, :math:`\sum_k b_k` (0 to 8). Non-uniform patterns get the code
+:math:`P + 1 = 9`. This is the rotation-invariant uniform LBP of scikit-image (``local_binary_pattern(image, 8, R,
+'uniform')``), which PyRadiomics' LBP filter also uses; the core tests compare the features with scikit-image.
+
+With :math:`h_k` the fraction of the ROI's pixels with code :math:`k`:
+
+``LbpUniform0`` … ``LbpUniform8`` — LBP Uniform 0 … LBP Uniform 8
+   :math:`h_0, \dots, h_8`: pixels whose samples form a uniform pattern with that many samples at least as bright as the
+   pixel. Code 0 marks a pixel brighter than its whole circle (a bright spot), code 8 one at most as bright as its
+   circle (a dark spot or a flat area), and the codes between them edges and corners.
+
+``LbpNonUniform`` — LBP Non-Uniform
+   :math:`h_9`, the pixels with a non-uniform pattern.
+
+``LbpEntropy`` — LBP Entropy
+   .. math:: f = -\sum_{k=0}^{9} h_k \log(h_k + \epsilon)
+
+   :math:`\epsilon` is the machine epsilon, and the logarithm follows the log base setting.
+
+``LbpEnergy`` — LBP Energy
+   .. math:: f = \sum_{k=0}^{9} h_k^2
+
+The features have no direction, so the same value is reported for every direction; each distance gives its own radius.
+``ComputeLocalBinaryPatternFeatures`` (``core/analysis/LocalBinaryPattern``) computes them; all values are NaN for an
+empty region.
+
 Score
 ~~~~~
 

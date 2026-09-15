@@ -36,6 +36,10 @@ Sources of additional features
    Study of Late Toxicity," *Medical Physics*, vol. 39, no. 9, pp. 5732–5739, 2012.
    `doi:10.1118/1.4747526 <https://doi.org/10.1118/1.4747526>`__
 
+.. [Ojala2002] T. Ojala, M. Pietikäinen and T. Mäenpää, "Multiresolution Gray-Scale and Rotation Invariant Texture
+   Classification with Local Binary Patterns," *IEEE Transactions on Pattern Analysis and Machine Intelligence*,
+   vol. 24, no. 7, pp. 971–987, 2002. `doi:10.1109/TPAMI.2002.1017623 <https://doi.org/10.1109/TPAMI.2002.1017623>`__
+
 Standardized definitions
 ------------------------
 

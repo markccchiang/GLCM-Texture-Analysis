@@ -102,6 +102,19 @@ enum class Type {
     NgtdmBusyness,
     NgtdmComplexity,
     NgtdmStrength,
+    // Local binary pattern features (analysis/LocalBinaryPattern)
+    LbpUniform0,
+    LbpUniform1,
+    LbpUniform2,
+    LbpUniform3,
+    LbpUniform4,
+    LbpUniform5,
+    LbpUniform6,
+    LbpUniform7,
+    LbpUniform8,
+    LbpNonUniform,
+    LbpEntropy,
+    LbpEnergy,
     // Not texture features: added by CalculateScore
     Score,
     Age

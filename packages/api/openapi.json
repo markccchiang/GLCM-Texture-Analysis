@@ -168,6 +168,12 @@
                                 "enum": [
                                   "grayToneDifference"
                                 ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "localBinaryPattern"
+                                ]
                               }
                             ]
                           },

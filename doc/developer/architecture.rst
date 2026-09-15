@@ -103,6 +103,10 @@ Namespace ``glcm``; include paths are relative to ``core/``.
        distance, summed with prefix sums) and ``ComputeGrayToneDifferenceFeatures``: the 5 NGTDM features of
        PyRadiomics, without a direction. ``GrayToneDifferenceTest`` compares them with
        ``core/tests/data/pyradiomics-ngtdm.json``.
+   * - ``analysis/LocalBinaryPattern``
+     - ``LocalBinaryPatternCode`` (rotation-invariant uniform LBP with 8 samples, replicating scikit-image's arithmetic)
+       and ``ComputeLocalBinaryPatternFeatures``: the code fractions, entropy and energy of an ROI, sampling the whole
+       image around the ROI's box. ``LocalBinaryPatternTest`` compares them with ``core/tests/data/scikit-image-lbp.json``.
    * - ``analysis/Score``
      - The age-based score from mean, entropy and contrast with configurable ``ScoreCoefficients``.
    * - ``roi/Roi``
@@ -121,7 +125,8 @@ Namespace ``glcm``; include paths are relative to ``core/``.
        ``DefaultSettings`` and ``ValidateSettings``.
    * - ``pipeline/AnalysisRunner``
      - ``RunAnalysis`` measures every ROI at every distance: region statistics, first-order statistics, run length and
-       size zone features (once per ROI), gray tone difference features (per distance)
+       size zone features (once per ROI), gray tone difference and local binary pattern features (per distance; LBP
+       also reads the pixels around the ROI)
        from the original intensities, quantization, texture features, the score (calibration or current-settings profile), warnings, and
        ``Skipped``/``Failed`` results instead of exceptions for single ROIs.
    * - ``io/``

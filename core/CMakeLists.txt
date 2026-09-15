@@ -11,6 +11,7 @@ find_package(nlohmann_json 3.11 REQUIRED)
 add_library(glcm_core STATIC
         analysis/FirstOrder.cpp
         analysis/GrayToneDifference.cpp
+        analysis/LocalBinaryPattern.cpp
         analysis/RunLength.cpp
         analysis/Score.cpp
         analysis/SizeZone.cpp
@@ -49,6 +50,7 @@ if (GLCM_BUILD_TESTS)
         add_executable(glcm-tests
                 tests/FirstOrderTest.cpp
                 tests/GrayToneDifferenceTest.cpp
+                tests/LocalBinaryPatternTest.cpp
                 tests/RunLengthTest.cpp
                 tests/SizeZoneTest.cpp
                 tests/TextureAnalysisTest.cpp

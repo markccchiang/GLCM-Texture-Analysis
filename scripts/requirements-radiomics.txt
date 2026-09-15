@@ -1,11 +1,20 @@
 # Python 3.12 environment for scripts/radiomics-reference.py (see the setup in its docstring).
 # PyRadiomics 3.1.0 has no wheels for current Python versions; it is built from the commit of its v3.1.0 git tag.
+# scikit-image provides the LBP reference (PyRadiomics' LBP filter calls it).
 pyradiomics @ git+https://github.com/AIM-Harvard/pyradiomics.git@6a761c4eb01905cfcb1139b0b158547c55edd4df
 docopt==0.6.2
+imageio==2.37.4
+lazy-loader==0.5
+networkx==3.6.1
 numpy==2.5.3
+packaging==26.3
+pillow==12.3.0
 pykwalify==1.8.0
 python-dateutil==2.9.0.post0
 pywavelets==1.10.0
 ruamel-yaml==0.19.1
+scikit-image==0.26.0
+scipy==1.18.1
 simpleitk==2.5.6
 six==1.17.0
+tifffile==2026.9.9

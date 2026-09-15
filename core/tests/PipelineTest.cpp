@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "analysis/LocalBinaryPattern.hpp"
 #include "analysis/Score.hpp"
 #include "analysis/TextureAnalysis.hpp"
 #include "imaging/Quantizer.hpp"
@@ -137,6 +138,9 @@ TEST(FeatureCatalogTest, PresetsAreValid) {
         if (preset.id == "haralick") {
             EXPECT_EQ(preset.features.size(), 14u);
         }
+        if (preset.id == "lbp") {
+            EXPECT_EQ(preset.features.size(), 12u);
+        }
         if (preset.id == "ngtdm") {
             EXPECT_EQ(preset.features.size(), 5u);
         }
@@ -153,7 +157,7 @@ TEST(FeatureCatalogTest, PresetsAreValid) {
             EXPECT_TRUE(preset.enables_score);
         }
     }
-    EXPECT_EQ(ids, (std::set<std::string>{"haralick", "clausi2002", "basic", "score", "firstOrder", "glrlm", "glszm", "ngtdm", "all"}));
+    EXPECT_EQ(ids, (std::set<std::string>{"haralick", "clausi2002", "basic", "score", "firstOrder", "glrlm", "glszm", "ngtdm", "lbp", "all"}));
 }
 
 TEST(AnalysisSettingsTest, DefaultsDependOnBitDepth) {
@@ -509,7 +513,12 @@ TEST(AnalysisRunnerTest, ResultsDoNotDependOnWhereTheRoiLiesInTheImage) {
     };
 
     AnalysisSettings settings = DefaultSettings(8);
-    settings.features = AllFeatures();
+    // LBP samples the pixels around the ROI on purpose (AnalysisRunnerLbpTest), so it depends on the rest of the image
+    for (Type type : AllFeatures()) {
+        if (!IsLocalBinaryPatternFeature(type)) {
+            settings.features.insert(type);
+        }
+    }
     settings.distances = {1, 3};
     settings.score.enabled = true;
     for (const QuantizationMethod method : {QuantizationMethod::FixedRange, QuantizationMethod::RoiMinMax}) {

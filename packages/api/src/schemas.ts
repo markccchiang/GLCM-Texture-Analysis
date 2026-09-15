@@ -37,6 +37,7 @@ export const FeatureGroup = Type.Union([
   Type.Literal('runLength'),
   Type.Literal('sizeZone'),
   Type.Literal('grayToneDifference'),
+  Type.Literal('localBinaryPattern'),
 ]);
 
 export const FeatureInfo = Type.Object({
