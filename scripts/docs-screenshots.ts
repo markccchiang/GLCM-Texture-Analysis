@@ -258,6 +258,15 @@ async function main(): Promise<void> {
     await page.mouse.move(5, 1395);
     await page.waitForTimeout(400);
     await shot(page, 'results-table', page.locator('section[aria-label^="Results"]'));
+    const results = page.locator('section[aria-label^="Results"]');
+    await results.getByText('Plot', { exact: true }).click();
+    await results.getByLabel('Feature').click();
+    await page.getByRole('option', { name: 'Contrast', exact: true }).click();
+    await results.getByText('Directions', { exact: true }).click();
+    await page.mouse.move(5, 1395);
+    await page.waitForTimeout(400);
+    await shot(page, 'results-plot-directions', results);
+    await results.getByText('Table', { exact: true }).click();
 
     // Feature picker, which needs the taller window too
     await page.getByTestId('feature-picker-button').click();

@@ -151,6 +151,31 @@ Use the buttons above the table to work with it:
 - **Export** saves the results as CSV or JSON (see :ref:`export-results`).
 - The trash button clears the table (*Analyze ▸ Clear Results*).
 
+Plots
+~~~~~
+
+**Plot** (next to **Table** above the results) draws one feature of the measurements as a chart; choose the feature
+from the list next to the chart types:
+
+- **Bars**: one bar per ROI with the mean over the directions at one distance (choose it when you measured several);
+  the whiskers span the values of the single directions.
+- **Box**: per ROI, the values of every measured direction at every distance, as the median, the quartiles (linear
+  interpolation) and the range.
+- **Directions**: a polar plot of the value in each direction at one distance. A co-occurrence matrix counts both
+  neighbours of each pixel, so θ and θ + 180° have the same value and the shape is symmetric; an elongated shape shows
+  directional texture. The rings are labelled with their values, and the centre is not zero.
+- **Distance**: the mean over the directions against the distance ``d``, one line per ROI.
+
+.. figure:: images/results-plot-directions.png
+   :alt: The Plot view with a polar plot of Contrast per direction for four ROIs.
+   :width: 100%
+
+   Contrast per direction for four ROIs.
+
+Each ROI keeps its colour from the ROI Manager, and hovering its bar, box or line highlights the ROI on the canvas.
+When an ROI was measured more than once at the same distance, the latest measurement is plotted; after a batch, the
+series are named after the image and the ROI. **Save SVG** saves the chart as an SVG file.
+
 .. note::
 
    Mean and Std (region statistics) are computed from the original intensities of the ROI. All other features use the

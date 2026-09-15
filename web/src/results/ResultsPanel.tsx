@@ -1,7 +1,8 @@
 // Results table (doc/ui-design-plan.md, section 6.3.3): sorting, column chooser, copy as TSV. Long tables render only the
 // rows near the visible area, and each row follows the hovered ROI itself, so hovering does not re-render the table.
+// The Plot view (ResultsPlot) charts the same measurements.
 
-import { ActionIcon, Button, Checkbox, Group, Menu, Table, Text, Tooltip } from '@mantine/core';
+import { ActionIcon, Button, Checkbox, Group, Menu, SegmentedControl, Table, Text, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconClipboard, IconColumns, IconDownload, IconTrash } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
@@ -12,6 +13,7 @@ import { NON_STANDARD_NOTE } from '../analysis/SettingsPanel';
 import { PanelSection } from '../components/PanelSection';
 import { exportResultsFile } from '../files/actions';
 import { useRois } from '../rois/roiStore';
+import { ResultsPlot } from './ResultsPlot';
 import { useResults } from './resultsStore';
 import { cellText, columnsForRows, rowsToTsv, sortRows, type ResultRow, type SortDirection } from './rows';
 
@@ -95,6 +97,7 @@ export function ResultsPanel() {
   const hiddenColumns = useResults((state) => state.hiddenColumns);
   const catalog = useQuery(CATALOG_QUERY);
   const [sort, setSort] = useState<{ id: string; direction: SortDirection } | null>(null);
+  const [view, setView] = useState<'table' | 'plot'>('table');
   const bodyRef = useRef<HTMLDivElement>(null);
 
   const columns = useMemo(() => columnsForRows(rows, catalog.data?.features ?? []), [rows, catalog.data]);
@@ -137,6 +140,19 @@ export function ResultsPanel() {
       bodyRef={bodyRef}
       actions={
         <Group gap={4}>
+          <SegmentedControl
+            size="xs"
+            aria-label="Results view"
+            disabled={rows.length === 0}
+            value={view}
+            onChange={(value) => setView(value as 'table' | 'plot')}
+            data={[
+              { value: 'table', label: 'Table' },
+              { value: 'plot', label: 'Plot' },
+            ]}
+          />
+          {view === 'table' && (
+            <>
           <Menu position="bottom-end" closeOnItemClick={false}>
             <Menu.Target>
               <Button size="compact-xs" variant="subtle" color="gray" leftSection={<IconColumns size={12} />} disabled={columns.length === 0}>
@@ -154,6 +170,8 @@ export function ResultsPanel() {
           <Button size="compact-xs" variant="subtle" color="gray" leftSection={<IconClipboard size={12} />} disabled={rows.length === 0} onClick={copy}>
             Copy
           </Button>
+            </>
+          )}
           <Menu position="bottom-end">
             <Menu.Target>
               <Button size="compact-xs" variant="subtle" color="gray" leftSection={<IconDownload size={12} />} disabled={rows.length === 0}>
@@ -175,6 +193,8 @@ export function ResultsPanel() {
         <Text size="sm" c="dimmed" p="sm">
           Measurement results appear here. Select ROIs and press M, or ⇧M to measure all.
         </Text>
+      ) : view === 'plot' ? (
+        <ResultsPlot />
       ) : (
         <Table stickyHeader striped={!virtualize} highlightOnHover withColumnBorders fz="xs" verticalSpacing={2} horizontalSpacing={6} data-testid="results-table">
           <Table.Thead>
