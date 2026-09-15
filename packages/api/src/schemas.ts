@@ -29,6 +29,7 @@ export const HealthResponse = Type.Object({
 });
 export type HealthResponse = Static<typeof HealthResponse>;
 
+// "regionStatistics" is the first-order statistics group (the id predates the other first-order features)
 export const FeatureGroup = Type.Union([Type.Literal('regionStatistics'), Type.Literal('haralick'), Type.Literal('other')]);
 
 export const FeatureInfo = Type.Object({

@@ -59,7 +59,7 @@ To run the application, build the addon and web app and start the server; see [W
 
 | Group | Features |
 | --- | --- |
-| Region statistics | Mean, STD |
+| First-order statistics | Mean, STD, Minimum, Maximum, Range, Median, 10th/90th Percentile, Interquartile Range, (Robust) Mean Absolute Deviation, Root Mean Squared, Energy, Variance, Skewness, Kurtosis, Entropy, Uniformity |
 | Haralick | Energy (Angular Second Moment), Contrast, Correlation (I, II, III), Sum of Squares (in i, j, both), Homogeneity I, Homogeneity II (Inverse Difference Moment), Sum Average, Sum Variance, Sum Entropy, Entropy, Difference Variance, Difference Entropy, Information Measures of Correlation I and II, Maximal Correlation Coefficient |
 | Others | Auto Correlation, Cluster Shade, Cluster Prominence, Dissimilarity, Maximum Probability, Inverse Difference Normalized, Inverse Difference Moment Normalized |
 

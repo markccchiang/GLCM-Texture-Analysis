@@ -209,7 +209,7 @@ function ShortcutsContent() {
 }
 
 const FEATURE_GROUP_LABELS: Record<string, string> = {
-  regionStatistics: 'Region statistics',
+  regionStatistics: 'First-order statistics',
   haralick: 'Haralick features',
   other: 'Other co-occurrence features',
 };

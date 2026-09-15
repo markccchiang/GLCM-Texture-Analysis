@@ -43,7 +43,7 @@ import { formatLength, formatSpacing, isAnisotropic, offsetLengthsMm } from '../
 export const NON_STANDARD_NOTE = 'Non-standard: follows Yang et al. (2012) as printed; see Feature Equations.';
 
 const GROUP_LABELS: Record<string, string> = {
-  regionStatistics: 'Region statistics',
+  regionStatistics: 'First-order statistics',
   haralick: 'Haralick',
   other: 'Other',
 };

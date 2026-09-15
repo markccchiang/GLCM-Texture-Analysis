@@ -187,12 +187,18 @@ Features
 
 The first column is the ``glcm::Type`` value passed to ``TextureAnalysis::Calculate()``.
 
-Region statistics
-~~~~~~~~~~~~~~~~~
+.. _region-statistics:
+
+First-order statistics
+~~~~~~~~~~~~~~~~~~~~~~
 
 These do not use the co-occurrence matrix. The same value is reported for every computed direction. Let
-:math:`v_1, \dots, v_N` be the values of the :math:`N` pixels in :math:`\Omega`. The analysis pipeline uses the original
-intensities (before quantization); ``TextureAnalysis`` on its own uses the gray levels it is given.
+:math:`v_1, \dots, v_N` be the values of the :math:`N` pixels in :math:`\Omega` and :math:`v_{(1)} \le \dots \le v_{(N)}`
+the same values sorted. The analysis pipeline uses the original intensities (before quantization) for all of them except
+``FirstOrderEntropy`` and ``Uniformity``, which use the quantized gray levels. ``TextureAnalysis`` on its own computes
+only ``Mean`` and ``Std``, from the gray levels it is given; the others are computed by ``ComputeFirstOrderStatistics``
+(``core/analysis/FirstOrder``). The definitions follow PyRadiomics [vanGriethuysen2017]_ and the IBSI
+[Zwanenburg2020]_, and are checked against PyRadiomics in the core tests. Every value is NaN for an empty region.
 
 ``Mean``
    .. math:: \bar{v} = \frac{1}{N} \sum_{t=1}^{N} v_t
@@ -205,6 +211,64 @@ intensities (before quantization); ``TextureAnalysis`` on its own uses the gray 
    .. math:: s = \sqrt{\frac{1}{N - 1} \sum_{t=1}^{N} (v_t - \bar{v})^2}
 
    0 for a single pixel and NaN for an empty region.
+
+``Minimum``, ``Maximum``, ``Range``
+   :math:`v_{(1)}`, :math:`v_{(N)}` and :math:`v_{(N)} - v_{(1)}`.
+
+``Median``, ``Percentile10``, ``Percentile90``
+   The percentiles :math:`P_{50}`, :math:`P_{10}` and :math:`P_{90}`, interpolated linearly between the sorted values
+   (NumPy's default):
+
+   .. math:: P_q = v_{(k)} + (h - k + 1) \, \bigl(v_{(k+1)} - v_{(k)}\bigr), \qquad h = 1 + (N - 1) \frac{q}{100}, \quad k = \lfloor h \rfloor
+
+   with :math:`v_{(N+1)} = v_{(N)}`.
+
+``InterquartileRange``
+   .. math:: f = P_{75} - P_{25}
+
+``MeanAbsoluteDeviation``
+   .. math:: f = \frac{1}{N} \sum_{t=1}^{N} |v_t - \bar{v}|
+
+``RobustMeanAbsoluteDeviation``
+   The mean absolute deviation of the :math:`N_{10-90}` values with :math:`P_{10} \le v_t \le P_{90}` from their own
+   mean :math:`\bar{v}_{10-90}`:
+
+   .. math:: f = \frac{1}{N_{10-90}} \sum_{P_{10} \le v_t \le P_{90}} |v_t - \bar{v}_{10-90}|
+
+``RootMeanSquared``
+   .. math:: f = \sqrt{\frac{1}{N} \sum_{t=1}^{N} v_t^2}
+
+``FirstOrderEnergy`` — Energy (first-order)
+   .. math:: f = \sum_{t=1}^{N} v_t^2
+
+   Without an intensity shift (PyRadiomics' ``voxelArrayShift`` of 0). It grows with the number of pixels, so it only
+   compares ROIs of the same size.
+
+``Variance``
+   Population variance, unlike ``Std``:
+
+   .. math:: \sigma^2 = \frac{1}{N} \sum_{t=1}^{N} (v_t - \bar{v})^2
+
+``Skewness``
+   .. math:: f = \frac{\frac{1}{N} \sum_{t} (v_t - \bar{v})^3}{\sigma^3}
+
+   0 when :math:`\sigma = 0`.
+
+``Kurtosis``
+   .. math:: f = \frac{\frac{1}{N} \sum_{t} (v_t - \bar{v})^4}{\sigma^4}
+
+   Not the excess kurtosis: a normal distribution gives 3. 0 when :math:`\sigma = 0`.
+
+``FirstOrderEntropy`` — Entropy (first-order)
+   With :math:`p(i) = N_i / N` the fraction of the region's pixels at gray level :math:`i` after quantization:
+
+   .. math:: f = -\sum_{i=0}^{N_g-1} p(i) \log\bigl(p(i) + \epsilon\bigr)
+
+   :math:`\epsilon` is the machine epsilon (:math:`2.2 \cdot 10^{-16}`), and the logarithm follows the log base setting
+   (PyRadiomics uses :math:`\log_2`).
+
+``Uniformity``
+   .. math:: f = \sum_{i=0}^{N_g-1} p(i)^2
 
 Haralick features
 ~~~~~~~~~~~~~~~~~

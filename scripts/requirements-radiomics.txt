@@ -1,0 +1,11 @@
+# Python 3.12 environment for scripts/radiomics-reference.py (see the setup in its docstring).
+# PyRadiomics 3.1.0 has no wheels for current Python versions; it is built from the commit of its v3.1.0 git tag.
+pyradiomics @ git+https://github.com/AIM-Harvard/pyradiomics.git@6a761c4eb01905cfcb1139b0b158547c55edd4df
+docopt==0.6.2
+numpy==2.5.3
+pykwalify==1.8.0
+python-dateutil==2.9.0.post0
+pywavelets==1.10.0
+ruamel-yaml==0.19.1
+simpleitk==2.5.6
+six==1.17.0

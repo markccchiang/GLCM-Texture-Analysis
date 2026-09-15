@@ -9,6 +9,7 @@ find_package(Eigen3 REQUIRED NO_MODULE)
 find_package(nlohmann_json 3.11 REQUIRED)
 
 add_library(glcm_core STATIC
+        analysis/FirstOrder.cpp
         analysis/Score.cpp
         analysis/TextureAnalysis.cpp
         imaging/DisplayRenderer.cpp
@@ -43,6 +44,7 @@ if (GLCM_BUILD_TESTS)
     if (GTest_FOUND)
         enable_testing()
         add_executable(glcm-tests
+                tests/FirstOrderTest.cpp
                 tests/TextureAnalysisTest.cpp
                 tests/ImagingTest.cpp
                 tests/IoTest.cpp
@@ -50,6 +52,8 @@ if (GLCM_BUILD_TESTS)
                 tests/RoiTest.cpp
                 tests/TextureOptionsTest.cpp)
         target_link_libraries(glcm-tests PRIVATE glcm_core GTest::gtest_main nlohmann_json::nlohmann_json)
+        # Reference data and sample images of the repository (FirstOrderTest). The repository root: core/ is also built as its own project, where PROJECT_SOURCE_DIR is core/
+        target_compile_definitions(glcm-tests PRIVATE GLCM_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/..")
         # Keep the test binary at the top of the build tree (./build/glcm-tests)
         set_target_properties(glcm-tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
         include(GoogleTest)

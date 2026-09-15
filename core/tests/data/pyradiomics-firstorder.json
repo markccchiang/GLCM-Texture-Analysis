@@ -1,0 +1,95 @@
+{
+  "source": "PyRadiomics 3.1.0a2.post8+g6a761c4, NumPy 2.5.3, SimpleITK 2.5.6",
+  "settings": {
+    "binWidth": 1,
+    "voxelArrayShift": 0,
+    "logBase": "log2"
+  },
+  "cases": [
+    {
+      "image": "textures/camera.png",
+      "rectangle": [
+        100,
+        100,
+        64,
+        48
+      ],
+      "bitDepth": 8,
+      "features": {
+        "Minimum": 8.0,
+        "Maximum": 216.0,
+        "Range": 208.0,
+        "Median": 39.0,
+        "Percentile10": 25.0,
+        "Percentile90": 214.0,
+        "InterquartileRange": 178.0,
+        "MeanAbsoluteDeviation": 83.58883603413899,
+        "RobustMeanAbsoluteDeviation": 84.08498715394647,
+        "RootMeanSquared": 133.79298496378962,
+        "FirstOrderEnergy": 54990529.0,
+        "Variance": 7493.042996618482,
+        "Skewness": 0.4587080373398369,
+        "Kurtosis": 1.2564373889771843,
+        "Mean": 102.01725260416667,
+        "FirstOrderEntropy": 5.053833472726367,
+        "Uniformity": 0.04926808675130208
+      }
+    },
+    {
+      "image": "textures/brick.png",
+      "rectangle": [
+        200,
+        150,
+        90,
+        70
+      ],
+      "bitDepth": 8,
+      "features": {
+        "Minimum": 68.0,
+        "Maximum": 203.0,
+        "Range": 135.0,
+        "Median": 99.0,
+        "Percentile10": 96.0,
+        "Percentile90": 166.0,
+        "InterquartileRange": 7.0,
+        "MeanAbsoluteDeviation": 21.145670949861426,
+        "RobustMeanAbsoluteDeviation": 11.82073981456207,
+        "RootMeanSquared": 114.82507883802532,
+        "FirstOrderEnergy": 83064232.0,
+        "Variance": 765.6421063240109,
+        "Skewness": 1.6574478700947652,
+        "Kurtosis": 4.40896848340766,
+        "Mean": 111.44126984126984,
+        "FirstOrderEntropy": 4.9966684216058095,
+        "Uniformity": 0.06943083900226757
+      }
+    },
+    {
+      "image": "medical/ct-chest.png",
+      "rectangle": [
+        180,
+        200,
+        120,
+        80
+      ],
+      "bitDepth": 16,
+      "features": {
+        "Minimum": 0.0,
+        "Maximum": 4095.0,
+        "Range": 4095.0,
+        "Median": 1011.5,
+        "Percentile10": 135.0,
+        "Percentile90": 1452.0,
+        "InterquartileRange": 1123.25,
+        "MeanAbsoluteDeviation": 517.7425558810762,
+        "RobustMeanAbsoluteDeviation": 397.2997329397875,
+        "RootMeanSquared": 1170.0017060617904,
+        "FirstOrderEnergy": 13141478325.0,
+        "Variance": 461716.9955533744,
+        "Skewness": 1.0808468635933308,
+        "Kurtosis": 6.158467638487285,
+        "Mean": 952.4636458333333
+      }
+    }
+  ]
+}

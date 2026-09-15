@@ -4,6 +4,7 @@
 #include <cmath>
 #include <stdexcept>
 
+#include "analysis/FirstOrder.hpp"
 #include "analysis/Score.hpp"
 #include "imaging/Quantizer.hpp"
 
@@ -99,10 +100,22 @@ bool MatchesScoreCalibration(const AnalysisSettings& settings, int distance, int
 struct PreparedRegion {
     RegionStatistics statistics;
     QuantizationResult quantized;
+    std::map<Type, double> first_order; // the requested first-order statistics
 };
 
 PreparedRegion Prepare(const cv::Mat& gray, const cv::Mat& mask, const AnalysisSettings& settings) {
-    return {ComputeRegionStatistics(gray, mask), Quantize(gray, mask, settings.gray_levels, settings.quantization)};
+    PreparedRegion prepared{ComputeRegionStatistics(gray, mask), Quantize(gray, mask, settings.gray_levels, settings.quantization), {}};
+    std::set<Type> first_order;
+    for (Type type : settings.features) {
+        if (IsFirstOrderStatistic(type)) {
+            first_order.insert(type);
+        }
+    }
+    if (!first_order.empty()) {
+        prepared.first_order =
+            ComputeFirstOrderStatistics(gray, mask, prepared.quantized.image, settings.gray_levels, settings.log_base, first_order);
+    }
+    return prepared;
 }
 
 void Measure(const cv::Mat& gray, const cv::Mat& mask, const PreparedRegion& prepared, int distance, const AnalysisSettings& settings,
@@ -130,7 +143,7 @@ void Measure(const cv::Mat& gray, const cv::Mat& mask, const PreparedRegion& pre
 
     std::set<Type> texture_types;
     for (Type type : settings.features) {
-        if (type != Type::Mean && type != Type::Std) {
+        if (type != Type::Mean && type != Type::Std && !IsFirstOrderStatistic(type)) {
             texture_types.insert(type);
         }
     }
@@ -148,6 +161,9 @@ void Measure(const cv::Mat& gray, const cv::Mat& mask, const PreparedRegion& pre
     }
     if (settings.features.count(Type::Std) > 0) {
         result.values[Type::Std] = Uniform(statistics.std, settings.directions);
+    }
+    for (const auto& [type, value] : prepared.first_order) {
+        result.values[type] = Uniform(value, settings.directions);
     }
     for (Type type : texture_types) {
         result.values[type] = values.at(type);

@@ -45,6 +45,23 @@ enum class Type {
     InverseDifferenceNormalized,
     InverseDifferenceMomentNormalized,
     MaximalCorrelationCoefficient,
+    // First-order statistics (analysis/FirstOrder): from the pixels of the region, not the co-occurrence matrix
+    Minimum,
+    Maximum,
+    Range,
+    Median,
+    Percentile10,
+    Percentile90,
+    InterquartileRange,
+    MeanAbsoluteDeviation,
+    RobustMeanAbsoluteDeviation,
+    RootMeanSquared,
+    FirstOrderEnergy,
+    Variance,
+    Skewness,
+    Kurtosis,
+    FirstOrderEntropy,
+    Uniformity,
     // Not texture features: added by CalculateScore
     Score,
     Age

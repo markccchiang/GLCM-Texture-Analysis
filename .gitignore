@@ -2,6 +2,7 @@ build/
 doc/_build/
 doc/.venv/
 .venv-medical/
+.venv-radiomics/
 CLAUDE.md
 .idea/
 node_modules/

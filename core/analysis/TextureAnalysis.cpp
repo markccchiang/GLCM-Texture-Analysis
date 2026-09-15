@@ -813,6 +813,38 @@ std::string TextureAnalysis::TypeToString(Type type) {
             return "Inverse Difference Moment Normalized";
         case Type::MaximalCorrelationCoefficient:
             return "Maximal Correlation Coefficient";
+        case Type::Minimum:
+            return "Minimum";
+        case Type::Maximum:
+            return "Maximum";
+        case Type::Range:
+            return "Range";
+        case Type::Median:
+            return "Median";
+        case Type::Percentile10:
+            return "10th Percentile";
+        case Type::Percentile90:
+            return "90th Percentile";
+        case Type::InterquartileRange:
+            return "Interquartile Range";
+        case Type::MeanAbsoluteDeviation:
+            return "Mean Absolute Deviation";
+        case Type::RobustMeanAbsoluteDeviation:
+            return "Robust Mean Absolute Deviation";
+        case Type::RootMeanSquared:
+            return "Root Mean Squared";
+        case Type::FirstOrderEnergy:
+            return "Energy (first-order)";
+        case Type::Variance:
+            return "Variance";
+        case Type::Skewness:
+            return "Skewness";
+        case Type::Kurtosis:
+            return "Kurtosis";
+        case Type::FirstOrderEntropy:
+            return "Entropy (first-order)";
+        case Type::Uniformity:
+            return "Uniformity";
         case Type::Score:
             return "Score";
         case Type::Age:

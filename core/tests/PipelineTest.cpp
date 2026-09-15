@@ -137,11 +137,14 @@ TEST(FeatureCatalogTest, PresetsAreValid) {
         if (preset.id == "haralick") {
             EXPECT_EQ(preset.features.size(), 14u);
         }
+        if (preset.id == "firstOrder") {
+            EXPECT_EQ(preset.features.size(), 18u); // Mean, Std and the 16 of analysis/FirstOrder
+        }
         if (preset.id == "score") {
             EXPECT_TRUE(preset.enables_score);
         }
     }
-    EXPECT_EQ(ids, (std::set<std::string>{"haralick", "clausi2002", "basic", "score", "all"}));
+    EXPECT_EQ(ids, (std::set<std::string>{"haralick", "clausi2002", "basic", "score", "firstOrder", "all"}));
 }
 
 TEST(AnalysisSettingsTest, DefaultsDependOnBitDepth) {

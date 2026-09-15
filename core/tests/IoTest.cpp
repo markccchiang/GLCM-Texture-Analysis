@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include "analysis/FirstOrder.hpp"
+#include "imaging/Quantizer.hpp"
 #include "io/Identifiers.hpp"
 #include "io/Json.hpp"
 #include "io/ResultsCsv.hpp"
@@ -506,6 +508,36 @@ TEST(ResultsJsonTest, ReadsBackWhatItWrites) {
     EXPECT_EQ(document.results[2].error, output.results[2].error);
     EXPECT_EQ(document.context.image_name, CONTEXT.image_name);
     EXPECT_EQ(document.settings.distances, settings.distances);
+}
+
+TEST(AnalysisRunnerFirstOrderTest, ReportsFirstOrderStatisticsOfTheRoiInEveryDirection) {
+    AnalysisSettings settings = DefaultSettings(8);
+    settings.features = {Type::Std, Type::Minimum, Type::Maximum, Type::Range, Type::Median, Type::Variance, Type::FirstOrderEntropy,
+        Type::Uniformity, Type::Contrast};
+    settings.directions = {Direction::H, Direction::V};
+    const cv::Mat image = Pattern8(30, 30);
+    const AnalysisOutput output = RunAnalysis(image, {MakeRoi("r1", "A", RectangleRoi{2, 3, 20, 10})}, settings);
+    ASSERT_EQ(output.results.size(), 1u);
+    const MeasurementResult& result = output.results[0];
+    ASSERT_EQ(result.status, MeasurementStatus::Ok);
+
+    // The module's values for the ROI's pixels and gray levels, in the computed directions only
+    const cv::Rect box(2, 3, 20, 10);
+    const cv::Mat mask(box.size(), CV_8UC1, cv::Scalar(255));
+    const QuantizationResult quantized = Quantize(image(box), mask, settings.gray_levels, settings.quantization);
+    const auto expected = ComputeFirstOrderStatistics(image(box), mask, quantized.image, settings.gray_levels, settings.log_base,
+        {Type::Minimum, Type::Maximum, Type::Range, Type::Median, Type::Variance, Type::FirstOrderEntropy, Type::Uniformity});
+    for (const auto& [type, value] : expected) {
+        SCOPED_TRACE(TextureAnalysis::TypeToString(type));
+        EXPECT_EQ(result.values.at(type).H, value);
+        EXPECT_EQ(result.values.at(type).V, value);
+        EXPECT_TRUE(std::isnan(result.values.at(type).LD));
+    }
+
+    // Variance is the population variance, Std the sample standard deviation
+    const double n = result.pixel_count;
+    EXPECT_NEAR(result.values.at(Type::Variance).H, std::pow(result.values.at(Type::Std).H, 2) * (n - 1) / n, 1e-9);
+    EXPECT_TRUE(result.values.count(Type::Contrast) > 0);
 }
 
 TEST(ResultsCsvTest, WritesAreasWithAPixelSpacing) {

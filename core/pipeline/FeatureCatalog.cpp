@@ -15,7 +15,7 @@ const char YANG_SUM_OF_SQUARES[] =
     "Follows Yang et al. (2012): the sum of the variances in i and j, which is twice Haralick's F4 for "
     "a symmetric co-occurrence matrix. Sum of Squares (in x) is Haralick's F4.";
 
-const char REGION_ANCHOR[] = "equations.html#region-statistics";
+const char REGION_ANCHOR[] = "equations.html#first-order-statistics";
 const char HARALICK_ANCHOR[] = "equations.html#haralick-features";
 const char OTHER_ANCHOR[] = "equations.html#other-co-occurrence-features";
 
@@ -30,6 +30,22 @@ std::vector<FeatureInfo> BuildCatalog() {
     return {
         Make(Type::Mean, "Mean", G::RegionStatistics, REGION_ANCHOR),
         Make(Type::Std, "Std", G::RegionStatistics, REGION_ANCHOR),
+        Make(Type::Minimum, "Minimum", G::RegionStatistics, REGION_ANCHOR),
+        Make(Type::Maximum, "Maximum", G::RegionStatistics, REGION_ANCHOR),
+        Make(Type::Range, "Range", G::RegionStatistics, REGION_ANCHOR),
+        Make(Type::Median, "Median", G::RegionStatistics, REGION_ANCHOR),
+        Make(Type::Percentile10, "Percentile10", G::RegionStatistics, REGION_ANCHOR),
+        Make(Type::Percentile90, "Percentile90", G::RegionStatistics, REGION_ANCHOR),
+        Make(Type::InterquartileRange, "InterquartileRange", G::RegionStatistics, REGION_ANCHOR),
+        Make(Type::MeanAbsoluteDeviation, "MeanAbsoluteDeviation", G::RegionStatistics, REGION_ANCHOR),
+        Make(Type::RobustMeanAbsoluteDeviation, "RobustMeanAbsoluteDeviation", G::RegionStatistics, REGION_ANCHOR),
+        Make(Type::RootMeanSquared, "RootMeanSquared", G::RegionStatistics, REGION_ANCHOR),
+        Make(Type::FirstOrderEnergy, "FirstOrderEnergy", G::RegionStatistics, REGION_ANCHOR),
+        Make(Type::Variance, "Variance", G::RegionStatistics, REGION_ANCHOR),
+        Make(Type::Skewness, "Skewness", G::RegionStatistics, REGION_ANCHOR),
+        Make(Type::Kurtosis, "Kurtosis", G::RegionStatistics, REGION_ANCHOR),
+        Make(Type::FirstOrderEntropy, "FirstOrderEntropy", G::RegionStatistics, REGION_ANCHOR),
+        Make(Type::Uniformity, "Uniformity", G::RegionStatistics, REGION_ANCHOR),
 
         Make(Type::Energy, "Energy", G::Haralick, HARALICK_ANCHOR),
         Make(Type::Contrast, "Contrast", G::Haralick, HARALICK_ANCHOR),
@@ -92,8 +108,12 @@ std::optional<Type> FeatureTypeFromId(const std::string& id) {
 const std::vector<FeaturePreset>& FeaturePresets() {
     static const std::vector<FeaturePreset> presets = [] {
         std::set<Type> all;
+        std::set<Type> first_order;
         for (const FeatureInfo& info : FeatureCatalog()) {
             all.insert(info.type);
+            if (info.group == FeatureGroup::RegionStatistics) {
+                first_order.insert(info.type);
+            }
         }
         return std::vector<FeaturePreset>{
             {"haralick", "Haralick F1–F14",
@@ -105,6 +125,7 @@ const std::vector<FeaturePreset>& FeaturePresets() {
             {"basic", "Basic",
                 {Type::Mean, Type::Std, Type::Contrast, Type::Entropy, Type::Energy, Type::HomogeneityII, Type::CorrelationII}, false},
             {"score", "Score (Mean, Entropy, Contrast)", {Type::Mean, Type::Entropy, Type::Contrast}, true},
+            {"firstOrder", "First-order statistics", first_order, false},
             {"all", "All features", all, false},
         };
     }();

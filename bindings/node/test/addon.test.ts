@@ -55,15 +55,16 @@ describe('catalog', () => {
 
   it('lists every feature with its flags', () => {
     const catalog = native.catalog();
-    expect(catalog.features).toHaveLength(31);
-    expect(new Set(catalog.features.map((feature) => feature.id)).size).toBe(31);
+    expect(catalog.features).toHaveLength(47);
+    expect(new Set(catalog.features.map((feature) => feature.id)).size).toBe(47);
 
     const nonStandard = catalog.features.filter((feature) => feature.nonStandard).map((feature) => feature.id);
     expect(nonStandard.sort()).toEqual(['CorrelationIII', 'SumOfSquares']);
     expect(catalog.features.find((feature) => feature.id === 'MaximalCorrelationCoefficient')?.cost).toBe('slow');
-    expect(catalog.features[0]).toMatchObject({ id: 'Mean', group: 'regionStatistics', docAnchor: 'equations.html#region-statistics' });
+    expect(catalog.features[0]).toMatchObject({ id: 'Mean', group: 'regionStatistics', docAnchor: 'equations.html#first-order-statistics' });
+    expect(catalog.features.filter((feature) => feature.group === 'regionStatistics')).toHaveLength(18);
 
-    expect(catalog.presets.map((preset) => preset.id)).toEqual(['haralick', 'clausi2002', 'basic', 'score', 'all']);
+    expect(catalog.presets.map((preset) => preset.id)).toEqual(['haralick', 'clausi2002', 'basic', 'score', 'firstOrder', 'all']);
     expect(catalog.presets[0].features).toHaveLength(14);
     expect(catalog.limits).toMatchObject({
       minGrayLevels: 2,
