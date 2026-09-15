@@ -335,14 +335,30 @@ paths are relative to ``core/``. The main entry points:
    * - ``roi/Roi.hpp``
      - ``RectangleRoi``, ``EllipseRoi``, ``PolygonRoi``, ``Roi``; ``RasterizeMask``, ``RasterizeCroppedMask``, ``MaskBoundingBox``,
        ``CountMaskPixels``
+   * - ``imaging/ImageHeader.hpp``
+     - ``ReadImageSize``, ``ReadImageSizeFromBytes`` → ``ImageSize{width, height, more_images, pixel_spacing}``;
+       ``PixelSpacing``, ``SpacingFromDensity``
    * - ``imaging/Quantizer.hpp``
      - ``QuantizationSettings``, ``Quantize``
    * - ``analysis/TextureAnalysis.hpp``
      - ``TextureAnalysis``, ``Type``, ``Direction``, ``Features``, ``TextureOptions``
+   * - ``analysis/FirstOrder.hpp``
+     - ``ComputeFirstOrderStatistics``, ``IsFirstOrderStatistic``
+   * - ``analysis/RunLength.hpp``
+     - ``ComputeRunLengthMatrix`` → ``RunLengthMatrix``, ``ComputeRunLengthFeatures``, ``IsRunLengthFeature``
+   * - ``analysis/SizeZone.hpp``
+     - ``ComputeSizeZoneMatrix`` → ``SizeZoneMatrix``, ``ComputeSizeZoneFeatures``, ``IsSizeZoneFeature``
+   * - ``analysis/GrayToneDifference.hpp``
+     - ``ComputeGrayToneDifferenceMatrix`` → ``GrayToneDifferenceMatrix``, ``ComputeGrayToneDifferenceFeatures``,
+       ``IsGrayToneDifferenceFeature``
+   * - ``analysis/LocalBinaryPattern.hpp``
+     - ``LocalBinaryPatternCode``, ``ComputeLocalBinaryPatternHistogram``, ``ComputeLocalBinaryPatternFeatures``,
+       ``IsLocalBinaryPatternFeature``
    * - ``pipeline/AnalysisSettings.hpp``
      - ``AnalysisSettings``, ``DefaultSettings``, ``ValidateSettings``
    * - ``pipeline/AnalysisRunner.hpp``
-     - ``RunAnalysis`` → ``AnalysisOutput{results, cancelled}``; ``ComputeRegionStatistics``
+     - ``RunAnalysis`` → ``AnalysisOutput{results, cancelled}``, computing every feature family of the settings;
+       ``ComputeRegionStatistics``
    * - ``pipeline/FeatureCatalog.hpp``
      - ``FeatureCatalog``, ``FeaturePresets``, ``FeatureTypeFromId``
    * - ``imaging/DisplayRenderer.hpp``
@@ -369,7 +385,8 @@ paths are relative to ``core/``. The main entry points:
 
    glcm::AnalysisOutput output = glcm::RunAnalysis(image.gray, {roi}, settings);
    double contrast_0_deg = output.results[0].values.at(glcm::Type::Contrast).H;
-   std::string csv = glcm::ResultsToCsv(output.results, settings, {"camera.png", "", "2026-09-14T12:00:00Z"});
+   // Image name, SHA-256, timestamp and pixel spacing (std::nullopt: no areas in mm²)
+   std::string csv = glcm::ResultsToCsv(output.results, settings, {"camera.png", "", "2026-09-14T12:00:00Z", std::nullopt});
 
 Functions throw ``std::invalid_argument`` for invalid input (for example invalid settings); ``RunAnalysis`` reports
 problems with a single ROI as a ``Skipped`` or ``Failed`` result instead.

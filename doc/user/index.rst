@@ -10,8 +10,8 @@ GLCM Texture Analysis measures the texture of regions in grayscale images. A typ
    (:ref:`viewing`).
 #. **Draw regions of interest (ROIs)** — rectangles, ellipses, polygons or freehand outlines, collected in the ROI
    Manager (:ref:`rois`).
-#. **Measure** — choose the texture features and the GLCM settings, and measure the selected or all ROIs; the results
-   appear in a table (:ref:`measuring`).
+#. **Measure** — choose the texture features and the analysis settings, and measure the selected or all ROIs, or the
+   same ROIs on a batch of images; the results appear in a table and as plots (:ref:`measuring`).
 #. **Save and export** — export the results as CSV or JSON, save the ROIs for another session, export the ROI images,
    or save everything as a project (:ref:`files`).
 
