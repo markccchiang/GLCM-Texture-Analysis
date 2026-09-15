@@ -17,5 +17,6 @@ export const {
   windowLevel,
   featureMapGrid,
   computeFeatureMap,
+  CancelToken,
 } = native;
 export default native;

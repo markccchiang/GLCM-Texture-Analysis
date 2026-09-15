@@ -4244,7 +4244,7 @@
         "tags": [
           "featureMaps"
         ],
-        "description": "Computes a co-occurrence feature in a window around every point of a grid over the whole image, in bands of rows that share the worker limit with analyses. Poll GET /feature-maps/{id} until the status is final, then fetch the values. Maps are kept in memory only, and the oldest finished maps are forgotten.",
+        "description": "Computes a co-occurrence feature in a window around every point of a grid over the whole image, in bands of rows of about equal computing work that share the worker limit with analyses. A map with more bands than GLCM_MAX_FEATURE_MAP_BANDS (or the pending task limit) is refused with 422 TooManyJobs. Poll GET /feature-maps/{id} until the status is final, then fetch the values. Maps are kept in memory only, and the oldest finished maps are forgotten.",
         "requestBody": {
           "required": true,
           "content": {
@@ -5141,7 +5141,7 @@
         "tags": [
           "featureMaps"
         ],
-        "description": "A queued or running map is cancelled once its running bands finish; a finished map is forgotten.",
+        "description": "A queued or running map is cancelled: queued bands are dropped and running bands stop after their current point. A finished map is forgotten.",
         "parameters": [
           {
             "schema": {

@@ -385,8 +385,9 @@ describe('feature maps', () => {
   const centre = (index: number, step: number, size: number) => Math.floor((index * step + Math.min(index * step + step, size) - 1) / 2);
 
   it('gives the grid of an image and validates the settings', () => {
-    expect(native.featureMapGrid(JSON.stringify(settings), width, height)).toEqual({ step: 4, columns: 6, rows: 4 });
-    expect(native.featureMapGrid(JSON.stringify({ ...settings, step: null }), 1100, 20)).toEqual({ step: 3, columns: 367, rows: 7 });
+    expect(native.featureMapGrid(JSON.stringify(settings), width, height)).toMatchObject({ step: 4, columns: 6, rows: 4 });
+    expect(native.featureMapGrid(JSON.stringify({ ...settings, step: null }), 1100, 20)).toMatchObject({ step: 3, columns: 367, rows: 7 });
+    expect(native.featureMapGrid(JSON.stringify(settings), width, height).workPerRow).toBeGreaterThan(0);
     for (const invalid of [{ feature: 'MaximalCorrelationCoefficient' }, { window: 4 }, { distance: 5 }, { step: 0.5 }]) {
       expect(() => native.featureMapGrid(JSON.stringify({ ...settings, ...invalid }), width, height)).toThrow(
         expect.objectContaining({ code: 'INVALID_ARGUMENT' }),
@@ -411,6 +412,17 @@ describe('feature maps', () => {
       const mean = (JSON.parse(json) as { results: Array<{ values: { Contrast: { mean: number } } }> }).results[0].values.Contrast.mean;
       expect(values[row * 6 + column]).toBeCloseTo(mean, 4);
     }
+  });
+
+  it('stops computations whose token was cancelled', async () => {
+    const token = new native.CancelToken();
+    expect(token.cancelled).toBe(false);
+    const values = await native.computeFeatureMap(pixels, width, height, 8, JSON.stringify(settings), 0, 4, token);
+    expect(values).toHaveLength(24);
+    token.cancel();
+    expect(token.cancelled).toBe(true);
+    expect(await rejectionCode(native.computeFeatureMap(pixels, width, height, 8, JSON.stringify(settings), 0, 4, token))).toBe('CANCELLED');
+    expect(() => native.computeFeatureMap(pixels, width, height, 8, JSON.stringify(settings), 0, 4, {} as native.CancelToken)).toThrow(TypeError);
   });
 
   it('rejects rows outside the map and images that cannot be quantized', async () => {

@@ -14,6 +14,10 @@ namespace glcm {
 
 namespace {
 
+// Passes over each direction's co-occurrence matrix per point (normalizing, marginals, the feature), relative to one
+// pixel pair; FeatureMapRowWork's unit is one counted pixel pair
+const double MATRIX_PASSES = 4.0;
+
 int64_t CeilDivide(int64_t numerator, int64_t denominator) {
     return (numerator + denominator - 1) / denominator;
 }
@@ -115,6 +119,16 @@ FeatureMapGrid ResolveFeatureMapGrid(int width, int height, int step) {
     return grid;
 }
 
+double FeatureMapRowWork(const FeatureMapSettings& settings, int width, int height) {
+    const FeatureMapGrid grid = ResolveFeatureMapGrid(width, height, settings.step);
+    const double window_pixels = static_cast<double>(std::min(settings.window, width)) * std::min(settings.window, height);
+    const double directions = static_cast<double>(settings.directions.size());
+    const double matrix_cells = static_cast<double>(settings.gray_levels) * settings.gray_levels;
+    // Each window pixel is paired with its two neighbours in every direction
+    const double per_point = window_pixels * (1.0 + 2.0 * directions) + directions * matrix_cells * MATRIX_PASSES;
+    return grid.columns * per_point;
+}
+
 void ValidateFeatureMapSettings(const FeatureMapSettings& settings) {
     if (!IsFeatureMapFeature(settings.feature)) {
         const std::string name =
@@ -143,7 +157,8 @@ void ValidateFeatureMapSettings(const FeatureMapSettings& settings) {
     ValidateSettings(analysis);
 }
 
-std::vector<float> ComputeFeatureMapRows(const cv::Mat& gray, const FeatureMapSettings& settings, int first_row, int row_count) {
+std::vector<float> ComputeFeatureMapRows(
+    const cv::Mat& gray, const FeatureMapSettings& settings, int first_row, int row_count, const std::atomic<bool>* cancel) {
     if (gray.empty() || gray.channels() != 1 || (gray.depth() != CV_8U && gray.depth() != CV_16U)) {
         throw std::invalid_argument("The image must be an 8- or 16-bit single-channel image");
     }
@@ -174,6 +189,9 @@ std::vector<float> ComputeFeatureMapRows(const cv::Mat& gray, const FeatureMapSe
         const int centre_y = BlockCentre(row, grid.step, gray.rows);
         const cv::Range rows(std::max(0, centre_y - half) - top, std::min(gray.rows, centre_y + half + 1) - top);
         for (int column = 0; column < grid.columns; ++column) {
+            if (cancel != nullptr && cancel->load(std::memory_order_relaxed)) {
+                throw FeatureMapCancelled();
+            }
             const int centre_x = BlockCentre(column, grid.step, gray.cols);
             const cv::Range columns(std::max(0, centre_x - half), std::min(gray.cols, centre_x + half + 1));
             analysis.ProcessRectImage(levels(rows, columns), settings.distance);

@@ -1,6 +1,9 @@
 import type { AnalysisSettings, FeatureMapInfo, FeatureMapSettings, ImageInfo } from '@glcm/api';
 import * as native from '@glcm/native';
 import { afterEach, describe, expect, it } from 'vitest';
+import { FeatureMapManager, type FeatureMapState } from '../src/analysis/FeatureMapManager.js';
+import { JobLimitError } from '../src/analysis/JobManager.js';
+import { Scheduler } from '../src/analysis/Scheduler.js';
 import { createTestApp, encodeTiff, uploadImage, type TestApp } from './helpers.js';
 
 const WIDTH = 16;
@@ -111,7 +114,8 @@ describe('feature maps', () => {
   });
 
   it('shares the pending task limit with analyses', async () => {
-    const { t, image } = await setup({ analysisConcurrency: 0, maxPendingJobs: 5 });
+    // The map is one band; the analysis's two jobs do not fit next to it
+    const { t, image } = await setup({ analysisConcurrency: 0, maxPendingJobs: 2 });
     expect((await start(t.app, image.imageId)).statusCode).toBe(202);
 
     const settings: AnalysisSettings = {
@@ -129,9 +133,78 @@ describe('feature maps', () => {
     expect(analysis.statusCode).toBe(503);
   });
 
-  it('refuses maps with more bands than the pending task limit', async () => {
-    // Four bands of one row each do not fit into one pending task
-    const { t, image } = await setup({ maxPendingJobs: 1 });
-    expect((await start(t.app, image.imageId)).json()).toMatchObject({ error: 'TooManyJobs' });
+});
+
+describe('feature map manager', () => {
+  const image = { imageId: `img_${'0'.repeat(32)}`, name: 'pattern.tif', width: WIDTH, height: HEIGHT, bitDepth: 8 } as ImageInfo;
+  const pixels = Buffer.from(PIXELS);
+  const options = { maxPendingJobs: 100, maxBands: 100, retainFinished: 8 };
+
+  async function finished(state: FeatureMapState, timeoutMs = 10_000): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    while (state.info.status === 'queued' || state.info.status === 'running') {
+      if (Date.now() > deadline) {
+        throw new Error('The feature map did not finish');
+      }
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+  }
+
+  it('splits the rows into bands of about equal estimated work', async () => {
+    const { workPerRow } = native.featureMapGrid(JSON.stringify(SETTINGS), WIDTH, HEIGHT);
+    const queued = new Scheduler(0);
+    new FeatureMapManager({ ...options, scheduler: queued, bandWork: 1 }).start(SETTINGS, image, pixels);
+    // A band has at least one row
+    expect(queued.pending).toBe(4);
+
+    const scheduler = new Scheduler(2);
+    const manager = new FeatureMapManager({ ...options, scheduler, bandWork: 2.5 * workPerRow });
+    const state = manager.start(SETTINGS, image, pixels);
+    expect(scheduler.pending).toBe(2);
+    await finished(state);
+    expect(state.info).toMatchObject({ status: 'completed', completedRows: 4 });
+    const expected = await native.computeFeatureMap(pixels, WIDTH, HEIGHT, 8, JSON.stringify(SETTINGS), 0, 4);
+    expect(Array.from(state.values)).toEqual(Array.from(expected));
+  });
+
+  it('refuses maps with more bands than the limit', () => {
+    const scheduler = new Scheduler(0);
+    const tooMany = (limits: { maxBands: number; maxPendingJobs: number }) => {
+      try {
+        new FeatureMapManager({ ...options, ...limits, scheduler, bandWork: 1 }).start(SETTINGS, image, pixels);
+      } catch (error) {
+        return error;
+      }
+      return undefined;
+    };
+    expect(tooMany({ maxBands: 3, maxPendingJobs: 100 })).toBeInstanceOf(JobLimitError);
+    expect(tooMany({ maxBands: 3, maxPendingJobs: 100 })).toMatchObject({ reason: 'tooLarge', jobs: 4, limit: 3 });
+    expect(tooMany({ maxBands: 100, maxPendingJobs: 2 })).toMatchObject({ reason: 'tooLarge', jobs: 4, limit: 2 });
+    expect(scheduler.pending).toBe(0);
+  });
+
+  it('stops a running band when the map is cancelled', async () => {
+    const size = 400;
+    const large = { ...image, width: size, height: size };
+    const largePixels = Buffer.from(Array.from({ length: size * size }, (_, i) => (i * 7919 + (i >> 3)) % 256));
+    // Several minutes of computing in a single band
+    const slow: FeatureMapSettings = { ...SETTINGS, window: 127, step: 1, grayLevels: 256, quantization: { method: 'fixedRange', min: 0, max: 255, binWidth: 1 } };
+    const scheduler = new Scheduler(1);
+    const manager = new FeatureMapManager({ ...options, scheduler, bandWork: Number.POSITIVE_INFINITY });
+    const state = manager.start(slow, large, largePixels);
+    expect(state.info.status).toBe('running');
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const cancelledAt = Date.now();
+    expect(manager.cancel(state.info.featureMapId)).toBe(true);
+    await finished(state);
+    expect(Date.now() - cancelledAt).toBeLessThan(2000);
+    expect(state.info).toMatchObject({ status: 'cancelled', completedRows: 0, error: null });
+    expect(scheduler.pending).toBe(0);
+
+    // The worker is free for the next map
+    const next = manager.start(SETTINGS, image, pixels);
+    await finished(next);
+    expect(next.info.status).toBe('completed');
   });
 });

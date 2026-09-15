@@ -155,7 +155,7 @@ direction has no value and stays transparent.
    A Contrast map over the image, with the feature map card.
 
 The map is computed on the server, which shares its workers with measurements. While it runs, a card in the top-right
-corner of the image shows the progress; its **×** cancels the map. When the map is done, the card controls how it looks:
+corner of the image shows the progress; its **×** cancels the map at once. When the map is done, the card controls how it looks:
 
 - **Min** and **Max** set the map's own window: values at or below Min get the first colour, values at or above Max the
   last. **Auto** uses the 0.5 and 99.5 percentiles of the values (the default); **Full range** the smallest and largest

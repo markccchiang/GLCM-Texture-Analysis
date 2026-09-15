@@ -32,7 +32,7 @@ export const featureMapRoutes: FastifyPluginAsyncTypebox<FeatureMapRoutesOptions
       schema: {
         summary: 'Start a feature map',
         description:
-          'Computes a co-occurrence feature in a window around every point of a grid over the whole image, in bands of rows that share the worker limit with analyses. Poll GET /feature-maps/{id} until the status is final, then fetch the values. Maps are kept in memory only, and the oldest finished maps are forgotten.',
+          'Computes a co-occurrence feature in a window around every point of a grid over the whole image, in bands of rows of about equal computing work that share the worker limit with analyses. A map with more bands than GLCM_MAX_FEATURE_MAP_BANDS (or the pending task limit) is refused with 422 TooManyJobs. Poll GET /feature-maps/{id} until the status is final, then fetch the values. Maps are kept in memory only, and the oldest finished maps are forgotten.',
         tags: ['featureMaps'],
         body: FeatureMapRequest,
         response: { 202: FeatureMapInfo, 400: ErrorResponse, 404: ErrorResponse, 422: ErrorResponse, 503: ErrorResponse },
@@ -60,7 +60,11 @@ export const featureMapRoutes: FastifyPluginAsyncTypebox<FeatureMapRoutesOptions
           throw error;
         }
         if (error.reason === 'tooLarge') {
-          throw new ApiError(422, 'TooManyJobs', `The feature map has ${error.jobs} bands, more than the limit of ${error.limit} tasks`);
+          throw new ApiError(
+            422,
+            'TooManyJobs',
+            `The feature map needs ${error.jobs} parts of about a second of computing, more than the limit of ${error.limit}; use a larger step, a smaller window or fewer gray levels`,
+          );
         }
         reply.header('Retry-After', String(BUSY_RETRY_SECONDS));
         throw new ApiError(503, 'ServerBusy', `The server is busy with ${error.pending} tasks; try again later`);
@@ -118,7 +122,7 @@ export const featureMapRoutes: FastifyPluginAsyncTypebox<FeatureMapRoutesOptions
     {
       schema: {
         summary: 'Cancel or forget a feature map',
-        description: 'A queued or running map is cancelled once its running bands finish; a finished map is forgotten.',
+        description: 'A queued or running map is cancelled: queued bands are dropped and running bands stop after their current point. A finished map is forgotten.',
         tags: ['featureMaps'],
         params: FeatureMapIdParams,
         response: { 204: NoBody('Cancelled or forgotten (no body)'), 400: ErrorResponse, 404: ErrorResponse },

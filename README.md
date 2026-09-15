@@ -174,6 +174,7 @@ The server is configured with environment variables:
 | `GLCM_DISPLAY_CACHE_BYTES` | 536,870,912 (512 MiB) | Disk space for cached `display.png` renderings |
 | `GLCM_ANALYSIS_CONCURRENCY` | number of CPU cores | Analysis jobs (ROI × distance) running at the same time |
 | `GLCM_MAX_PENDING_JOBS` | 100,000; 20,000 in server mode | Analysis jobs queued or running over all analyses; larger analyses get `422 TooManyJobs`, others `503 ServerBusy` while the queue is full |
+| `GLCM_MAX_FEATURE_MAP_BANDS` | 4,096; 1,024 in server mode | Bands of one feature map, each about a second of computing (they also count as pending jobs); larger maps get `422 TooManyJobs` |
 | `GLCM_PIXEL_CACHE_BYTES` | 2,147,483,648 (2 GiB); 1 GiB in server mode | Memory for pixel buffers of recently used images (0 = read the file for every request) |
 | `GLCM_WEB_DIR` | `web/dist` | Built web app |
 | `GLCM_SAMPLES_DIR` | `samples/` | Sample images offered on the start screen |

@@ -1,8 +1,10 @@
 #ifndef GLCM_FEATURE_MAP_HPP_
 #define GLCM_FEATURE_MAP_HPP_
 
+#include <atomic>
 #include <opencv2/core.hpp>
 #include <set>
+#include <stdexcept>
 #include <vector>
 
 #include "analysis/TextureAnalysis.hpp"
@@ -36,6 +38,12 @@ struct FeatureMapGrid {
     int rows = 0;    // ceil(height / step)
 };
 
+// Thrown by ComputeFeatureMapRows when its cancel flag is set
+class FeatureMapCancelled : public std::runtime_error {
+public:
+    FeatureMapCancelled() : std::runtime_error("The feature map was cancelled") {}
+};
+
 // Co-occurrence features that can be mapped: the Haralick and other co-occurrence features except the Maximal
 // Correlation Coefficient, which is too slow to compute for every window
 bool IsFeatureMapFeature(Type type);
@@ -47,6 +55,11 @@ int AutomaticFeatureMapStep(int width, int height);
 // gives more than MAX_FEATURE_MAP_POINTS_PER_SIDE points along a side.
 FeatureMapGrid ResolveFeatureMapGrid(int width, int height, int step);
 
+// Estimated computing work of one row of the map for an image of this size, in units roughly proportional to the time:
+// for every point, the pixel pairs counted in its (clipped) window and the co-occurrence matrices normalized and read.
+// Used to split maps into parts of similar duration. Throws std::invalid_argument like ResolveFeatureMapGrid.
+double FeatureMapRowWork(const FeatureMapSettings& settings, int width, int height);
+
 // Throws std::invalid_argument with a message describing the first problem found
 void ValidateFeatureMapSettings(const FeatureMapSettings& settings);
 
@@ -56,8 +69,10 @@ void ValidateFeatureMapSettings(const FeatureMapSettings& settings);
 // feature's mean over the selected directions, computed with TextureAnalysis::ProcessRectImage on the quantized window,
 // or NaN when a selected direction has no pixel pairs in the window. The image is quantized as a whole, so the rows of a
 // map can be computed separately and give the same values. Throws std::invalid_argument for invalid settings or rows,
-// or when the image cannot be quantized with the settings.
-std::vector<float> ComputeFeatureMapRows(const cv::Mat& gray, const FeatureMapSettings& settings, int first_row, int row_count);
+// or when the image cannot be quantized with the settings. When `cancel` is given and becomes true, the computation stops
+// after the current point and throws FeatureMapCancelled.
+std::vector<float> ComputeFeatureMapRows(
+    const cv::Mat& gray, const FeatureMapSettings& settings, int first_row, int row_count, const std::atomic<bool>* cancel = nullptr);
 
 } // namespace glcm
 

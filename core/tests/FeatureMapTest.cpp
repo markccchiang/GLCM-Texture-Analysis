@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <opencv2/core.hpp>
 #include <stdexcept>
@@ -226,4 +227,42 @@ TEST(FeatureMapTest, ReadsSettingsFromJson) {
     EXPECT_EQ(message(R"({"feature": "Contrast", "directions": [10]})"),
         "Invalid feature map settings: settings.directions[0] must be 0, 45, 90 or 135");
     EXPECT_EQ(message(R"({"feature": "Contrast", "window": 2.5})"), "Invalid feature map settings: settings.window must be an integer");
+}
+
+TEST(FeatureMapTest, StopsWhenCancelled) {
+    const cv::Mat gray = Pattern8(20, 20);
+    FeatureMapSettings settings;
+    settings.step = 1;
+    std::atomic<bool> cancel{true};
+    EXPECT_THROW(ComputeFeatureMapRows(gray, settings, 0, 20, &cancel), FeatureMapCancelled);
+    cancel = false;
+    EXPECT_EQ(ComputeFeatureMapRows(gray, settings, 0, 20, &cancel).size(), 400u);
+}
+
+TEST(FeatureMapTest, EstimatesRowWorkFromPointsWindowGrayLevelsAndDirections) {
+    FeatureMapSettings settings;
+    settings.window = 15;
+    settings.step = 4;
+    settings.gray_levels = 32;
+    const double work = FeatureMapRowWork(settings, 400, 100);
+    // 100 points, each 225 pixels × 9 pair visits and 4 directions × 1024 cells × 4 passes
+    EXPECT_DOUBLE_EQ(work, 100.0 * (225.0 * 9.0 + 4.0 * 1024.0 * 4.0));
+
+    FeatureMapSettings denser = settings;
+    denser.step = 2;
+    EXPECT_DOUBLE_EQ(FeatureMapRowWork(denser, 400, 100), 2.0 * work);
+    FeatureMapSettings finer = settings;
+    finer.gray_levels = 256;
+    EXPECT_GT(FeatureMapRowWork(finer, 400, 100), 10.0 * work);
+    FeatureMapSettings one_direction = settings;
+    one_direction.directions = {Direction::V};
+    EXPECT_LT(FeatureMapRowWork(one_direction, 400, 100), work / 3.0);
+
+    // Windows larger than the image are clipped to it
+    FeatureMapSettings large = settings;
+    large.window = 127;
+    FeatureMapSettings small = settings;
+    small.window = 11;
+    EXPECT_DOUBLE_EQ(FeatureMapRowWork(large, 10, 10), FeatureMapRowWork(small, 10, 10));
+    EXPECT_THROW(FeatureMapRowWork(settings, 0, 10), std::invalid_argument);
 }

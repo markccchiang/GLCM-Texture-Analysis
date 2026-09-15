@@ -186,11 +186,13 @@ survive restarts; closing the server waits for these writes (``JobManager.flush`
 .. rubric:: Feature maps
 
 ``analysis/FeatureMapManager.ts`` checks the settings and computes the grid with the addon's ``featureMapGrid``, then
-splits the map's rows into at most 64 **bands**, each a task on the shared scheduler that calls ``computeFeatureMap``
-(``glcm::ComputeFeatureMapRows``). The core quantizes the image as a whole in every band, so the bands give the same
+splits the map's rows into **bands** of about equal estimated work (``glcm::FeatureMapRowWork``, about a second of
+computing each), each a task on the shared scheduler that calls ``computeFeatureMap`` (``glcm::ComputeFeatureMapRows``).
+Maps take turns with analyses band by band, and a map with more bands than ``GLCM_MAX_FEATURE_MAP_BANDS`` is refused. The core quantizes the image as a whole in every band, so the bands give the same
 values as one call for the whole map. The values are copied into one ``Float32Array``; the web app polls
 ``GET /feature-maps/{id}`` and fetches ``/values`` once the map has completed. The first failing band fails the map and
-drops the other queued bands. Maps are kept in memory only (up to 8 finished maps) and are not written to disk.
+stops the others. Cancelling drops the queued bands and cancels the map's ``CancelToken``, which the core checks after
+every point, so running bands stop at once. Maps are kept in memory only (up to 8 finished maps) and are not written to disk.
 
 .. rubric:: Storage
 

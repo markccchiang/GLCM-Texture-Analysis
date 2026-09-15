@@ -1,6 +1,6 @@
 // Types of the glcm_native addon (bindings/node/src/addon.cpp).
 // Rejected promises and thrown errors carry `code`: INVALID_ARGUMENT, UNSUPPORTED_IMAGE, IMAGE_TOO_LARGE,
-// DECODE_FAILED or INTERNAL_ERROR. Invalid argument types throw a TypeError synchronously.
+// DECODE_FAILED, INTERNAL_ERROR or (computeFeatureMap with a cancelled token) CANCELLED. Invalid argument types throw a TypeError synchronously.
 
 export type FeatureGroupId = 'regionStatistics' | 'haralick' | 'other' | 'runLength' | 'sizeZone' | 'grayToneDifference' | 'localBinaryPattern';
 
@@ -111,6 +111,15 @@ export interface NativeFeatureMapGrid {
   step: number;
   columns: number;
   rows: number;
+  /** Estimated computing work of one row (glcm::FeatureMapRowWork), in units roughly proportional to the time */
+  workPerRow: number;
+}
+
+/** Stops the computeFeatureMap calls that received it after their current point; they reject with code CANCELLED */
+export class CancelToken {
+  constructor();
+  cancel(): void;
+  readonly cancelled: boolean;
 }
 
 /**
@@ -132,6 +141,7 @@ export function computeFeatureMap(
   settingsJson: string,
   firstRow: number,
   rowCount: number,
+  cancelToken?: CancelToken,
 ): Promise<Float32Array>;
 
 /**
@@ -189,5 +199,6 @@ declare const native: {
   windowLevel: typeof windowLevel;
   featureMapGrid: typeof featureMapGrid;
   computeFeatureMap: typeof computeFeatureMap;
+  CancelToken: typeof CancelToken;
 };
 export default native;

@@ -2,15 +2,17 @@
 //
 // Long-running work (decoding, rendering, ROI statistics, analyses) runs in Napi::AsyncWorker threads and returns
 // promises. Rejected promises and errors thrown by synchronous validation carry an error `code`: INVALID_ARGUMENT,
-// UNSUPPORTED_IMAGE, IMAGE_TOO_LARGE, DECODE_FAILED or INTERNAL_ERROR.
+// UNSUPPORTED_IMAGE, IMAGE_TOO_LARGE, DECODE_FAILED, INTERNAL_ERROR or CANCELLED (a cancelled feature map).
 
 #include <napi.h>
 
+#include <atomic>
 #include <climits>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <initializer_list>
+#include <memory>
 #include <opencv2/imgcodecs.hpp>
 #include <stdexcept>
 #include <string>
@@ -36,6 +38,7 @@ const char CODE_UNSUPPORTED_IMAGE[] = "UNSUPPORTED_IMAGE";
 const char CODE_DECODE_FAILED[] = "DECODE_FAILED";
 const char CODE_IMAGE_TOO_LARGE[] = "IMAGE_TOO_LARGE";
 const char CODE_INTERNAL[] = "INTERNAL_ERROR";
+const char CODE_CANCELLED[] = "CANCELLED";
 
 bool HostIsLittleEndian() {
     const uint16_t probe = 1;
@@ -664,14 +667,55 @@ Napi::Value WindowLevel(const Napi::CallbackInfo& info) {
     return Napi::Number::New(info.Env(), glcm::WindowLevel(value, window_min, window_max));
 }
 
+// Marks CancelToken objects, so that computeFeatureMap never unwraps another kind of object
+const napi_type_tag CANCEL_TOKEN_TAG = {0x8a4f2c1e5b7d4e3aULL, 0x9c6b1f0d2e8a7c55ULL};
+
+// new CancelToken(): cancel() makes the computeFeatureMap calls that received the token stop after their current point
+class CancelToken : public Napi::ObjectWrap<CancelToken> {
+public:
+    static Napi::Function Define(Napi::Env env) {
+        return DefineClass(env, "CancelToken",
+            {InstanceMethod("cancel", &CancelToken::Cancel), InstanceAccessor("cancelled", &CancelToken::Cancelled, nullptr)});
+    }
+
+    explicit CancelToken(const Napi::CallbackInfo& info)
+        : Napi::ObjectWrap<CancelToken>(info), _flag(std::make_shared<std::atomic<bool>>(false)) {
+        info.This().As<Napi::Object>().TypeTag(&CANCEL_TOKEN_TAG);
+    }
+
+    std::shared_ptr<std::atomic<bool>> Flag() const {
+        return _flag;
+    }
+
+private:
+    void Cancel(const Napi::CallbackInfo& /*info*/) {
+        _flag->store(true);
+    }
+
+    Napi::Value Cancelled(const Napi::CallbackInfo& info) {
+        return Napi::Boolean::New(info.Env(), _flag->load());
+    }
+
+    // Shared with the workers, which may outlive the JavaScript object
+    std::shared_ptr<std::atomic<bool>> _flag;
+};
+
 class FeatureMapWorker : public PixelWorker {
 public:
-    FeatureMapWorker(Napi::Env env, const PixelArguments& arguments, std::string settings_json, int first_row, int row_count)
-        : PixelWorker(env, arguments), _settings_json(std::move(settings_json)), _first_row(first_row), _row_count(row_count) {}
+    FeatureMapWorker(Napi::Env env, const PixelArguments& arguments, std::string settings_json, int first_row, int row_count,
+        std::shared_ptr<std::atomic<bool>> cancel)
+        : PixelWorker(env, arguments),
+          _settings_json(std::move(settings_json)),
+          _first_row(first_row),
+          _row_count(row_count),
+          _cancel(std::move(cancel)) {}
 
     void Execute() override {
         try {
-            _values = glcm::ComputeFeatureMapRows(Gray(), glcm::FeatureMapSettingsFromJson(_settings_json), _first_row, _row_count);
+            _values = glcm::ComputeFeatureMapRows(
+                Gray(), glcm::FeatureMapSettingsFromJson(_settings_json), _first_row, _row_count, _cancel.get());
+        } catch (const glcm::FeatureMapCancelled& error) {
+            Fail(CODE_CANCELLED, error.what());
         } catch (const std::invalid_argument& error) {
             Fail(CODE_INVALID_ARGUMENT, error.what());
         } catch (const std::exception& error) {
@@ -691,6 +735,7 @@ private:
     std::string _settings_json;
     int _first_row;
     int _row_count;
+    std::shared_ptr<std::atomic<bool>> _cancel;
     std::vector<float> _values;
 };
 
@@ -709,6 +754,7 @@ Napi::Value FeatureMapGridInfo(const Napi::CallbackInfo& info) {
         result.Set("step", grid.step);
         result.Set("columns", grid.columns);
         result.Set("rows", grid.rows);
+        result.Set("workPerRow", glcm::FeatureMapRowWork(settings, width, height));
         return result;
     } catch (const std::invalid_argument& error) {
         throw ErrorWithCode(env, CODE_INVALID_ARGUMENT, error.what());
@@ -717,12 +763,19 @@ Napi::Value FeatureMapGridInfo(const Napi::CallbackInfo& info) {
     }
 }
 
-// computeFeatureMap(pixels, width, height, bitDepth, settingsJson, firstRow, rowCount): Promise<Float32Array> of
-// rowCount × columns values (glcm::ComputeFeatureMapRows)
+// computeFeatureMap(pixels, width, height, bitDepth, settingsJson, firstRow, rowCount, cancelToken?): Promise<Float32Array> of
+// rowCount × columns values (glcm::ComputeFeatureMapRows); rejects with code CANCELLED once the token is cancelled
 Napi::Value ComputeFeatureMap(const Napi::CallbackInfo& info) {
     const PixelArguments pixels = ReadPixelArguments(info, 0);
-    auto* worker = new FeatureMapWorker(
-        info.Env(), pixels, StringArgument(info, 4, "settingsJson"), IntegerArgument(info, 5, "firstRow"), IntegerArgument(info, 6, "rowCount"));
+    std::shared_ptr<std::atomic<bool>> cancel;
+    if (info.Length() > 7 && !info[7].IsUndefined()) {
+        if (!info[7].IsObject() || !info[7].As<Napi::Object>().CheckTypeTag(&CANCEL_TOKEN_TAG)) {
+            throw Napi::TypeError::New(info.Env(), "cancelToken must be a CancelToken");
+        }
+        cancel = CancelToken::Unwrap(info[7].As<Napi::Object>())->Flag();
+    }
+    auto* worker = new FeatureMapWorker(info.Env(), pixels, StringArgument(info, 4, "settingsJson"), IntegerArgument(info, 5, "firstRow"),
+        IntegerArgument(info, 6, "rowCount"), std::move(cancel));
     const Napi::Promise promise = worker->Promise();
     worker->Queue();
     return promise;
@@ -741,6 +794,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set("windowLevel", Napi::Function::New(env, WindowLevel, "windowLevel"));
     exports.Set("featureMapGrid", Napi::Function::New(env, FeatureMapGridInfo, "featureMapGrid"));
     exports.Set("computeFeatureMap", Napi::Function::New(env, ComputeFeatureMap, "computeFeatureMap"));
+    exports.Set("CancelToken", CancelToken::Define(env));
     return exports;
 }
 

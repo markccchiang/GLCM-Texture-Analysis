@@ -59,7 +59,12 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
     retainFinished: RETAINED_ANALYSES,
     onFinished: (state) => results.save({ info: state.info, results: jobs.results(state) }),
   });
-  const maps = new FeatureMapManager({ scheduler, maxPendingJobs: config.maxPendingJobs, retainFinished: RETAINED_FEATURE_MAPS });
+  const maps = new FeatureMapManager({
+    scheduler,
+    maxPendingJobs: config.maxPendingJobs,
+    maxBands: config.maxFeatureMapBands,
+    retainFinished: RETAINED_FEATURE_MAPS,
+  });
   // Results are written just after an analysis finishes; closing waits for the writes, so none are lost on shutdown
   app.addHook('onClose', async () => jobs.flush());
 

@@ -93,14 +93,16 @@ Endpoints
      - Description
    * - ``POST /feature-maps``
      - ``{imageId, settings}`` → ``202`` with ``FeatureMapInfo``; ``400`` for invalid settings, ``404`` for an unknown
-       image; ``422`` ``TooManyJobs`` and ``503`` ``ServerBusy`` as for analyses, counting the map's bands of rows
+       image; ``422`` ``TooManyJobs`` when the map needs more bands of rows (about a second of computing each) than
+       ``GLCM_MAX_FEATURE_MAP_BANDS`` or ``GLCM_MAX_PENDING_JOBS``; ``503`` ``ServerBusy`` while the job queue is full
    * - ``GET /feature-maps/{id}``
      - ``FeatureMapInfo``: status, ``step``, ``columns``, ``rows``, ``completedRows``, ``error``, settings
    * - ``GET /feature-maps/{id}/values``
      - ``rows × columns`` little-endian 32-bit floats, row-major, NaN where a window has no pixel pairs;
        ``409 NotReady`` until the map has completed
    * - ``DELETE /feature-maps/{id}``
-     - Cancel a queued or running map (running bands finish), or forget a finished one (``204``)
+     - Cancel a queued or running map (queued bands are dropped, running bands stop after their current point), or
+       forget a finished one (``204``)
 
 .. list-table:: Exports and samples
    :header-rows: 1
@@ -319,10 +321,14 @@ functions throw, with an ``Error`` whose ``code`` is ``INVALID_ARGUMENT``, ``UNS
      - ROI crops, masks, quantized images and manifest as ``{name, data}`` files
    * - ``windowLevel(value, min, max): number``
      - The 8-bit display value of one intensity
-   * - ``featureMapGrid(settingsJson, width, height): {step, columns, rows}``
-     - Parse and validate feature map settings for an image size; throws ``INVALID_ARGUMENT``
-   * - ``computeFeatureMap(pixels, width, height, bitDepth, settingsJson, firstRow, rowCount): Promise<Float32Array>``
-     - ``rowCount × columns`` values of rows of a feature map (``glcm::ComputeFeatureMapRows``)
+   * - ``featureMapGrid(settingsJson, width, height): {step, columns, rows, workPerRow}``
+     - Parse and validate feature map settings for an image size; throws ``INVALID_ARGUMENT``. ``workPerRow`` is the
+       estimated computing work of one row (``glcm::FeatureMapRowWork``)
+   * - ``computeFeatureMap(pixels, width, height, bitDepth, settingsJson, firstRow, rowCount, cancelToken?): Promise<Float32Array>``
+     - ``rowCount × columns`` values of rows of a feature map (``glcm::ComputeFeatureMapRows``); rejects with
+       ``CANCELLED`` once ``cancelToken`` is cancelled
+   * - ``new CancelToken()``, ``token.cancel()``, ``token.cancelled``
+     - Stops the ``computeFeatureMap`` calls that received the token after their current point
 
 .. code-block:: javascript
 

@@ -20,6 +20,8 @@ export interface ServerConfig {
   analysisConcurrency: number;
   /** Analysis jobs queued or running at once over all analyses; larger analyses are refused, others wait (503) */
   maxPendingJobs: number;
+  /** Bands (about a second of computing each) of one feature map; larger maps are refused */
+  maxFeatureMapBands: number;
   /** Memory for pixel buffers of recently used images, shared by ROI statistics, analyses and exports */
   pixelCacheBytes: number;
   logLevel: string;
@@ -61,6 +63,7 @@ export const DEFAULT_CONFIG: Defaults = {
   displayCacheBytes: 512 * MIB,
   analysisConcurrency: Math.max(1, os.availableParallelism()),
   maxPendingJobs: 100_000,
+  maxFeatureMapBands: 4096,
   pixelCacheBytes: 2048 * MIB,
   logLevel: 'info',
   apiToken: null,
@@ -75,6 +78,7 @@ export const SERVER_MODE_DEFAULTS: Partial<Defaults> = {
   maxUploadBytes: 100 * MIB,
   maxImagePixels: 10_000 * 10_000,
   maxPendingJobs: 20_000,
+  maxFeatureMapBands: 1024,
   pixelCacheBytes: 1024 * MIB,
   rateLimitPerMinute: 600,
   retentionHours: 7 * 24,
@@ -130,6 +134,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     displayCacheBytes: integerSetting(env, 'GLCM_DISPLAY_CACHE_BYTES', defaults.displayCacheBytes, 0),
     analysisConcurrency: integerSetting(env, 'GLCM_ANALYSIS_CONCURRENCY', defaults.analysisConcurrency, 1),
     maxPendingJobs: integerSetting(env, 'GLCM_MAX_PENDING_JOBS', defaults.maxPendingJobs, 1),
+    maxFeatureMapBands: integerSetting(env, 'GLCM_MAX_FEATURE_MAP_BANDS', defaults.maxFeatureMapBands, 1),
     pixelCacheBytes: integerSetting(env, 'GLCM_PIXEL_CACHE_BYTES', defaults.pixelCacheBytes, 0),
     logLevel: env.GLCM_LOG_LEVEL || defaults.logLevel,
     webDir: path.resolve(env.GLCM_WEB_DIR || path.join(REPOSITORY_ROOT, 'web', 'dist')),
