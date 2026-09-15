@@ -230,6 +230,9 @@ export function MenuBar() {
         <Menu.Item disabled={!settings || !catalog.data} onClick={() => ui().setModal('batch')}>
           Batch Measure…
         </Menu.Item>
+        <Menu.Item disabled={!hasImage} onClick={() => ui().setModal('featureMap')}>
+          Feature Map…
+        </Menu.Item>
         <Menu.Divider />
         <Menu.Sub>
           <Menu.Sub.Target>

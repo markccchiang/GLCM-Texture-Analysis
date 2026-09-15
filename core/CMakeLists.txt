@@ -26,6 +26,7 @@ add_library(glcm_core STATIC
         io/RoiImageExport.cpp
         pipeline/AnalysisRunner.cpp
         pipeline/AnalysisSettings.cpp
+        pipeline/FeatureMap.cpp
         pipeline/FeatureCatalog.cpp
         roi/Roi.cpp)
 
@@ -48,6 +49,7 @@ if (GLCM_BUILD_TESTS)
     if (GTest_FOUND)
         enable_testing()
         add_executable(glcm-tests
+                tests/FeatureMapTest.cpp
                 tests/FirstOrderTest.cpp
                 tests/GrayToneDifferenceTest.cpp
                 tests/LocalBinaryPatternTest.cpp

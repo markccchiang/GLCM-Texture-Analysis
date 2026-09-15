@@ -6,6 +6,8 @@ import {
   type AnalysisInfo,
   type AnalysisRequest,
   type AnalysisResults,
+  type FeatureMapInfo,
+  type FeatureMapRequest,
   type RoiStatsRequest,
   type RoiStatsResponse,
   type CatalogResponse,
@@ -226,6 +228,41 @@ export async function getAnalysisCsv(analysisId: string): Promise<string> {
     throw await errorFromResponse(response);
   }
   return response.text();
+}
+
+export function startFeatureMap(request: FeatureMapRequest): Promise<FeatureMapInfo> {
+  return sendJson('POST', `${API_PREFIX}/feature-maps`, request);
+}
+
+export function getFeatureMap(featureMapId: string, signal?: AbortSignal): Promise<FeatureMapInfo> {
+  return getJson(`${API_PREFIX}/feature-maps/${featureMapId}`, signal);
+}
+
+/** The rows × columns values of a completed feature map, sent as little-endian 32-bit floats */
+export async function getFeatureMapValues(info: FeatureMapInfo, signal?: AbortSignal): Promise<Float32Array> {
+  const response = await apiFetch(`${API_PREFIX}/feature-maps/${info.featureMapId}/values`, { signal });
+  if (!response.ok) {
+    throw await errorFromResponse(response);
+  }
+  const buffer = await response.arrayBuffer();
+  const count = info.columns * info.rows;
+  if (buffer.byteLength !== count * 4) {
+    throw new Error(`The feature map values have ${buffer.byteLength} bytes, expected ${count * 4}`);
+  }
+  const view = new DataView(buffer);
+  const values = new Float32Array(count);
+  for (let i = 0; i < count; i += 1) {
+    values[i] = view.getFloat32(i * 4, true);
+  }
+  return values;
+}
+
+/** Cancels a running feature map or forgets a finished one */
+export async function deleteFeatureMap(featureMapId: string): Promise<void> {
+  const response = await apiFetch(`${API_PREFIX}/feature-maps/${featureMapId}`, { method: 'DELETE' });
+  if (!response.ok && response.status !== 404) {
+    throw await errorFromResponse(response);
+  }
 }
 
 export function analysisEventsUrl(analysisId: string): string {

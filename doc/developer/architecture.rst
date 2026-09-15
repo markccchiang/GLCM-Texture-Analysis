@@ -156,7 +156,8 @@ configuration, starts retention and listens. Plugins and hooks are registered in
 #. In server mode or when configured: CORS allow-list, rate limit, bearer-token authentication (``security.ts``).
 #. ``@fastify/static`` for ``web/dist`` and a not-found handler that returns ``index.html`` for page requests and a
    JSON 404 for everything else.
-#. The route plugins under ``/api/v1``: ``health``, ``catalog``, ``images``, ``analyses``, ``exports``, ``samples``.
+#. The route plugins under ``/api/v1``: ``health``, ``catalog``, ``images``, ``analyses``, ``featureMaps``, ``exports``,
+   ``samples``.
 
 .. rubric:: Configuration and modes
 
@@ -166,14 +167,24 @@ server mode, which has stricter defaults and refuses to start without a strong `
 
 .. rubric:: Analysis jobs
 
-``analysis/JobManager.ts`` splits an analysis into **one job per ROI × distance** and runs the jobs of all analyses with
-``GLCM_ANALYSIS_CONCURRENCY`` workers. Analyses **take turns**, one job each, so a large analysis does not hold up
-smaller ones started after it. At most ``GLCM_MAX_PENDING_JOBS`` jobs are queued or running: a larger analysis is
+``analysis/JobManager.ts`` splits an analysis into **one job per ROI × distance**. ``analysis/Scheduler.ts`` runs the
+tasks of all analyses and feature maps with ``GLCM_ANALYSIS_CONCURRENCY`` workers. Analyses and maps **take turns**, one
+task each, so a large one does not hold up smaller ones started after it. At most ``GLCM_MAX_PENDING_JOBS`` tasks are
+queued or running: a larger analysis is
 refused (``422 TooManyJobs``), and while the queue is full new analyses get ``503 ServerBusy``. Each job calls the
 addon's ``runAnalysis`` with one ROI and one distance; results are stored by position (ROI order, then distance order). The manager emits ``result``, ``progress``
 and ``finished`` events, which ``GET /analyses/{id}/events`` streams as Server-Sent Events. Cancelling drops queued
 jobs; running jobs finish. Finished analyses stay in memory (up to 100) and are written to ``results/`` so that they
 survive restarts; closing the server waits for these writes (``JobManager.flush``).
+
+.. rubric:: Feature maps
+
+``analysis/FeatureMapManager.ts`` checks the settings and computes the grid with the addon's ``featureMapGrid``, then
+splits the map's rows into at most 64 **bands**, each a task on the shared scheduler that calls ``computeFeatureMap``
+(``glcm::ComputeFeatureMapRows``). The core quantizes the image as a whole in every band, so the bands give the same
+values as one call for the whole map. The values are copied into one ``Float32Array``; the web app polls
+``GET /feature-maps/{id}`` and fetches ``/values`` once the map has completed. The first failing band fails the map and
+drops the other queued bands. Maps are kept in memory only (up to 8 finished maps) and are not written to disk.
 
 .. rubric:: Storage
 
@@ -226,6 +237,9 @@ stores are plain functions (``app/actions.ts``, ``analysis/measure.ts``, ``files
    * - ``batch/batchStore``
      - The batch measurement in progress: one status per image; kept outside the dialog, so closing it does not stop the
        batch
+   * - ``featureMaps/featureMapStore``
+     - The feature map shown over the image: its status while the server computes it, its values, and its own window,
+       colour table, opacity and visibility
    * - ``analysis/settingsStore``
      - Analysis settings, persisted in ``localStorage``
    * - ``api/auth``
@@ -246,8 +260,9 @@ All API calls go through ``api/client.ts`` and ``apiFetch``, which adds the acce
 
 .. rubric:: Image canvas
 
-``viewer/ImageCanvas.tsx`` draws a **Konva** stage with two layers: the image and the ROI overlay
-(``viewer/RoiLayer.tsx``). The viewport maps image coordinates to the screen (``screen = image × scale + offset``), and
+``viewer/ImageCanvas.tsx`` draws a **Konva** stage with the image, the feature map (``featureMaps/FeatureMapLayer.tsx``,
+one canvas pixel per grid point scaled by the step and clipped to the image), the ROI overlay (``viewer/RoiLayer.tsx``)
+and the ruler. The viewport maps image coordinates to the screen (``screen = image × scale + offset``), and
 all pure viewport, wheel and keyboard logic is in tested modules (``viewer/viewport.ts``, ``wheel.ts``,
 ``keyboard.ts``). Every pointer event goes through one handler that hit-tests the stage and runs a gesture: pan, drag to
 draw a rectangle or ellipse, freehand, polygon clicks, drawing the ruler, moving ROIs or dragging polygon vertices. Only the Konva

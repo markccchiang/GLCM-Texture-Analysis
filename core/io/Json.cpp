@@ -496,6 +496,56 @@ AnalysisSettings SettingsFromJson(const std::string& text) {
     }
 }
 
+namespace {
+
+FeatureMapSettings FeatureMapSettingsFromJsonValue(const Json& value, const std::string& path) {
+    const std::string feature_path = Child(path, "feature");
+    const std::string id = Text(Field(value, "feature", path), feature_path);
+    const auto type = FeatureTypeFromId(id);
+    if (!type) {
+        Fail(feature_path, "\"" + id + "\" is not a known feature");
+    }
+
+    // The fields shared with analysis settings are read by the same code
+    Json shared = Json::object();
+    shared["features"] = Json::array();
+    for (const char* key : {"grayLevels", "quantization", "directions", "logBase"}) {
+        if (value.contains(key)) {
+            shared[key] = value.at(key);
+        }
+    }
+    const AnalysisSettings analysis = json_detail::SettingsFromJsonValue(shared, path);
+
+    FeatureMapSettings settings;
+    settings.feature = *type;
+    settings.gray_levels = analysis.gray_levels;
+    settings.quantization = analysis.quantization;
+    settings.directions = analysis.directions;
+    settings.log_base = analysis.log_base;
+    if (value.contains("window")) {
+        settings.window = Integer(value.at("window"), Child(path, "window"));
+    }
+    if (value.contains("step") && !value.at("step").is_null()) {
+        settings.step = Integer(value.at("step"), Child(path, "step"));
+    }
+    if (value.contains("distance")) {
+        settings.distance = Integer(value.at("distance"), Child(path, "distance"));
+    }
+    return settings;
+}
+
+} // namespace
+
+FeatureMapSettings FeatureMapSettingsFromJson(const std::string& text) {
+    try {
+        return FeatureMapSettingsFromJsonValue(Json::parse(text), "settings");
+    } catch (const nlohmann::json::exception& error) {
+        throw std::invalid_argument(std::string("Invalid feature map settings: ") + error.what());
+    } catch (const std::invalid_argument& error) {
+        throw std::invalid_argument(std::string("Invalid feature map settings: ") + error.what());
+    }
+}
+
 std::string ResultsToJson(const std::vector<MeasurementResult>& results, const AnalysisSettings& settings, const ExportContext& context) {
     Json items = Json::array();
     for (const MeasurementResult& result : results) {

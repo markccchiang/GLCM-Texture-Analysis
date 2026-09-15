@@ -15,5 +15,7 @@ export const {
   formatResults,
   exportRoiImages,
   windowLevel,
+  featureMapGrid,
+  computeFeatureMap,
 } = native;
 export default native;

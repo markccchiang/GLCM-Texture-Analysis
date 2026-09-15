@@ -306,6 +306,21 @@ async function main(): Promise<void> {
     await page.mouse.move(5, VIEWPORT.height - 5);
     await page.keyboard.press('0');
 
+    // Feature map over the image, with its card
+    await chooseMenuItem(page, 'Analyze', 'Feature Map…');
+    await page.getByRole('dialog', { name: 'Feature Map' }).getByRole('button', { name: 'Compute' }).click();
+    const mapCard = page.getByRole('region', { name: 'Feature map' });
+    await mapCard.getByRole('button', { name: 'Save PNG' }).waitFor({ timeout: 120_000 });
+    await mapCard.getByRole('combobox', { name: 'Colour table' }).click();
+    await page.getByRole('option', { name: 'Magma', exact: true }).click();
+    const mapHover = await toPage(page, 260, 200);
+    await page.mouse.move(mapHover.x, mapHover.y);
+    await page.waitForTimeout(500);
+    await shot(page, 'feature-map', page.getByTestId('image-canvas'));
+    await mapCard.getByRole('button', { name: 'Close feature map' }).click();
+    await mapCard.waitFor({ state: 'hidden' });
+    await page.mouse.move(5, VIEWPORT.height - 5);
+
     // File menu and dialogs
     await page.getByRole('navigation', { name: 'Main menu' }).getByRole('button', { name: 'File', exact: true }).click();
     const menu = page.getByRole('menu');

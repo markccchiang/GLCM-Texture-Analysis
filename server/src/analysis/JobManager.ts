@@ -1,6 +1,7 @@
 // Analysis jobs (doc/ui-design-plan.md, section 6.3.3). Each ROI × distance pair is one job, run with the addon's
-// AsyncWorker. At most `concurrency` jobs of all analyses run at a time. Analyses take turns, one job each, so a large
-// analysis does not hold up the ones started after it, and at most `maxPendingJobs` jobs are queued or running.
+// AsyncWorker on a Scheduler, which runs at most `concurrency` tasks of all analyses and feature maps at a time. Analyses
+// take turns, one job each, so a large analysis does not hold up the ones started after it, and at most `maxPendingJobs`
+// tasks are queued or running.
 
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
@@ -15,6 +16,7 @@ import type {
   Roi,
 } from '@glcm/api';
 import * as native from '@glcm/native';
+import { Scheduler } from './Scheduler.js';
 
 export function newAnalysisId(): string {
   return `ana_${randomUUID().replaceAll('-', '')}`;
@@ -45,9 +47,11 @@ interface InternalState extends AnalysisState {
 }
 
 export interface JobManagerOptions {
-  /** Jobs running at the same time */
+  /** Jobs running at the same time, when no scheduler is given */
   concurrency: number;
-  /** Jobs queued or running over all analyses; start() refuses analyses that do not fit */
+  /** Scheduler shared with feature maps; by default the manager has its own */
+  scheduler?: Scheduler;
+  /** Tasks queued or running on the scheduler; start() refuses analyses that do not fit */
   maxPendingJobs: number;
   /** Finished analyses kept in memory; the oldest are forgotten first */
   retainFinished: number;
@@ -99,14 +103,13 @@ function failedResult(job: Job, message: string): MeasurementResult {
 
 export class JobManager {
   private readonly analyses = new Map<string, InternalState>();
-  /** Queued jobs per analysis; Map order is the order in which analyses get their next job */
-  private readonly queues = new Map<InternalState, Job[]>();
-  private queued = 0;
-  private running = 0;
+  private readonly scheduler: Scheduler;
   /** onFinished calls that have not settled yet */
   private readonly pendingFinishes = new Set<Promise<unknown>>();
 
-  constructor(private readonly options: JobManagerOptions) {}
+  constructor(private readonly options: JobManagerOptions) {
+    this.scheduler = options.scheduler ?? new Scheduler(options.concurrency);
+  }
 
   /**
    * Queues the jobs of an analysis; the request must already be validated. Throws JobLimitError when the jobs do not
@@ -157,9 +160,7 @@ export class JobManager {
     this.analyses.set(state.info.analysisId, state);
     this.forgetOldAnalyses();
 
-    this.queues.set(state, jobs);
-    this.queued += jobs.length;
-    this.pump();
+    this.scheduler.enqueue(state, jobs.map((job) => (release) => this.run(state, job, release)));
     return state;
   }
 
@@ -177,11 +178,7 @@ export class JobManager {
       return true;
     }
     state.cancelRequested = true;
-    const queued = this.queues.get(state);
-    if (queued) {
-      this.queued -= queued.length;
-      this.queues.delete(state);
-    }
+    this.scheduler.drop(state);
     if (state.running === 0) {
       this.finish(state, 'cancelled');
     }
@@ -207,32 +204,16 @@ export class JobManager {
     };
   }
 
-  /** Number of queued or running jobs */
+  /** Number of queued or running tasks on the scheduler, including those of feature maps */
   get pendingJobs(): number {
-    return this.queued + this.running;
+    return this.scheduler.pending;
   }
 
   private emit(state: AnalysisState, event: AnalysisEvent): void {
     state.events.emit('event', event);
   }
 
-  /** Starts jobs while workers are free, taking one job from each analysis in turn */
-  private pump(): void {
-    while (this.running < this.options.concurrency && this.queues.size > 0) {
-      const [state, jobs] = this.queues.entries().next().value as [InternalState, Job[]];
-      const job = jobs.shift()!;
-      this.queued -= 1;
-      // The analysis goes to the back of the line, or leaves it when it has no more queued jobs
-      this.queues.delete(state);
-      if (jobs.length > 0) {
-        this.queues.set(state, jobs);
-      }
-      void this.run(state, job);
-    }
-  }
-
-  private async run(state: InternalState, job: Job): Promise<void> {
-    this.running += 1;
+  private async run(state: InternalState, job: Job, release: () => void): Promise<void> {
     state.running += 1;
     if (state.info.status === 'queued') {
       state.info.status = 'running';
@@ -253,7 +234,7 @@ export class JobManager {
     } catch (error) {
       result = failedResult(job, error instanceof Error ? error.message : String(error));
     } finally {
-      this.running -= 1;
+      release();
       state.running -= 1;
     }
 
@@ -267,7 +248,6 @@ export class JobManager {
     } else if (state.cancelRequested && state.running === 0) {
       this.finish(state, 'cancelled');
     }
-    this.pump();
   }
 
   private finish(state: InternalState, status: AnalysisStatus, error: string | null = null): void {

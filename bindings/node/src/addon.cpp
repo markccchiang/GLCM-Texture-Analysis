@@ -25,6 +25,7 @@
 #include "pipeline/AnalysisRunner.hpp"
 #include "pipeline/AnalysisSettings.hpp"
 #include "pipeline/FeatureCatalog.hpp"
+#include "pipeline/FeatureMap.hpp"
 #include "pipeline/Version.hpp"
 #include "roi/Roi.hpp"
 
@@ -663,6 +664,70 @@ Napi::Value WindowLevel(const Napi::CallbackInfo& info) {
     return Napi::Number::New(info.Env(), glcm::WindowLevel(value, window_min, window_max));
 }
 
+class FeatureMapWorker : public PixelWorker {
+public:
+    FeatureMapWorker(Napi::Env env, const PixelArguments& arguments, std::string settings_json, int first_row, int row_count)
+        : PixelWorker(env, arguments), _settings_json(std::move(settings_json)), _first_row(first_row), _row_count(row_count) {}
+
+    void Execute() override {
+        try {
+            _values = glcm::ComputeFeatureMapRows(Gray(), glcm::FeatureMapSettingsFromJson(_settings_json), _first_row, _row_count);
+        } catch (const std::invalid_argument& error) {
+            Fail(CODE_INVALID_ARGUMENT, error.what());
+        } catch (const std::exception& error) {
+            Fail(CODE_INTERNAL, error.what());
+        }
+    }
+
+    void OnOK() override {
+        Napi::Float32Array values = Napi::Float32Array::New(Env(), _values.size());
+        if (!_values.empty()) {
+            std::memcpy(values.Data(), _values.data(), _values.size() * sizeof(float));
+        }
+        Resolve(values);
+    }
+
+private:
+    std::string _settings_json;
+    int _first_row;
+    int _row_count;
+    std::vector<float> _values;
+};
+
+// featureMapGrid(settingsJson, width, height): {step, columns, rows}; throws an Error with code INVALID_ARGUMENT when the
+// settings are invalid for an image of this size
+Napi::Value FeatureMapGridInfo(const Napi::CallbackInfo& info) {
+    const std::string settings_json = StringArgument(info, 0, "settingsJson");
+    const int width = IntegerArgument(info, 1, "width");
+    const int height = IntegerArgument(info, 2, "height");
+    Napi::Env env = info.Env();
+    try {
+        const glcm::FeatureMapSettings settings = glcm::FeatureMapSettingsFromJson(settings_json);
+        glcm::ValidateFeatureMapSettings(settings);
+        const glcm::FeatureMapGrid grid = glcm::ResolveFeatureMapGrid(width, height, settings.step);
+        Napi::Object result = Napi::Object::New(env);
+        result.Set("step", grid.step);
+        result.Set("columns", grid.columns);
+        result.Set("rows", grid.rows);
+        return result;
+    } catch (const std::invalid_argument& error) {
+        throw ErrorWithCode(env, CODE_INVALID_ARGUMENT, error.what());
+    } catch (const std::exception& error) {
+        throw ErrorWithCode(env, CODE_INTERNAL, error.what());
+    }
+}
+
+// computeFeatureMap(pixels, width, height, bitDepth, settingsJson, firstRow, rowCount): Promise<Float32Array> of
+// rowCount × columns values (glcm::ComputeFeatureMapRows)
+Napi::Value ComputeFeatureMap(const Napi::CallbackInfo& info) {
+    const PixelArguments pixels = ReadPixelArguments(info, 0);
+    auto* worker = new FeatureMapWorker(
+        info.Env(), pixels, StringArgument(info, 4, "settingsJson"), IntegerArgument(info, 5, "firstRow"), IntegerArgument(info, 6, "rowCount"));
+    const Napi::Promise promise = worker->Promise();
+    worker->Queue();
+    return promise;
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set("coreVersion", Napi::Function::New(env, CoreVersion, "coreVersion"));
     exports.Set("catalog", Napi::Function::New(env, Catalog, "catalog"));
@@ -674,6 +739,8 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set("formatResults", Napi::Function::New(env, FormatResults, "formatResults"));
     exports.Set("exportRoiImages", Napi::Function::New(env, ExportRoiImages, "exportRoiImages"));
     exports.Set("windowLevel", Napi::Function::New(env, WindowLevel, "windowLevel"));
+    exports.Set("featureMapGrid", Napi::Function::New(env, FeatureMapGridInfo, "featureMapGrid"));
+    exports.Set("computeFeatureMap", Napi::Function::New(env, ComputeFeatureMap, "computeFeatureMap"));
     return exports;
 }
 

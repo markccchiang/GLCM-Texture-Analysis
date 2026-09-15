@@ -127,6 +127,49 @@ once (``# images=`` gives the number of images) and the ``image`` and ``imageSha
 If the images needed different settings, for example 8-bit and 16-bit images with a fixed quantization range, the
 download is a ZIP with one CSV per group of settings.
 
+Feature maps
+------------
+
+A **feature map** shows how a co-occurrence feature, for example Contrast or Entropy, changes across the whole image.
+*Analyze ▸ Feature Map…* computes the feature in a small square window around many points of the image and draws the
+values in colour over the image:
+
+- **Feature** — any Haralick or other co-occurrence feature except the Maximal Correlation Coefficient, which is too
+  slow to compute for every window.
+- **Window** — the side of the square window in pixels, an odd number from 3 to 127 (15 by default). Windows at the
+  edges of the image are cut off by the edges.
+- **Distance** — one of the distances of the analysis settings; it must be smaller than the window.
+- **Step** — the spacing of the points. *Automatic* chooses the smallest step that gives at most 512 points along each
+  side (1 for images up to 512 pixels, 8 for 4096 pixels). With *Manual* you choose it, up to 2048 points along a side.
+  Each point stands for the block of *step × step* pixels around it, and its window is centred in that block.
+
+The gray levels, quantization, directions and logarithm come from the analysis settings. The quantization applies to
+the whole image: *ROI min–max* uses the image minimum and maximum, and *Fixed bin width* starts at the image minimum.
+Each point is the mean over the selected directions; a point whose window has no pixel pairs at the distance in some
+direction has no value and stays transparent.
+
+.. figure:: images/feature-map.png
+   :alt: The camera image with a Contrast map in the Magma colour table over it, and the feature map card with the colour bar, window, colour table, opacity and save buttons.
+   :width: 100%
+
+   A Contrast map over the image, with the feature map card.
+
+The map is computed on the server, which shares its workers with measurements. While it runs, a card in the top-right
+corner of the image shows the progress; its **×** cancels the map. When the map is done, the card controls how it looks:
+
+- **Min** and **Max** set the map's own window: values at or below Min get the first colour, values at or above Max the
+  last. **Auto** uses the 0.5 and 99.5 percentiles of the values (the default); **Full range** the smallest and largest
+  value.
+- **Colour table** — the same tables as for the image (Viridis by default), independent of the image's colour table.
+- **Opacity** and **Show over the image** blend the map with the image or hide it.
+- Moving the pointer over the image shows the map value of the point under it.
+- **Save PNG** saves the map in its colours, one pixel per point. **Save TIFF** saves the values as a 32-bit
+  floating-point TIFF (one pixel per point, points without a value as NaN) for other image tools; its description
+  records the image and settings.
+
+There is one map at a time. The **×** closes it, and opening another image closes it too. Maps are not saved in projects;
+save them as PNG or TIFF to keep them.
+
 Results
 -------
 

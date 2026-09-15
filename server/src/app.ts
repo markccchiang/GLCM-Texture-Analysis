@@ -5,12 +5,15 @@ import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { API_PREFIX } from '@glcm/api';
 import * as native from '@glcm/native';
 import Fastify from 'fastify';
+import { FeatureMapManager } from './analysis/FeatureMapManager.js';
 import { JobManager } from './analysis/JobManager.js';
+import { Scheduler } from './analysis/Scheduler.js';
 import type { ServerConfig } from './config.js';
 import { ApiError } from './errors.js';
 import { analysisRoutes } from './routes/analyses.js';
 import { catalogRoutes } from './routes/catalog.js';
 import { exportRoutes } from './routes/exports.js';
+import { featureMapRoutes } from './routes/featureMaps.js';
 import { healthRoutes } from './routes/health.js';
 import { imageRoutes } from './routes/images.js';
 import { sampleRoutes } from './routes/samples.js';
@@ -30,6 +33,8 @@ export interface BuildAppOptions {
 
 /** Finished analyses kept in memory; all of them are also stored on disk */
 const RETAINED_ANALYSES = 100;
+/** Finished feature maps kept in memory (up to 2048 × 2048 32-bit values each); maps are not stored on disk */
+const RETAINED_FEATURE_MAPS = 8;
 
 export async function buildApp(config: ServerConfig, options: BuildAppOptions = {}) {
   const app = Fastify({
@@ -45,12 +50,16 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
   await results.init();
   const displayCache = new DisplayCache(path.join(config.dataDir, 'cache', 'display'), config.displayCacheBytes);
   await displayCache.init();
+  // Analyses and feature maps share the worker limit and the pending task limit
+  const scheduler = new Scheduler(config.analysisConcurrency);
   const jobs: JobManager = new JobManager({
     concurrency: config.analysisConcurrency,
+    scheduler,
     maxPendingJobs: config.maxPendingJobs,
     retainFinished: RETAINED_ANALYSES,
     onFinished: (state) => results.save({ info: state.info, results: jobs.results(state) }),
   });
+  const maps = new FeatureMapManager({ scheduler, maxPendingJobs: config.maxPendingJobs, retainFinished: RETAINED_FEATURE_MAPS });
   // Results are written just after an analysis finishes; closing waits for the writes, so none are lost on shutdown
   app.addHook('onClose', async () => jobs.flush());
 
@@ -71,6 +80,7 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
         { name: 'images', description: 'Upload, display and pixel data' },
         { name: 'rois', description: 'ROI pixel counts and statistics' },
         { name: 'analyses', description: 'Texture measurements' },
+        { name: 'featureMaps', description: 'Texture features computed in a sliding window over the whole image' },
         { name: 'exports', description: 'Results files and ROI images' },
         { name: 'samples', description: 'Sample images for the start screen' },
       ],
@@ -130,6 +140,7 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
       await api.register(catalogRoutes, { config });
       await api.register(imageRoutes, { config, store, displayCache });
       await api.register(analysisRoutes, { store, jobs, results });
+      await api.register(featureMapRoutes, { store, maps });
       await api.register(exportRoutes, { store });
       await api.register(sampleRoutes, { samplesDir: config.samplesDir });
     },

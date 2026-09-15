@@ -374,3 +374,48 @@ describe('renderDisplay', () => {
     expect(await rejectionCode(native.renderDisplay(pixels, width, height, 16, 10, 5, 0))).toBe('INVALID_ARGUMENT');
   });
 });
+
+describe('feature maps', () => {
+  const width = 21;
+  const height = 13;
+  const pixels = Buffer.from(Array.from({ length: width * height }, (_, i) => (i * 37 + Math.floor(i / width) * 11) % 256));
+  const quantization = { method: 'fixedRange', min: 0, max: 255, binWidth: 1 };
+  const settings = { feature: 'Contrast', window: 5, step: 4, grayLevels: 16, quantization, distance: 1, directions: [0, 45, 90, 135], logBase: 'natural' };
+  /** Centre pixel of a grid block, as in glcm::ComputeFeatureMapRows */
+  const centre = (index: number, step: number, size: number) => Math.floor((index * step + Math.min(index * step + step, size) - 1) / 2);
+
+  it('gives the grid of an image and validates the settings', () => {
+    expect(native.featureMapGrid(JSON.stringify(settings), width, height)).toEqual({ step: 4, columns: 6, rows: 4 });
+    expect(native.featureMapGrid(JSON.stringify({ ...settings, step: null }), 1100, 20)).toEqual({ step: 3, columns: 367, rows: 7 });
+    for (const invalid of [{ feature: 'MaximalCorrelationCoefficient' }, { window: 4 }, { distance: 5 }, { step: 0.5 }]) {
+      expect(() => native.featureMapGrid(JSON.stringify({ ...settings, ...invalid }), width, height)).toThrow(
+        expect.objectContaining({ code: 'INVALID_ARGUMENT' }),
+      );
+    }
+  });
+
+  it('gives each point the analysis of its window with a fixed quantization range', async () => {
+    const values = await native.computeFeatureMap(pixels, width, height, 8, JSON.stringify(settings), 0, 4);
+    expect(values).toBeInstanceOf(Float32Array);
+    expect(values).toHaveLength(24);
+    const band = await native.computeFeatureMap(pixels, width, height, 8, JSON.stringify(settings), 2, 1);
+    expect(Array.from(band)).toEqual(Array.from(values.subarray(12, 18)));
+
+    for (const [column, row] of [[0, 0], [2, 1], [5, 3]]) {
+      const x = centre(column, 4, width);
+      const y = centre(row, 4, height);
+      const [x0, x1, y0, y1] = [Math.max(0, x - 2), Math.min(width, x + 3), Math.max(0, y - 2), Math.min(height, y + 3)];
+      const rois = [{ id: 'w', name: 'Window', shape: { type: 'rectangle', x: x0, y: y0, width: x1 - x0, height: y1 - y0 } }];
+      const analysis = { features: ['Contrast'], grayLevels: 16, quantization, distances: [1], directions: [0, 45, 90, 135], logBase: 'natural' };
+      const json = await native.runAnalysis(pixels, width, height, 8, JSON.stringify(rois), JSON.stringify(analysis));
+      const mean = (JSON.parse(json) as { results: Array<{ values: { Contrast: { mean: number } } }> }).results[0].values.Contrast.mean;
+      expect(values[row * 6 + column]).toBeCloseTo(mean, 4);
+    }
+  });
+
+  it('rejects rows outside the map and images that cannot be quantized', async () => {
+    expect(await rejectionCode(native.computeFeatureMap(pixels, width, height, 8, JSON.stringify(settings), 3, 2))).toBe('INVALID_ARGUMENT');
+    const none = JSON.stringify({ ...settings, quantization: { ...quantization, method: 'none' } });
+    expect(await rejectionCode(native.computeFeatureMap(pixels, width, height, 8, none, 0, 1))).toBe('INVALID_ARGUMENT');
+  });
+});

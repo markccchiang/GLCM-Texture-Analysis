@@ -1,5 +1,6 @@
 import { Button, Progress, Stack, Text } from '@mantine/core';
 import { StartScreen } from '../components/StartScreen';
+import { FeatureMapCard } from '../featureMaps/FeatureMapCard';
 import { cancelImageLoad } from '../stores/imageLoader';
 import { useViewer, type LoadingState } from '../stores/viewerStore';
 import { ImageCanvas } from './ImageCanvas';
@@ -37,6 +38,7 @@ export function CanvasArea() {
     <div style={{ position: 'relative', height: '100%' }}>
       <ImageCanvas />
       <ScaleBar />
+      <FeatureMapCard />
       {!hasImage && !loading && (
         <div style={{ position: 'absolute', inset: 0 }}>
           <StartScreen />

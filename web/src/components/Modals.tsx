@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { getSamples } from '../api/client';
 import { BatchContent } from '../batch/BatchDialog';
+import { FeatureMapContent } from '../featureMaps/FeatureMapDialog';
 import { CATALOG_QUERY } from '../api/queryClient';
 import { useAnalysisSettings } from '../analysis/settingsStore';
 import { exportRoiImagesFile, saveProjectFile } from '../files/actions';
@@ -472,6 +473,7 @@ const TITLES: Record<ModalName, string> = {
   exportRoiImages: 'Export ROI Images',
   equations: 'Feature Equations',
   batch: 'Batch Measure',
+  featureMap: 'Feature Map',
 };
 
 export function AppModals() {
@@ -484,6 +486,7 @@ export function AppModals() {
       {modal === 'shortcuts' && <ShortcutsContent />}
       {modal === 'equations' && <EquationsContent />}
       {modal === 'batch' && <BatchContent onClose={close} />}
+      {modal === 'featureMap' && <FeatureMapContent onClose={close} />}
       {modal === 'about' && <AboutContent />}
       {modal === 'samples' && <SamplesContent onClose={close} />}
       {modal === 'saveProject' && <SaveProjectContent onClose={close} />}

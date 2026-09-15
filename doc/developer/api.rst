@@ -19,7 +19,7 @@ Conventions
 - **Authentication:** when the server has an access token (always in server mode), every request except
   ``GET /health`` needs ``Authorization: Bearer <token>``. ``GET /health`` reports whether a token is needed.
 - **Errors:** every 4xx and 5xx response has the body ``{"error": "<code>", "message": "<description>"}``.
-- **Identifiers:** images are ``img_`` and analyses ``ana_`` followed by 32 hexadecimal digits.
+- **Identifiers:** images are ``img_``, analyses ``ana_`` and feature maps ``fmap_`` followed by 32 hexadecimal digits.
 - **Coordinates:** ROI coordinates are image pixels as floating-point numbers; pixel ``(column c, row r)`` covers
   ``[c, c + 1) × [r, r + 1)``.
 
@@ -84,6 +84,23 @@ Endpoints
      - ``glcm-results`` document with the finished jobs, ordered by ROI and distance
    * - ``GET /analyses/{id}/results.csv``, ``.json``
      - The same results as a downloadable CSV or JSON file written by the core
+
+.. list-table:: Feature maps
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Method and path
+     - Description
+   * - ``POST /feature-maps``
+     - ``{imageId, settings}`` → ``202`` with ``FeatureMapInfo``; ``400`` for invalid settings, ``404`` for an unknown
+       image; ``422`` ``TooManyJobs`` and ``503`` ``ServerBusy`` as for analyses, counting the map's bands of rows
+   * - ``GET /feature-maps/{id}``
+     - ``FeatureMapInfo``: status, ``step``, ``columns``, ``rows``, ``completedRows``, ``error``, settings
+   * - ``GET /feature-maps/{id}/values``
+     - ``rows × columns`` little-endian 32-bit floats, row-major, NaN where a window has no pixel pairs;
+       ``409 NotReady`` until the map has completed
+   * - ``DELETE /feature-maps/{id}``
+     - Cancel a queued or running map (running bands finish), or forget a finished one (``204``)
 
 .. list-table:: Exports and samples
    :header-rows: 1
@@ -302,6 +319,10 @@ functions throw, with an ``Error`` whose ``code`` is ``INVALID_ARGUMENT``, ``UNS
      - ROI crops, masks, quantized images and manifest as ``{name, data}`` files
    * - ``windowLevel(value, min, max): number``
      - The 8-bit display value of one intensity
+   * - ``featureMapGrid(settingsJson, width, height): {step, columns, rows}``
+     - Parse and validate feature map settings for an image size; throws ``INVALID_ARGUMENT``
+   * - ``computeFeatureMap(pixels, width, height, bitDepth, settingsJson, firstRow, rowCount): Promise<Float32Array>``
+     - ``rowCount × columns`` values of rows of a feature map (``glcm::ComputeFeatureMapRows``)
 
 .. code-block:: javascript
 
@@ -361,6 +382,9 @@ paths are relative to ``core/``. The main entry points:
        ``ComputeRegionStatistics``
    * - ``pipeline/FeatureCatalog.hpp``
      - ``FeatureCatalog``, ``FeaturePresets``, ``FeatureTypeFromId``
+   * - ``pipeline/FeatureMap.hpp``
+     - ``FeatureMapSettings``, ``ResolveFeatureMapGrid``, ``ValidateFeatureMapSettings`` and ``ComputeFeatureMapRows``:
+       a co-occurrence feature in a sliding window over the whole image
    * - ``imaging/DisplayRenderer.hpp``
      - ``ComputeDisplayStatistics``, ``WindowLevel``, ``RenderWindowLevel``
    * - ``io/Json.hpp``

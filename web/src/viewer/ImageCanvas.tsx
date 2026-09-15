@@ -29,6 +29,7 @@ import { useViewer } from '../stores/viewerStore';
 import { keyToAction } from './keyboard';
 import { Navigator } from './Navigator';
 import { ROI_NODE_NAME, RoiLayer, VERTEX_NODE_NAME, type PolygonDraft } from './RoiLayer';
+import { FeatureMapLayer } from '../featureMaps/FeatureMapLayer';
 import { snapRuler } from './ruler';
 import { RulerLayer } from './RulerLayer';
 import { useDisplaySource } from './useDisplaySource';
@@ -664,6 +665,7 @@ export function ImageCanvas() {
               />
             )}
           </Layer>
+          {info && <FeatureMapLayer viewport={viewport} imageWidth={info.width} imageHeight={info.height} />}
           {info && <RoiLayer viewport={viewport} draft={draft} interactive={tool === 'pointer' && !spaceHeld} />}
           {info && <RulerLayer viewport={viewport} />}
         </Stage>

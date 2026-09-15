@@ -106,6 +106,34 @@ export function roiStats(pixels: Uint8Array, width: number, height: number, bitD
 /** Parses and validates an analysis request; throws an Error with code INVALID_ARGUMENT describing the first problem. */
 export function validateAnalysis(roisJson: string, settingsJson: string): void;
 
+export interface NativeFeatureMapGrid {
+  /** Grid spacing in image pixels (chosen automatically when the settings have no step) */
+  step: number;
+  columns: number;
+  rows: number;
+}
+
+/**
+ * Parses and validates feature map settings for an image of this size (glcm::ValidateFeatureMapSettings and
+ * glcm::ResolveFeatureMapGrid); throws an Error with code INVALID_ARGUMENT describing the first problem.
+ */
+export function featureMapGrid(settingsJson: string, width: number, height: number): NativeFeatureMapGrid;
+
+/**
+ * Rows [firstRow, firstRow + rowCount) of a feature map (glcm::ComputeFeatureMapRows): rowCount × columns values,
+ * row-major, NaN where a window has no pixel pairs. Rejects with INVALID_ARGUMENT when the image cannot be quantized
+ * with the settings.
+ */
+export function computeFeatureMap(
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+  bitDepth: 8 | 16,
+  settingsJson: string,
+  firstRow: number,
+  rowCount: number,
+): Promise<Float32Array>;
+
 /**
  * Measures every ROI at every distance (glcm::RunAnalysis).
  * @returns the "glcm-results" JSON document (without image name, SHA-256 or timestamp)
@@ -159,5 +187,7 @@ declare const native: {
   formatResults: typeof formatResults;
   exportRoiImages: typeof exportRoiImages;
   windowLevel: typeof windowLevel;
+  featureMapGrid: typeof featureMapGrid;
+  computeFeatureMap: typeof computeFeatureMap;
 };
 export default native;

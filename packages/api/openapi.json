@@ -4238,6 +4238,1086 @@
         }
       }
     },
+    "/api/v1/feature-maps": {
+      "post": {
+        "summary": "Start a feature map",
+        "tags": [
+          "featureMaps"
+        ],
+        "description": "Computes a co-occurrence feature in a window around every point of a grid over the whole image, in bands of rows that share the worker limit with analyses. Poll GET /feature-maps/{id} until the status is final, then fetch the values. Maps are kept in memory only, and the oldest finished maps are forgotten.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "imageId",
+                  "settings"
+                ],
+                "properties": {
+                  "imageId": {
+                    "type": "string",
+                    "pattern": "^img_[0-9a-f]{32}$"
+                  },
+                  "settings": {
+                    "type": "object",
+                    "required": [
+                      "feature",
+                      "window",
+                      "step",
+                      "grayLevels",
+                      "quantization",
+                      "distance",
+                      "directions",
+                      "logBase"
+                    ],
+                    "properties": {
+                      "feature": {
+                        "type": "string",
+                        "description": "Id of a Haralick or other co-occurrence feature from GET /catalog, except MaximalCorrelationCoefficient"
+                      },
+                      "window": {
+                        "type": "integer",
+                        "minimum": 3,
+                        "maximum": 127,
+                        "description": "Odd side of the square window in pixels; windows are clipped at the image edges"
+                      },
+                      "step": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Grid spacing in image pixels; null chooses the smallest step that gives at most 512 points per side"
+                      },
+                      "grayLevels": {
+                        "type": "integer",
+                        "minimum": 2,
+                        "maximum": 256
+                      },
+                      "quantization": {
+                        "type": "object",
+                        "required": [
+                          "method",
+                          "min",
+                          "max",
+                          "binWidth"
+                        ],
+                        "properties": {
+                          "method": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fixedRange"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "roiMinMax"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fixedBinWidth"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "none"
+                                ]
+                              }
+                            ]
+                          },
+                          "min": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 65535,
+                            "description": "fixedRange: lowest intensity"
+                          },
+                          "max": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 65535,
+                            "description": "fixedRange: highest intensity"
+                          },
+                          "binWidth": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "fixedBinWidth: intensities per gray level"
+                          }
+                        },
+                        "description": "Applied to the whole image: roiMinMax uses the image minimum and maximum, fixedBinWidth starts at the image minimum"
+                      },
+                      "distance": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 64,
+                        "description": "Pixel pair distance; smaller than the window"
+                      },
+                      "directions": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "enum": [
+                                0
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                45
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                90
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                135
+                              ]
+                            }
+                          ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 4,
+                        "description": "The map shows the mean over these directions"
+                      },
+                      "logBase": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "natural"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "log2"
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "featureMapId",
+                    "imageId",
+                    "imageName",
+                    "status",
+                    "settings",
+                    "step",
+                    "columns",
+                    "rows",
+                    "completedRows",
+                    "error",
+                    "createdAt",
+                    "finishedAt",
+                    "coreVersion"
+                  ],
+                  "properties": {
+                    "featureMapId": {
+                      "type": "string",
+                      "pattern": "^fmap_[0-9a-f]{32}$"
+                    },
+                    "imageId": {
+                      "type": "string",
+                      "pattern": "^img_[0-9a-f]{32}$"
+                    },
+                    "imageName": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "queued"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "running"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "completed"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "cancelled"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "failed"
+                          ]
+                        }
+                      ]
+                    },
+                    "settings": {
+                      "type": "object",
+                      "required": [
+                        "feature",
+                        "window",
+                        "step",
+                        "grayLevels",
+                        "quantization",
+                        "distance",
+                        "directions",
+                        "logBase"
+                      ],
+                      "properties": {
+                        "feature": {
+                          "type": "string",
+                          "description": "Id of a Haralick or other co-occurrence feature from GET /catalog, except MaximalCorrelationCoefficient"
+                        },
+                        "window": {
+                          "type": "integer",
+                          "minimum": 3,
+                          "maximum": 127,
+                          "description": "Odd side of the square window in pixels; windows are clipped at the image edges"
+                        },
+                        "step": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Grid spacing in image pixels; null chooses the smallest step that gives at most 512 points per side"
+                        },
+                        "grayLevels": {
+                          "type": "integer",
+                          "minimum": 2,
+                          "maximum": 256
+                        },
+                        "quantization": {
+                          "type": "object",
+                          "required": [
+                            "method",
+                            "min",
+                            "max",
+                            "binWidth"
+                          ],
+                          "properties": {
+                            "method": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "fixedRange"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "roiMinMax"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "fixedBinWidth"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "none"
+                                  ]
+                                }
+                              ]
+                            },
+                            "min": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 65535,
+                              "description": "fixedRange: lowest intensity"
+                            },
+                            "max": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 65535,
+                              "description": "fixedRange: highest intensity"
+                            },
+                            "binWidth": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "fixedBinWidth: intensities per gray level"
+                            }
+                          },
+                          "description": "Applied to the whole image: roiMinMax uses the image minimum and maximum, fixedBinWidth starts at the image minimum"
+                        },
+                        "distance": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 64,
+                          "description": "Pixel pair distance; smaller than the window"
+                        },
+                        "directions": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "enum": [
+                                  0
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  45
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  90
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  135
+                                ]
+                              }
+                            ]
+                          },
+                          "minItems": 1,
+                          "maxItems": 4,
+                          "description": "The map shows the mean over these directions"
+                        },
+                        "logBase": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "natural"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "log2"
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "step": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "description": "Grid spacing used, also when the settings chose it automatically"
+                    },
+                    "columns": {
+                      "type": "integer",
+                      "description": "ceil(image width / step)"
+                    },
+                    "rows": {
+                      "type": "integer",
+                      "description": "ceil(image height / step)"
+                    },
+                    "completedRows": {
+                      "type": "integer"
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "coreVersion": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feature-maps/{id}": {
+      "get": {
+        "summary": "Feature map status",
+        "tags": [
+          "featureMaps"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^fmap_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "featureMapId",
+                    "imageId",
+                    "imageName",
+                    "status",
+                    "settings",
+                    "step",
+                    "columns",
+                    "rows",
+                    "completedRows",
+                    "error",
+                    "createdAt",
+                    "finishedAt",
+                    "coreVersion"
+                  ],
+                  "properties": {
+                    "featureMapId": {
+                      "type": "string",
+                      "pattern": "^fmap_[0-9a-f]{32}$"
+                    },
+                    "imageId": {
+                      "type": "string",
+                      "pattern": "^img_[0-9a-f]{32}$"
+                    },
+                    "imageName": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "queued"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "running"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "completed"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "cancelled"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "failed"
+                          ]
+                        }
+                      ]
+                    },
+                    "settings": {
+                      "type": "object",
+                      "required": [
+                        "feature",
+                        "window",
+                        "step",
+                        "grayLevels",
+                        "quantization",
+                        "distance",
+                        "directions",
+                        "logBase"
+                      ],
+                      "properties": {
+                        "feature": {
+                          "type": "string",
+                          "description": "Id of a Haralick or other co-occurrence feature from GET /catalog, except MaximalCorrelationCoefficient"
+                        },
+                        "window": {
+                          "type": "integer",
+                          "minimum": 3,
+                          "maximum": 127,
+                          "description": "Odd side of the square window in pixels; windows are clipped at the image edges"
+                        },
+                        "step": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Grid spacing in image pixels; null chooses the smallest step that gives at most 512 points per side"
+                        },
+                        "grayLevels": {
+                          "type": "integer",
+                          "minimum": 2,
+                          "maximum": 256
+                        },
+                        "quantization": {
+                          "type": "object",
+                          "required": [
+                            "method",
+                            "min",
+                            "max",
+                            "binWidth"
+                          ],
+                          "properties": {
+                            "method": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "fixedRange"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "roiMinMax"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "fixedBinWidth"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "none"
+                                  ]
+                                }
+                              ]
+                            },
+                            "min": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 65535,
+                              "description": "fixedRange: lowest intensity"
+                            },
+                            "max": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 65535,
+                              "description": "fixedRange: highest intensity"
+                            },
+                            "binWidth": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "fixedBinWidth: intensities per gray level"
+                            }
+                          },
+                          "description": "Applied to the whole image: roiMinMax uses the image minimum and maximum, fixedBinWidth starts at the image minimum"
+                        },
+                        "distance": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 64,
+                          "description": "Pixel pair distance; smaller than the window"
+                        },
+                        "directions": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "enum": [
+                                  0
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  45
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  90
+                                ]
+                              },
+                              {
+                                "type": "number",
+                                "enum": [
+                                  135
+                                ]
+                              }
+                            ]
+                          },
+                          "minItems": 1,
+                          "maxItems": 4,
+                          "description": "The map shows the mean over these directions"
+                        },
+                        "logBase": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "natural"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "log2"
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "step": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "description": "Grid spacing used, also when the settings chose it automatically"
+                    },
+                    "columns": {
+                      "type": "integer",
+                      "description": "ceil(image width / step)"
+                    },
+                    "rows": {
+                      "type": "integer",
+                      "description": "ceil(image height / step)"
+                    },
+                    "completedRows": {
+                      "type": "integer"
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "coreVersion": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Cancel or forget a feature map",
+        "tags": [
+          "featureMaps"
+        ],
+        "description": "A queued or running map is cancelled once its running bands finish; a finished map is forgotten.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^fmap_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Cancelled or forgotten (no body)"
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feature-maps/{id}/values": {
+      "get": {
+        "summary": "Values of a completed feature map",
+        "tags": [
+          "featureMaps"
+        ],
+        "description": "rows × columns little-endian 32-bit floats, row-major; NaN where a window has no pixel pairs in a selected direction. Grid point (column, row) stands for the image pixels [column × step, (column + 1) × step) × [row × step, (row + 1) × step). 409 NotReady until the map has completed.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^fmap_[0-9a-f]{32}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Float32 values",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error returned by every endpoint for 4xx and 5xx responses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error",
+                    "message"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Machine-readable error code, e.g. \"NotFound\" or \"PayloadTooLarge\""
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Human-readable description"
+                    }
+                  },
+                  "description": "Error returned by every endpoint for 4xx and 5xx responses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/exports/results": {
       "post": {
         "summary": "Export results as CSV or JSON",
@@ -5503,6 +6583,10 @@
     {
       "name": "analyses",
       "description": "Texture measurements"
+    },
+    {
+      "name": "featureMaps",
+      "description": "Texture features computed in a sliding window over the whole image"
     },
     {
       "name": "exports",

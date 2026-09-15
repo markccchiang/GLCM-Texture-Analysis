@@ -8,6 +8,7 @@
 
 #include "pipeline/AnalysisRunner.hpp"
 #include "pipeline/AnalysisSettings.hpp"
+#include "pipeline/FeatureMap.hpp"
 #include "roi/Roi.hpp"
 
 namespace glcm {
@@ -56,6 +57,13 @@ std::string SettingsToJson(const AnalysisSettings& settings);
 // Throws std::invalid_argument ("Invalid analysis settings: <path> <problem>"). The result is not validated; call
 // ValidateSettings before running an analysis.
 AnalysisSettings SettingsFromJson(const std::string& text);
+
+// Settings of a feature map, e.g. {"feature": "Contrast", "window": 15, "step": null, "grayLevels": 32, "quantization":
+// {...}, "distance": 1, "directions": [0, 45, 90, 135], "logBase": "natural"}. Only "feature" is required; a missing or
+// null "step" chooses it automatically. Gray levels, quantization, directions and log base are read as in
+// SettingsFromJson. Throws std::invalid_argument ("Invalid feature map settings: <path> <problem>"). The result is not
+// validated; call ValidateFeatureMapSettings.
+FeatureMapSettings FeatureMapSettingsFromJson(const std::string& text);
 
 // {"format": "glcm-results", "version": 1, "coreVersion", "timestamp", "image", "settings", "results": [...]}.
 // Feature values are objects {"0", "45", "90", "135", "mean", "range"}; NaN values are written as null.
