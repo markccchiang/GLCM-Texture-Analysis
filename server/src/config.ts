@@ -27,6 +27,8 @@ export interface ServerConfig {
   webDir: string | null;
   /** Sample images offered on the start screen; none when null */
   samplesDir: string | null;
+  /** Built Sphinx documentation (doc/_build/html), served at /docs/ when present; none when null */
+  docsDir: string | null;
   /** Bearer token required by /api/v1 (except /health); required in server mode */
   apiToken: string | null;
   /** Origins allowed to call the API from other sites (CORS); none by default */
@@ -46,7 +48,7 @@ const MIB = 1024 * 1024;
 /** Base64 of 32 random bytes, e.g. `openssl rand -base64 32` */
 export const MIN_TOKEN_LENGTH = 43;
 
-type Defaults = Omit<ServerConfig, 'dataDir' | 'webDir' | 'samplesDir'>;
+type Defaults = Omit<ServerConfig, 'dataDir' | 'webDir' | 'samplesDir' | 'docsDir'>;
 
 /** Defaults of local mode (loopback address) */
 export const DEFAULT_CONFIG: Defaults = {
@@ -131,6 +133,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     logLevel: env.GLCM_LOG_LEVEL || defaults.logLevel,
     webDir: path.resolve(env.GLCM_WEB_DIR || path.join(REPOSITORY_ROOT, 'web', 'dist')),
     samplesDir: path.resolve(env.GLCM_SAMPLES_DIR || path.join(REPOSITORY_ROOT, 'samples')),
+    docsDir: path.resolve(env.GLCM_DOCS_DIR || path.join(REPOSITORY_ROOT, 'doc', '_build', 'html')),
     apiToken: env.GLCM_API_TOKEN || null,
     corsOrigins: (env.GLCM_CORS_ORIGINS ?? '')
       .split(',')

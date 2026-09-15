@@ -172,6 +172,7 @@ The server is configured with environment variables:
 | `GLCM_PIXEL_CACHE_BYTES` | 2,147,483,648 (2 GiB); 1 GiB in server mode | Memory for pixel buffers of recently used images (0 = read the file for every request) |
 | `GLCM_WEB_DIR` | `web/dist` | Built web app |
 | `GLCM_SAMPLES_DIR` | `samples/` | Sample images offered on the start screen |
+| `GLCM_DOCS_DIR` | `doc/_build/html` | Built documentation, served at `/docs/` (Help ▸ Feature Equations links to it) |
 | `GLCM_LOG_LEVEL` | `info` | Fastify log level |
 
 `npm start` sets `UV_THREADPOOL_SIZE` to 16 unless it is already set. Analyses run in Node's libuv thread pool, which has only 4 threads by default.

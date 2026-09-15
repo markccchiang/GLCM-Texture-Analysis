@@ -38,6 +38,8 @@ export interface RoiState {
   deleteRois(ids: readonly string[]): void;
   duplicateRois(ids: readonly string[]): string[];
   renameRoi(id: string, name: string): void;
+  /** Sets a colour "#RRGGBB"; undoable. Other values are ignored. */
+  recolorRoi(id: string, color: string): void;
   replaceShape(id: string, shape: RoiShape): void;
   nudgeRois(ids: readonly string[], dx: number, dy: number): void;
   setVisible(id: string, visible: boolean): void;
@@ -150,6 +152,13 @@ export const useRois = create<RoiState>()((set, get) => {
       const { rois } = get();
       if (trimmed && rois.some((roi) => roi.id === id && roi.name !== trimmed)) {
         commit(rois.map((roi) => (roi.id === id ? { ...roi, name: trimmed } : roi)));
+      }
+    },
+
+    recolorRoi: (id, color) => {
+      const { rois } = get();
+      if (/^#[0-9A-Fa-f]{6}$/.test(color) && rois.some((roi) => roi.id === id && roi.color.toLowerCase() !== color.toLowerCase())) {
+        commit(rois.map((roi) => (roi.id === id ? { ...roi, color } : roi)));
       }
     },
 

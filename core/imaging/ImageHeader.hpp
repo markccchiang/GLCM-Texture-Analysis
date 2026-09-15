@@ -13,6 +13,8 @@ namespace glcm {
 struct ImageSize {
     int64_t width = 0;
     int64_t height = 0;
+    // TIFF only: the file holds more than one image (page); decoders read the first
+    bool more_images = false;
 };
 
 // Reads the size from the header of a PNG, JPEG, BMP or TIFF (including BigTIFF) file without decoding the pixels, so

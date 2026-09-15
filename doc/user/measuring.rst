@@ -25,7 +25,7 @@ sessions, and results already in the table keep the settings they were measured 
    * - **Preset**
      - A named set of features: *Haralick F1–F14*, *Clausi (2002): Contrast, Correlation, Entropy*, *Basic*,
        *Score (Mean, Entropy, Contrast)* (the inputs of the age-based score, with the score switched on) or *All
-       features*. Changing the features by hand shows *Custom*.
+       features*. Changing the features by hand shows *Custom*. The presets are also in *Analyze ▸ Presets*.
    * - **Features**
      - The features to compute. **N selected…** opens the feature picker.
    * - **Gray levels (Ng)**
@@ -55,6 +55,10 @@ point out, for example, that the Maximal Correlation Coefficient is slow for mor
 defaults** restores the default settings (Haralick features, 32 gray levels, full fixed range, distance 1, all
 directions).
 
+The **undo** and **redo** buttons at the top of the panel step back and forth through your changes to the settings,
+including choosing a preset or resetting to the defaults. Opening a project starts a new history. :kbd:`⌘Z` /
+:kbd:`Ctrl+Z` keeps undoing ROI changes only.
+
 .. figure:: images/feature-picker.png
    :alt: The feature picker with a search field and checkboxes grouped into region statistics, Haralick and other
          features; Correlation III and Sum of Squares are marked non-standard.
@@ -66,7 +70,8 @@ In the **feature picker**, features are grouped as in :doc:`../equations`. Type 
 **Select all** and **Clear all** apply to the listed features. Two features are marked **⚠ non-standard**
 (*Correlation III* and *Sum of Squares (in x and y)*): they follow a formula as printed in a later paper rather than
 the original definition; hover the badge for details. Features marked **slow** take noticeably longer for many gray
-levels.
+levels. *Help ▸ Feature Equations* lists every feature by group and opens the equations when the server provides the
+built documentation.
 
 .. rubric:: The age-based score
 

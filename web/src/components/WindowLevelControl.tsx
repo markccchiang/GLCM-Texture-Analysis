@@ -1,11 +1,82 @@
-import { ActionIcon, Button, Group, NumberInput, Popover, RangeSlider, Stack, Text } from '@mantine/core';
-import { IconAdjustmentsHorizontal } from '@tabler/icons-react';
+import { ActionIcon, Button, Group, NumberInput, Popover, RangeSlider, Stack, Text, TextInput } from '@mantine/core';
+import { IconAdjustmentsHorizontal, IconX } from '@tabler/icons-react';
+import { useState } from 'react';
 import { histogramPath, valueToHistogramX } from '../image/histogram';
+import { usePreferences } from '../stores/preferences';
 import { useUi } from '../stores/uiStore';
 import { maxSampleValue, useViewer } from '../stores/viewerStore';
 
 const HISTOGRAM_WIDTH = 256;
 const HISTOGRAM_HEIGHT = 72;
+
+/** Windows the user saved, offered for images of the same bit depth */
+function SavedWindows({ bitDepth, min, max, maxValue }: { bitDepth: number; min: number; max: number; maxValue: number }) {
+  const allPresets = usePreferences((state) => state.windowPresets);
+  const [name, setName] = useState('');
+  const presets = allPresets.filter((preset) => preset.bitDepth === bitDepth);
+  const save = () => {
+    const trimmed = name.trim();
+    if (trimmed) {
+      usePreferences.getState().saveWindowPreset({ name: trimmed, bitDepth, min, max });
+      setName('');
+    }
+  };
+
+  return (
+    <Stack gap={6}>
+      <Text size="xs" fw={500}>
+        Saved windows
+      </Text>
+      {presets.length === 0 ? (
+        <Text size="xs" c="dimmed">
+          None saved for {bitDepth}-bit images yet.
+        </Text>
+      ) : (
+        <Group gap={6}>
+          {presets.map((preset) => (
+            <Button.Group key={preset.name}>
+              <Button
+                size="compact-xs"
+                variant="default"
+                title={`${preset.min}–${preset.max}`}
+                onClick={() => useViewer.getState().setWindow(Math.min(preset.min, maxValue), Math.min(preset.max, maxValue))}
+              >
+                {preset.name}
+              </Button>
+              <Button
+                size="compact-xs"
+                variant="default"
+                px={4}
+                aria-label={`Remove saved window ${preset.name}`}
+                onClick={() => usePreferences.getState().removeWindowPreset(preset.name, bitDepth)}
+              >
+                <IconX size={10} />
+              </Button>
+            </Button.Group>
+          ))}
+        </Group>
+      )}
+      <Group gap={6} wrap="nowrap">
+        <TextInput
+          size="xs"
+          style={{ flex: 1 }}
+          placeholder={`Name for ${min}–${max}`}
+          aria-label="Name of the saved window"
+          value={name}
+          onChange={(event) => setName(event.currentTarget.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              save();
+            }
+          }}
+        />
+        <Button size="compact-xs" disabled={!name.trim()} onClick={save}>
+          Save
+        </Button>
+      </Group>
+    </Stack>
+  );
+}
 
 function WindowLevelPanel() {
   const image = useViewer((state) => state.image);
@@ -60,6 +131,7 @@ function WindowLevelPanel() {
       <Text size="xs" c="dimmed">
         Auto = 0.5–99.5 percentiles ({image.info.windowMin}–{image.info.windowMax})
       </Text>
+      <SavedWindows bitDepth={image.info.bitDepth} min={window.min} max={window.max} maxValue={maxValue} />
     </Stack>
   );
 }

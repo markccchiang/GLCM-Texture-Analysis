@@ -6,8 +6,8 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    // The API server (npm start) runs on 127.0.0.1:8080 in local mode
-    proxy: { '/api': 'http://127.0.0.1:8080' },
+    // The API server (npm start) runs on 127.0.0.1:8080 in local mode; it also serves the built documentation
+    proxy: { '/api': 'http://127.0.0.1:8080', '/docs': 'http://127.0.0.1:8080' },
   },
   build: {
     outDir: 'dist',

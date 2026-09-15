@@ -93,10 +93,12 @@ The ROI Manager
 Each row shows, from left to right:
 
 - **visibility** (the eye) — hidden ROIs are not drawn, but they can still be selected here and measured;
-- **color** and **name** — double-click the name to rename it, then press :kbd:`Enter`;
+- **color** and **name** — double-click the name to rename it, then press :kbd:`Enter`; choose another color in the
+  row menu;
 - **shape** — Rectangle, Ellipse, Polygon or Freehand;
 - **pixel count**, or ⚠ with an explanation when the ROI cannot be measured;
-- a **menu** (⋯) with *Zoom to ROI*, *Rename*, *Duplicate* and *Delete*.
+- a **menu** (⋯) with *Zoom to ROI*, *Rename*, a choice of eight **colors**, *Duplicate* and *Delete*. Changing the color
+  can be undone like other ROI changes.
 
 Click a row to select the ROI; :kbd:`⌘`/:kbd:`Ctrl`-click to add it to the selection; :kbd:`Shift`-click to select a
 range. The selection and the highlighted ROI are the same on the canvas and in the manager.

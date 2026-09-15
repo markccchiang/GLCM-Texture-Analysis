@@ -131,6 +131,21 @@ describe('ROI store', () => {
     expect(names()).toEqual(['ROI 1', 'A', 'B', 'C', 'D']);
   });
 
+  it('changes the colour as an undoable step and ignores invalid colours', () => {
+    const id = store().addRoi(rectangle(0));
+    const original = store().rois[0].color;
+    store().recolorRoi(id, '#00C2FF');
+    expect(store().rois[0].color).toBe('#00C2FF');
+    store().recolorRoi(id, '#00c2ff');
+    store().recolorRoi(id, 'blue');
+    store().recolorRoi(id, '#12345');
+    expect(store().rois[0].color).toBe('#00C2FF');
+    store().undo();
+    expect(store().rois[0].color).toBe(original);
+    store().redo();
+    expect(store().rois[0].color).toBe('#00C2FF');
+  });
+
   it('changes visibility without history', () => {
     const id = store().addRoi(rectangle(0));
     const steps = store().past.length;

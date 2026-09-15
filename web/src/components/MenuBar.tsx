@@ -1,8 +1,12 @@
 import { Badge, Button, Menu, Text } from '@mantine/core';
 import { IconCheck } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useAuth } from '../api/auth';
+import { CATALOG_QUERY } from '../api/queryClient';
 import { measure } from '../analysis/measure';
+import { applyPreset, matchingPreset } from '../analysis/settings';
+import { useAnalysisSettings } from '../analysis/settingsStore';
 import { renameSelectedRoi } from '../app/actions';
 import { exportResultsFile, exportRoiSetFile } from '../files/actions';
 import { clearStoredLayouts } from '../layout/layoutStorage';
@@ -52,6 +56,9 @@ export function MenuBar() {
   const hasResults = useResults((state) => state.rows.length > 0);
   const showLabels = useUi((state) => state.showRoiLabels);
   const hasToken = useAuth((state) => state.token !== null);
+  const catalog = useQuery(CATALOG_QUERY);
+  const settings = useAnalysisSettings((state) => state.settings);
+  const presetId = settings && catalog.data ? matchingPreset(settings.features, catalog.data.presets) : null;
   const viewer = useViewer.getState;
   const rois = useRois.getState;
   const ui = useUi.getState;
@@ -193,6 +200,23 @@ export function MenuBar() {
           Measure All
         </Menu.Item>
         <Menu.Divider />
+        <Menu.Sub>
+          <Menu.Sub.Target>
+            <Menu.Sub.Item disabled={!settings || !catalog.data}>Presets</Menu.Sub.Item>
+          </Menu.Sub.Target>
+          <Menu.Sub.Dropdown>
+            {catalog.data?.presets.map((preset) => (
+              <Menu.Item
+                key={preset.id}
+                leftSection={preset.id === presetId ? <IconCheck size={14} /> : <span style={{ width: 14 }} />}
+                onClick={() => useAnalysisSettings.getState().update((current) => applyPreset(current, preset))}
+              >
+                {preset.name}
+              </Menu.Item>
+            ))}
+          </Menu.Sub.Dropdown>
+        </Menu.Sub>
+        <Menu.Divider />
         <Menu.Item disabled={!hasResults} onClick={() => useResults.getState().clear()}>
           Clear Results
         </Menu.Item>
@@ -217,6 +241,7 @@ export function MenuBar() {
       </TopMenu>
 
       <TopMenu label="Help">
+        <Menu.Item onClick={() => ui().setModal('equations')}>Feature Equations</Menu.Item>
         <Menu.Item onClick={() => ui().setModal('shortcuts')}>Keyboard Shortcuts</Menu.Item>
         <Menu.Item onClick={() => ui().setModal('about')}>About</Menu.Item>
       </TopMenu>

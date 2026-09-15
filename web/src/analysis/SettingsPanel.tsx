@@ -2,6 +2,7 @@
 
 import type { Aggregation, AnalysisSettings, CatalogResponse, Direction, QuantizationMethod, ScoreProfile } from '@glcm/api';
 import {
+  ActionIcon,
   Badge,
   Button,
   Checkbox,
@@ -20,7 +21,7 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core';
-import { IconChevronDown, IconChevronRight, IconSearch } from '@tabler/icons-react';
+import { IconArrowBackUp, IconArrowForwardUp, IconChevronDown, IconChevronRight, IconSearch } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { CATALOG_QUERY } from '../api/queryClient';
@@ -151,6 +152,8 @@ function FeaturePicker({
 
 function SettingsForm({ settings, catalog, bitDepth }: { settings: AnalysisSettings; catalog: CatalogResponse; bitDepth: 8 | 16 }) {
   const update = useAnalysisSettings((state) => state.update);
+  const canUndo = useAnalysisSettings((state) => state.past.length > 0);
+  const canRedo = useAnalysisSettings((state) => state.future.length > 0);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [distanceError, setDistanceError] = useState<string | null>(null);
@@ -165,6 +168,18 @@ function SettingsForm({ settings, catalog, bitDepth }: { settings: AnalysisSetti
 
   return (
     <Stack gap="xs">
+      <Group justify="flex-end" gap={2}>
+        <Tooltip label="Undo settings change">
+          <ActionIcon size="sm" variant="subtle" color="gray" aria-label="Undo settings change" disabled={!canUndo} onClick={() => useAnalysisSettings.getState().undo()}>
+            <IconArrowBackUp size={14} />
+          </ActionIcon>
+        </Tooltip>
+        <Tooltip label="Redo settings change">
+          <ActionIcon size="sm" variant="subtle" color="gray" aria-label="Redo settings change" disabled={!canRedo} onClick={() => useAnalysisSettings.getState().redo()}>
+            <IconArrowForwardUp size={14} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
       <Select
         size="xs"
         label="Preset"
@@ -350,7 +365,7 @@ function SettingsForm({ settings, catalog, bitDepth }: { settings: AnalysisSetti
         </Stack>
       </Collapse>
 
-      <Button size="compact-xs" variant="subtle" color="gray" onClick={() => useAnalysisSettings.getState().setSettings(defaultSettings(catalog, bitDepth))}>
+      <Button size="compact-xs" variant="subtle" color="gray" onClick={() => useAnalysisSettings.getState().setSettings(defaultSettings(catalog, bitDepth), { history: 'record' })}>
         Reset to defaults
       </Button>
 

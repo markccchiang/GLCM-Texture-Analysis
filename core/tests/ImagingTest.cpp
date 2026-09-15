@@ -523,6 +523,30 @@ TEST(ImageLoaderTest, ChecksThePixelLimitBeforeDecoding) {
     EXPECT_THROW(glcm::LoadImageFile(file.path.string()), std::runtime_error);
 }
 
+TEST(ImageLoaderTest, WarnsThatOnlyTheFirstTiffPageIsUsed) {
+    const std::vector<cv::Mat> pages = {cv::Mat(10, 12, CV_8UC1, cv::Scalar(10)), cv::Mat(10, 12, CV_8UC1, cv::Scalar(200))};
+    TemporaryFile file("pages.tif");
+    ASSERT_TRUE(cv::imwrite(file.path.string(), pages));
+
+    for (const int64_t max_pixels : {int64_t{0}, int64_t{1000}}) {
+        SCOPED_TRACE(max_pixels);
+        const auto loaded = glcm::LoadImageFile(file.path.string(), max_pixels);
+        EXPECT_EQ(loaded.gray.at<uchar>(0, 0), 10);
+        ASSERT_EQ(loaded.warnings.size(), 1u);
+        EXPECT_NE(loaded.warnings[0].find("only the first is used"), std::string::npos) << loaded.warnings[0];
+    }
+    std::ifstream stream(file.path, std::ios::binary);
+    const std::vector<uchar> bytes((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+    EXPECT_TRUE(glcm::ReadImageSizeFromBytes(bytes)->more_images);
+    EXPECT_EQ(glcm::LoadImageBytes(bytes).warnings.size(), 1u);
+
+    // One page: no warning
+    TemporaryFile single("single.tif");
+    ASSERT_TRUE(cv::imwrite(single.path.string(), pages[0]));
+    EXPECT_FALSE(glcm::ReadImageSize(single.path.string())->more_images);
+    EXPECT_TRUE(glcm::LoadImageFile(single.path.string()).warnings.empty());
+}
+
 TEST(ImageLoaderTest, AppliesThePixelLimitExactly) {
     const cv::Mat image(30, 50, CV_16UC1, cv::Scalar(1234));
     TemporaryFile file("limit.tif");

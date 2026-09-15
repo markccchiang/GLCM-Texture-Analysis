@@ -62,6 +62,22 @@ LoadedImage ToLoadedImage(const cv::Mat& decoded, int64_t max_pixels) {
     return result;
 }
 
+// The header without the pixel limit: only for the warnings below, so an unreadable one is left to the decoder to report
+template <typename Read>
+std::optional<ImageSize> OptionalHeader(Read read) {
+    try {
+        return read();
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+}
+
+void AddHeaderWarnings(const std::optional<ImageSize>& header, LoadedImage& image) {
+    if (header && header->more_images) {
+        image.warnings.push_back("The TIFF file contains more than one image; only the first is used");
+    }
+}
+
 } // namespace
 
 ImageTooLargeError::ImageTooLargeError(int64_t width, int64_t height, int64_t max_pixels)
@@ -69,28 +85,40 @@ ImageTooLargeError::ImageTooLargeError(int64_t width, int64_t height, int64_t ma
                          std::to_string(max_pixels) + " pixels") {}
 
 LoadedImage LoadImageFile(const std::string& path, int64_t max_pixels) {
+    std::optional<ImageSize> header;
     if (max_pixels > 0) {
-        CheckHeaderSize(ReadImageSize(path), max_pixels);
+        header = ReadImageSize(path);
+        CheckHeaderSize(header, max_pixels);
+    } else {
+        header = OptionalHeader([&] { return ReadImageSize(path); });
     }
     cv::Mat decoded = cv::imread(path, DECODE_FLAGS);
     if (decoded.empty()) {
         throw std::runtime_error("Cannot read the image: " + path);
     }
-    return ToLoadedImage(decoded, max_pixels);
+    LoadedImage image = ToLoadedImage(decoded, max_pixels);
+    AddHeaderWarnings(header, image);
+    return image;
 }
 
 LoadedImage LoadImageBytes(const std::vector<uchar>& bytes, int64_t max_pixels) {
     if (bytes.empty()) {
         throw std::runtime_error("Cannot decode an empty image buffer");
     }
+    std::optional<ImageSize> header;
     if (max_pixels > 0) {
-        CheckHeaderSize(ReadImageSizeFromBytes(bytes), max_pixels);
+        header = ReadImageSizeFromBytes(bytes);
+        CheckHeaderSize(header, max_pixels);
+    } else {
+        header = OptionalHeader([&] { return ReadImageSizeFromBytes(bytes); });
     }
     cv::Mat decoded = cv::imdecode(bytes, DECODE_FLAGS);
     if (decoded.empty()) {
         throw std::runtime_error("Cannot decode the image data");
     }
-    return ToLoadedImage(decoded, max_pixels);
+    LoadedImage image = ToLoadedImage(decoded, max_pixels);
+    AddHeaderWarnings(header, image);
+    return image;
 }
 
 } // namespace glcm

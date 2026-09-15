@@ -1,9 +1,10 @@
-import { Badge, Button, Checkbox, Group, Kbd, List, Modal, NavLink, ScrollArea, SegmentedControl, Stack, Switch, Table, Text } from '@mantine/core';
+import { Anchor, Badge, Button, Checkbox, Group, Kbd, List, Modal, NavLink, ScrollArea, SegmentedControl, Stack, Switch, Table, Text } from '@mantine/core';
 import type { HealthResponse, SampleInfo } from '@glcm/api';
 import { API_PREFIX } from '@glcm/api';
 import { useQuery } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { getSamples } from '../api/client';
+import { CATALOG_QUERY } from '../api/queryClient';
 import { useAnalysisSettings } from '../analysis/settingsStore';
 import { exportRoiImagesFile, saveProjectFile } from '../files/actions';
 import { useRois } from '../rois/roiStore';
@@ -155,6 +156,87 @@ function ShortcutsContent() {
         ))}
       </Table.Tbody>
     </Table>
+  );
+}
+
+const FEATURE_GROUP_LABELS: Record<string, string> = {
+  regionStatistics: 'Region statistics',
+  haralick: 'Haralick features',
+  other: 'Other co-occurrence features',
+};
+
+/** Where the server serves the built Sphinx documentation (GLCM_DOCS_DIR) */
+const DOCS_URL = '/docs/';
+
+function EquationsContent() {
+  const catalog = useQuery(CATALOG_QUERY);
+  // The documentation is served only when it has been built, so check before linking to it
+  const docs = useQuery({
+    queryKey: ['docs-available'],
+    queryFn: async ({ signal }) => (await fetch(`${DOCS_URL}equations.html`, { method: 'HEAD', signal })).ok,
+    staleTime: Infinity,
+    retry: false,
+  });
+  if (catalog.isPending) {
+    return <Text c="dimmed">Loading…</Text>;
+  }
+  if (catalog.isError) {
+    return <Text c="red">{catalog.error.message}</Text>;
+  }
+  const { features } = catalog.data;
+  const groups = [...new Set(features.map((feature) => feature.group))];
+
+  return (
+    <Stack gap="md">
+      {docs.data ? (
+        <Text size="sm">
+          Definitions, conventions and references for every feature are in the documentation.{' '}
+          <Anchor href={`${DOCS_URL}equations.html`} target="_blank" rel="noopener">
+            Open the equations
+          </Anchor>
+        </Text>
+      ) : (
+        <Text size="sm" c="dimmed">
+          The equations are in doc/equations.rst. To open them from here, build the documentation with{' '}
+          <span className="mono">doc/.venv/bin/sphinx-build -b html doc doc/_build/html</span> and restart the server.
+        </Text>
+      )}
+      {groups.map((group) => {
+        const members = features.filter((feature) => feature.group === group);
+        const anchor = members[0]?.docAnchor;
+        return (
+          <Stack key={group} gap={4}>
+            <Group justify="space-between" gap="xs">
+              <Text fw={600} size="sm">
+                {FEATURE_GROUP_LABELS[group] ?? group}
+              </Text>
+              {docs.data && anchor && (
+                <Anchor size="xs" href={`${DOCS_URL}${anchor}`} target="_blank" rel="noopener">
+                  Equations
+                </Anchor>
+              )}
+            </Group>
+            <List size="sm" spacing={2}>
+              {members.map((feature) => (
+                <List.Item key={feature.id}>
+                  {feature.name}
+                  {feature.cost === 'slow' && (
+                    <Badge size="xs" variant="light" color="gray" ml={6}>
+                      slow
+                    </Badge>
+                  )}
+                  {feature.nonStandard && (
+                    <Text size="xs" c="yellow">
+                      ⚠ Non-standard: {feature.nonStandardReason}
+                    </Text>
+                  )}
+                </List.Item>
+              ))}
+            </List>
+          </Stack>
+        );
+      })}
+    </Stack>
   );
 }
 
@@ -331,16 +413,18 @@ const TITLES: Record<ModalName, string> = {
   samples: 'Open Sample Image',
   saveProject: 'Save Project',
   exportRoiImages: 'Export ROI Images',
+  equations: 'Feature Equations',
 };
 
 export function AppModals() {
   const modal = useUi((state) => state.modal);
   const close = () => useUi.getState().setModal(null);
   return (
-    <Modal opened={modal !== null} onClose={close} title={modal ? TITLES[modal] : ''} size={modal === 'imageInfo' ? 'lg' : 'md'}>
+    <Modal opened={modal !== null} onClose={close} title={modal ? TITLES[modal] : ''} size={modal === 'imageInfo' || modal === 'equations' ? 'lg' : 'md'}>
       {modal === 'imageInfo' && <ImageInfoContent />}
       {modal === 'preferences' && <PreferencesContent />}
       {modal === 'shortcuts' && <ShortcutsContent />}
+      {modal === 'equations' && <EquationsContent />}
       {modal === 'about' && <AboutContent />}
       {modal === 'samples' && <SamplesContent onClose={close} />}
       {modal === 'saveProject' && <SaveProjectContent onClose={close} />}

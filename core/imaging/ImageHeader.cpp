@@ -210,7 +210,14 @@ ImageSize TiffSize(ByteSource& source, bool little_endian) {
     if (width < 0 || height < 0) {
         reader.Invalid("missing image width or length");
     }
-    return Checked(reader, width, height);
+    ImageSize size = Checked(reader, width, height);
+    // The offset of the next image directory follows the entries; it is non-zero in a multi-page file
+    try {
+        size.more_images = reader.Unsigned(first_entry + entries * entry_size, offset_size, little_endian) != 0;
+    } catch (const std::runtime_error&) {
+        // A file that ends before the offset holds one image
+    }
+    return size;
 }
 
 std::optional<ImageSize> SizeFromSignature(ByteSource& source) {

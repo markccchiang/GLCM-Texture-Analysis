@@ -27,7 +27,12 @@ describe('web app and samples', () => {
     await fs.writeFile(path.join(fixtures, 'secret.png'), 'outside');
     await fs.symlink(path.join(fixtures, 'secret.png'), path.join(samplesDir, 'link.png'));
 
-    t = await createTestApp({ webDir, samplesDir });
+    const docsDir = path.join(fixtures, 'docs');
+    await fs.mkdir(docsDir);
+    await fs.writeFile(path.join(docsDir, 'index.html'), '<!doctype html><title>Docs</title>');
+    await fs.writeFile(path.join(docsDir, 'equations.html'), '<!doctype html><h1 id="haralick-features">Equations</h1>');
+
+    t = await createTestApp({ webDir, samplesDir, docsDir });
   });
 
   afterAll(async () => {
@@ -58,6 +63,16 @@ describe('web app and samples', () => {
       expect(response.statusCode, samplePath).toBe(404);
       expect(response.json(), samplePath).toMatchObject({ error: 'NotFound' });
     }
+  });
+
+  it('serves the built documentation at /docs/', async () => {
+    const page = await t.app.inject({ method: 'GET', url: '/docs/equations.html' });
+    expect(page.statusCode).toBe(200);
+    expect(page.headers['content-type']).toContain('text/html');
+    expect(page.body).toContain('haralick-features');
+    expect((await t.app.inject({ method: 'HEAD', url: '/docs/equations.html' })).statusCode).toBe(200);
+    expect((await t.app.inject({ method: 'GET', url: '/docs/' })).body).toContain('<title>Docs</title>');
+    expect((await t.app.inject({ method: 'HEAD', url: '/docs/missing.html' })).statusCode).toBe(404);
   });
 
   it('serves the web app with cache headers', async () => {
@@ -97,6 +112,8 @@ describe('without a web build or samples', () => {
   it('returns JSON 404s and an empty sample list', async () => {
     const t = await createTestApp();
     try {
+      // Without built documentation there is nothing at /docs/, and the web app shows how to build it
+      expect((await t.app.inject({ method: 'HEAD', url: '/docs/equations.html' })).statusCode).toBe(404);
       const page = await t.app.inject({ method: 'GET', url: '/', headers: { accept: 'text/html' } });
       expect(page.statusCode).toBe(404);
       expect(page.json()).toMatchObject({ error: 'NotFound' });

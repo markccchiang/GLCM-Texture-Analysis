@@ -7,7 +7,7 @@ import { PanelSection } from '../components/PanelSection';
 import { exportRoiSetFile } from '../files/actions';
 import { useUi } from '../stores/uiStore';
 import { useViewer } from '../stores/viewerStore';
-import { SHAPE_LABELS, shapeBounds, shapeKind } from './geometry';
+import { ROI_COLORS, SHAPE_LABELS, shapeBounds, shapeKind } from './geometry';
 import { useRois, type ManagedRoi } from './roiStore';
 import { roiProblem, useRoiStatistics } from './useRoiStatistics';
 
@@ -112,6 +112,21 @@ function RoiRow({ roi, pixelCount, problem }: { roi: ManagedRoi; pixelCount: num
             Zoom to ROI
           </Menu.Item>
           <Menu.Item onClick={() => useUi.getState().setRenamingRoiId(roi.id)}>Rename</Menu.Item>
+          <Menu.Label>Colour</Menu.Label>
+          <div className="roi-colour-choices" role="group" aria-label="ROI colour">
+            {ROI_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                className="roi-colour-choice"
+                style={{ background: color }}
+                aria-label={`Colour ${color}`}
+                aria-pressed={roi.color.toUpperCase() === color}
+                onClick={() => store().recolorRoi(roi.id, color)}
+              />
+            ))}
+          </div>
+          <Menu.Divider />
           <Menu.Item onClick={() => store().duplicateRois([roi.id])}>Duplicate</Menu.Item>
           <Menu.Item color="red" onClick={() => store().deleteRois([roi.id])}>
             Delete

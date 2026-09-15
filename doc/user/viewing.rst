@@ -79,6 +79,10 @@ those above it white. Changing the window **only changes the display**; measurem
   - **Auto** — from the 0.5th to the 99.5th percentile of the intensities (the window used when the image opens);
   - **Full range** — 0–255 or 0–65535.
 
+- Under **Saved windows**, type a name and choose **Save** to keep the current window, for example a lung window for CT
+  images. Saved windows are offered for every image of the same bit depth; choose one to apply it, or × to remove it.
+  They are kept in your browser.
+
 The histogram uses a logarithmic scale so that rare intensities stay visible; the shaded band is the window.
 
 .. note::

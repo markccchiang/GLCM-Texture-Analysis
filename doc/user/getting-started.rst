@@ -52,6 +52,7 @@ Supported files are PNG, JPEG, BMP and TIFF with 8 or 16 bits per pixel. The ima
 decodes it:
 
 - **Color images** are converted to grayscale, and a notification says so.
+- **Multi-page TIFF files** open with their first page only, and a notification says so.
 - **16-bit images** keep their full intensity range for measurements; the display uses a window (see
   :ref:`window-level`).
 - **Limits:** by default an image can have up to 200 MB and 20 000 × 20 000 pixels on your own computer (100 MB and

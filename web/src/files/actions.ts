@@ -158,7 +158,7 @@ function restoreProject(project: ProjectDocument, info: ImageInfo): void {
   // Opening a project is not an undoable edit
   useRois.setState({ past: [], future: [], selectedIds: [] });
   if (project.settings) {
-    useAnalysisSettings.getState().setSettings(project.settings);
+    useAnalysisSettings.getState().setSettings(project.settings, { history: 'clear' });
   }
   useResults.getState().loadRuns(runsFromProject(project));
 

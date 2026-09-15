@@ -303,3 +303,30 @@ body,
   font-family: var(--mantine-font-family-monospace);
   font-variant-numeric: tabular-nums;
 }
+
+/* Colour choices in the ROI row menu */
+.roi-colour-choices {
+  display: grid;
+  grid-template-columns: repeat(4, 22px);
+  gap: 8px;
+  padding: 2px 12px 8px;
+}
+
+.roi-colour-choice {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.roi-colour-choice[aria-pressed='true'] {
+  border-color: var(--mantine-color-text);
+}
+
+.roi-colour-choice:focus-visible {
+  outline: 2px solid var(--mantine-color-blue-5);
+  outline-offset: 2px;
+}

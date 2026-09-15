@@ -19,7 +19,7 @@ import { DisplayCache } from './storage/DisplayCache.js';
 import { ImageStore } from './storage/ImageStore.js';
 import { ResultStore } from './storage/ResultStore.js';
 import { startRetention } from './storage/retention.js';
-import { hasWebApp, registerWebApp, sendWebApp, wantsWebApp } from './web.js';
+import { hasDocs, hasWebApp, registerDocs, registerWebApp, sendWebApp, wantsWebApp } from './web.js';
 
 export interface BuildAppOptions {
   /** false disables request logging (tests, OpenAPI generation) */
@@ -112,6 +112,9 @@ export async function buildApp(config: ServerConfig, options: BuildAppOptions = 
   const serveWebApp = hasWebApp(config.webDir);
   if (serveWebApp) {
     await registerWebApp(app, config.webDir!);
+  }
+  if (hasDocs(config.docsDir)) {
+    await registerDocs(app, config.docsDir);
   }
 
   app.setNotFoundHandler((request, reply) => {
