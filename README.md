@@ -250,7 +250,7 @@ To rebuild later, activate the environment again with `source .venv/bin/activate
 | `Dockerfile`, `compose.yaml` | Server image and deployment example (`doc/deployment.md`) |
 | `.github/workflows/` | CI: core, unit and end-to-end tests on macOS and Ubuntu; Docker image smoke test |
 | `doc/` | Sphinx documentation (user guide with screenshots, GLCM equations and references, developer guide), the design plan and the deployment guide |
-| `samples/` | Sample images: synthetic test patterns, CC0 textures (including the default sample `textures/camera.png`) and medical images: CT, MRI and a chest X-ray (see `samples/README.md`) |
+| `samples/` | Sample images: synthetic test patterns, CC0 textures (including the default sample `textures/camera.png`) and medical images: chest and abdominal CT, MRI, a chest X-ray and a mammogram (see `samples/README.md`) |
 | `scripts/` | Helper scripts, e.g. `generate-samples.ts` (`npm run samples`) and `fetch-medical-samples.py` |
 
 ## License

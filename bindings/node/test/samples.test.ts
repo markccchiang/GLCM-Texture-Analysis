@@ -7,7 +7,9 @@ const SAMPLES = path.resolve(import.meta.dirname, '../../../samples');
 
 // Every image in samples/ (see samples/README.md): path, width, height, bit depth, channels before grayscale conversion
 const EXPECTED: ReadonlyArray<readonly [file: string, width: number, height: number, bitDepth: 8 | 16, channels: number]> = [
+  ['medical/ct-abdomen.png', 512, 512, 16, 1],
   ['medical/ct-chest.png', 512, 512, 16, 1],
+  ['medical/mammogram-cc.png', 1024, 1628, 16, 1],
   ['medical/mri-brain-t1.png', 160, 192, 16, 1],
   ['medical/xray-chest.png', 1024, 838, 16, 1],
   ['synthetic/checkerboard-8px-8bit.png', 256, 256, 8, 1],
@@ -46,6 +48,9 @@ describe('sample images', () => {
     const spacing = async (file: string) => (await native.decodeImageFile(path.join(SAMPLES, file))).pixelSpacing;
     // pHYs holds whole pixels per metre: 1422 for 0.703125 mm, 1000 × 750 for 1 × 1.3333 mm, 2431 × 2430 for 0.4113 × 0.4115 mm
     expect(await spacing('medical/ct-chest.png')).toEqual({ x: 1000 / 1422, y: 1000 / 1422 });
+    // 0.9765625 mm is exactly 1024 pixels per metre; the digitized mammogram has no spacing
+    expect(await spacing('medical/ct-abdomen.png')).toEqual({ x: 0.9765625, y: 0.9765625 });
+    expect(await spacing('medical/mammogram-cc.png')).toBeNull();
     expect(await spacing('medical/mri-brain-t1.png')).toEqual({ x: 1, y: 1000 / 750 });
     expect(await spacing('medical/xray-chest.png')).toEqual({ x: 1000 / 2431, y: 1000 / 2430 });
     expect(await spacing('textures/camera.png')).toBeNull();

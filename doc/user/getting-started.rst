@@ -46,7 +46,7 @@ There are three ways to open an image:
 - **Open Image…** on the start screen or in the *File* menu (:kbd:`⌘O` / :kbd:`Ctrl+O`) shows the file dialog.
 - **Drag** an image file from your desktop or file manager onto the window.
 - **Open sample image** opens ``textures/camera.png``, the cameraman photograph; **More sample images…** (or *File ▸ Open Sample Image…*) lists synthetic
-  test patterns, natural textures and medical images (a CT slice, a brain MRI slice and a chest X-ray, all 16-bit).
+  test patterns, natural textures and medical images (chest and abdominal CT slices, a brain MRI slice, a chest X-ray and a mammogram, all 16-bit).
 
 Supported files are PNG, JPEG, BMP and TIFF with 8 or 16 bits per pixel. The image is uploaded to the server, which
 decodes it:

@@ -37,23 +37,31 @@ All five are 8-bit grayscale PNGs. `camera.png` is the default sample: **Open sa
 
 ## Medical images (`medical/`)
 
-One slice or radiograph each, from public de-identified datasets, stored as lossless 16-bit grayscale PNGs. They exercise the 16-bit path with real clinical intensities; choose **Quantization** and **Gray levels** in the Analysis Settings to suit each image's value range. They are for testing and demonstration only, not for diagnosis.
+One slice, radiograph or mammogram each, from public de-identified datasets, stored as lossless 16-bit grayscale PNGs. They exercise the 16-bit path with real clinical intensities; choose **Quantization** and **Gray levels** in the Analysis Settings to suit each image's value range. They are for testing and demonstration only, not for diagnosis.
 
 `scripts/fetch-medical-samples.py` downloads the source data and writes these files; install its Python packages from `scripts/requirements-medical.txt`, where they are pinned. The pinned series and instances make the output identical on every run, and the script stops with an error when the pixels of an image differ from the committed files, for example because the source data or a package changed. They keep the licences below, not the repository's MIT License.
 
 | File | Size | Content | Conversion |
 | --- | --- | --- | --- |
+| `ct-abdomen.png` | 512 × 512 | Axial contrast-enhanced abdominal CT at z = −100 mm (0.9765625 mm pixels, 1 mm slices): liver, gallbladder, both kidneys, aorta, spine and bowel | Stored value = Hounsfield units + 1024, clipped to 0–4095 (12 bits), as for `ct-chest.png`; flipped vertically so that anterior is at the top (the series' column direction points anterior) |
 | `ct-chest.png` | 512 × 512 | Axial chest CT at z = −115 mm (0.703125 mm pixels, 2.5 mm slices): both lungs, the heart and great vessels, and a nodule in the left lung | Stored value = Hounsfield units + 1024, clipped to 0–4095 (12 bits); air ≈ 0, water ≈ 1024, outside the scan field 0 |
+| `mammogram-cc.png` | 1024 × 1628 | Craniocaudal (CC) mammogram of the left breast with a mass and an "L CC" film marker; scanned film | Reduced from 3024 × 4808 by area averaging; the 16-bit values of the digitized film, 0–65,535. The source has no pixel spacing, so the PNG has none |
 | `mri-brain-t1.png` | 160 × 192 | Axial T1-weighted brain MRI above the ventricles: gray and white matter, sulci and skull; pixels are 1 mm wide and 1.33 mm high | Slice 120 of the volume in RAS orientation, anterior at the top; original values 0–504 |
 | `xray-chest.png` | 1024 × 838 | Posteroanterior (PA) chest radiograph with an "R" marker | Reduced from 2846 × 2330 (0.148 mm pixels) by area averaging, so the pixels are 0.4113 × 0.4115 mm; 15-bit detector values, 76–30,619 |
 
-The medical PNGs store their pixel spacing in a `pHYs` chunk, taken from the DICOM `PixelSpacing` (CT) or `ImagerPixelSpacing` (X-ray, scaled by the reduction) and from the NIfTI voxel size (MRI). PNG stores whole pixels per metre, so the spacing read back is rounded slightly: 0.70323 mm for the CT, 1 × 1.33333 mm for the MRI, 0.41135 × 0.41152 mm for the X-ray.
+The medical PNGs store their pixel spacing in a `pHYs` chunk, taken from the DICOM `PixelSpacing` (CTs) or `ImagerPixelSpacing` (X-ray, scaled by the reduction) and from the NIfTI voxel size (MRI). PNG stores whole pixels per metre, so the spacing read back is rounded slightly: 0.70323 mm for the chest CT (the abdominal CT's 0.9765625 mm is exactly 1024 pixels per metre), 1 × 1.33333 mm for the MRI, 0.41135 × 0.41152 mm for the X-ray.
 
 ### Sources, licences and required citations
 
 - **`ct-chest.png`** — [LIDC-IDRI](https://www.cancerimagingarchive.net/collection/lidc-idri/) collection, patient LIDC-IDRI-0001, from The Cancer Imaging Archive (TCIA). Licence: [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
   - Armato III, S. G., McLennan, G., Bidaut, L., McNitt-Gray, M. F., Meyer, C. R., Reeves, A. P., et al. (2015). *Data From LIDC-IDRI* (Version 4) [Dataset]. The Cancer Imaging Archive. https://doi.org/10.7937/K9/TCIA.2015.LO9QL9SX
   - Armato, S. G., McLennan, G., Bidaut, L., et al. (2011). The Lung Image Database Consortium (LIDC) and Image Database Resource Initiative (IDRI): A Completed Reference Database of Lung Nodules on CT Scans. *Medical Physics*, 38(2), 915–931. https://doi.org/10.1118/1.3528204
+- **`ct-abdomen.png`** — [Pancreas-CT](https://www.cancerimagingarchive.net/collection/pancreas-ct/) collection, patient PANCREAS_0080, from TCIA. Licence: [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+  - Roth, H., Farag, A., Turkbey, E. B., Lu, L., Liu, J., & Summers, R. M. (2016). *Data From Pancreas-CT* (Version 2) [Dataset]. The Cancer Imaging Archive. https://doi.org/10.7937/K9/TCIA.2016.tNB1kqBU
+  - Roth, H. R., Lu, L., Farag, A., Shin, H.-C., Liu, J., Turkbey, E. B., & Summers, R. M. (2015). DeepOrgan: Multi-level Deep Convolutional Networks for Automated Pancreas Segmentation. In N. Navab et al. (Eds.), *MICCAI 2015*, Part I, LNCS 9349, 556–564. https://doi.org/10.1007/978-3-319-24553-9_68
+- **`mammogram-cc.png`** — [CBIS-DDSM](https://www.cancerimagingarchive.net/collection/cbis-ddsm/) collection, Mass-Training_P_00001_LEFT_CC (full mammogram image), from TCIA. Licence: [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+  - Sawyer-Lee, R., Gimenez, F., Hoogi, A., & Rubin, D. (2016). *Curated Breast Imaging Subset of Digital Database for Screening Mammography (CBIS-DDSM)* [Dataset]. The Cancer Imaging Archive. https://doi.org/10.7937/K9/TCIA.2016.7O02S9CY
+  - Lee, R. S., Gimenez, F., Hoogi, A., Miyake, K. K., Gorovoy, M., & Rubin, D. L. (2017). A curated mammography data set for use in computer-aided detection and diagnosis research. *Scientific Data*, 4, 170177. https://doi.org/10.1038/sdata.2017.177
 - **`xray-chest.png`** — [COVID-19-AR](https://www.cancerimagingarchive.net/collection/covid-19-ar/) collection, patient COVID-19-AR-16406496, from TCIA. Licence: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
   - Desai, S., Baghal, A., Wongsurawat, T., Al-Shukri, S., Gates, K., Farmer, P., et al. (2020). *Chest Imaging with Clinical and Genomic Correlates Representing a Rural COVID-19 Positive Population* (Version 1) [Dataset]. The Cancer Imaging Archive. https://doi.org/10.7937/TCIA.2020.PY71-5978
   - Desai, S., Baghal, A., Wongsurawat, T., et al. (2020). Chest imaging representing a COVID-19 positive rural U.S. population. *Scientific Data*, 7(1). https://doi.org/10.1038/s41597-020-00741-6

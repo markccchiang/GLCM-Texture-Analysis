@@ -36,11 +36,23 @@ XRAY_SERIES = '1.3.6.1.4.1.14519.5.2.1.9999.103.2033282158389577844152198164874'
 XRAY_INSTANCE = '1.3.6.1.4.1.14519.5.2.1.9999.103.2294547012929720947691791872212'
 XRAY_WIDTH = 1024
 
+# Pancreas-CT, patient PANCREAS_0080: contrast-enhanced abdominal CT, the axial slice at z = -100 mm (liver, gallbladder,
+# both kidneys, aorta, spine and bowel)
+ABDOMEN_SERIES = '1.2.826.0.1.3680043.2.1125.1.41202274843063370955090296887703130'
+ABDOMEN_INSTANCE = '1.2.826.0.1.3680043.2.1125.1.3951614841645739382916216145849403'
+
+# CBIS-DDSM, Mass-Training_P_00001_LEFT_CC: digitized film mammogram, craniocaudal view of the left breast with a mass
+MAMMOGRAM_SERIES = '1.3.6.1.4.1.9590.100.1.2.342386194811267636608694132590482924515'
+MAMMOGRAM_INSTANCE = '1.3.6.1.4.1.9590.100.1.2.156556873010981646517128874312129349516'
+MAMMOGRAM_WIDTH = 1024
+
 # SHA-256 of the uint16 pixel array of each output file (row-major, native byte order as written by numpy)
 EXPECTED_PIXELS_SHA256 = {
     'ct-chest.png': '6fc2fc92db49d2a769b629274c1e16d153cc2da0963229664ab1886ad811fd05',
     'xray-chest.png': '9b53b9fce54e7a16423b107776acb2d6a8ce3284e268b5dd61624c36c6bb91a8',
     'mri-brain-t1.png': 'be3ae4e4a35cbd3c99e228c4b0d851d6ac50cab77a23bfa5c3e7231232d2a47f',
+    'ct-abdomen.png': 'aeae3fd51f7b3f1c704e45fdcdc3af0ef99c4fd91a6402c4d3decf169d6cabc7',
+    'mammogram-cc.png': '3af6b82f57a8563dc477e8cc877b0a438d61e14d2b98d415c2f73e2c9db5d224',
 }
 
 # OpenNeuro ds000001, sub-01: T1-weighted anatomical MRI, axial slice 120 in RAS orientation
@@ -64,8 +76,8 @@ def dicom_instance(series_uid: str, instance_uid: str) -> pydicom.Dataset:
     raise RuntimeError(f'Instance {instance_uid} not found in series {series_uid}')
 
 
-def save_png(pixels: np.ndarray, name: str, spacing_mm: tuple[float, float]) -> None:
-    """Writes a 16-bit PNG; spacing_mm (x, y) becomes its pHYs chunk, which stores whole pixels per metre"""
+def save_png(pixels: np.ndarray, name: str, spacing_mm: tuple[float, float] | None) -> None:
+    """Writes a 16-bit PNG; spacing_mm (x, y) becomes its pHYs chunk, which stores whole pixels per metre (None: no pHYs)"""
     assert pixels.dtype == np.uint16
     digest = hashlib.sha256(pixels.astype('<u2').tobytes()).hexdigest()
     if digest != EXPECTED_PIXELS_SHA256[name]:
@@ -74,11 +86,12 @@ def save_png(pixels: np.ndarray, name: str, spacing_mm: tuple[float, float]) -> 
             'The source data or a package version changed; check it before updating EXPECTED_PIXELS_SHA256.'
         )
     path = OUTPUT / name
-    Image.fromarray(pixels).save(path, optimize=True, dpi=tuple(25.4 / mm for mm in spacing_mm))
-    print(
-        f'{path.relative_to(ROOT)}: {pixels.shape[1]} × {pixels.shape[0]}, values {pixels.min()}–{pixels.max()}, '
-        f'pixel spacing {spacing_mm[0]:.6g} × {spacing_mm[1]:.6g} mm, pixels sha256 {digest}'
-    )
+    if spacing_mm is None:
+        Image.fromarray(pixels).save(path, optimize=True)
+    else:
+        Image.fromarray(pixels).save(path, optimize=True, dpi=tuple(25.4 / mm for mm in spacing_mm))
+    spacing = 'no pixel spacing' if spacing_mm is None else f'pixel spacing {spacing_mm[0]:.6g} × {spacing_mm[1]:.6g} mm'
+    print(f'{path.relative_to(ROOT)}: {pixels.shape[1]} × {pixels.shape[0]}, values {pixels.min()}–{pixels.max()}, {spacing}, pixels sha256 {digest}')
 
 
 def dicom_spacing(dataset: pydicom.Dataset) -> tuple[float, float]:
@@ -92,6 +105,27 @@ def ct_chest() -> None:
     hounsfield = dataset.pixel_array.astype(np.int32) * int(dataset.RescaleSlope) + int(dataset.RescaleIntercept)
     # Stored value = HU + 1024: air is about 0, water 1024; the area outside the scan field (-2048 HU) becomes 0
     save_png(np.clip(hounsfield + 1024, 0, 4095).astype(np.uint16), 'ct-chest.png', dicom_spacing(dataset))
+
+
+def ct_abdomen() -> None:
+    dataset = dicom_instance(ABDOMEN_SERIES, ABDOMEN_INSTANCE)
+    hounsfield = dataset.pixel_array.astype(np.int32) * int(dataset.RescaleSlope) + int(dataset.RescaleIntercept)
+    # The column direction of this series points anterior (0, -1, 0), so the rows run from the back to the front; flip
+    # them to show anterior at the top, as ct-chest.png
+    column_direction = [float(value) for value in dataset.ImageOrientationPatient[3:]]
+    assert column_direction == [0.0, -1.0, 0.0], column_direction
+    hounsfield = np.flipud(hounsfield)
+    save_png(np.clip(hounsfield + 1024, 0, 4095).astype(np.uint16), 'ct-abdomen.png', dicom_spacing(dataset))
+
+
+def mammogram_cc() -> None:
+    dataset = dicom_instance(MAMMOGRAM_SERIES, MAMMOGRAM_INSTANCE)
+    assert dataset.PhotometricInterpretation == 'MONOCHROME2'
+    pixels = dataset.pixel_array.astype(np.float32)
+    height = round(pixels.shape[0] * MAMMOGRAM_WIDTH / pixels.shape[1])
+    reduced = np.asarray(Image.fromarray(pixels).resize((MAMMOGRAM_WIDTH, height), Image.Resampling.BOX))
+    # The digitized films carry no pixel spacing (CBIS-DDSM has none in its DICOM files), so the PNG has none either
+    save_png(np.clip(np.rint(reduced), 0, 65535).astype(np.uint16), 'mammogram-cc.png', None)
 
 
 def xray_chest() -> None:
@@ -124,7 +158,9 @@ def mri_brain() -> None:
 def main() -> None:
     OUTPUT.mkdir(parents=True, exist_ok=True)
     ct_chest()
+    ct_abdomen()
     xray_chest()
+    mammogram_cc()
     mri_brain()
 
 
