@@ -6,7 +6,7 @@ Getting started
 Starting the application
 ------------------------
 
-**On your own computer**, build and start the server once the requirements in ``README.md`` are installed:
+**On your own computer**, build and start the server once the requirements in ``README.md`` (or, for Linux, ``DEVELOPMENT.md``) are installed:
 
 .. code-block:: bash
 

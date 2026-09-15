@@ -20,7 +20,8 @@ This documentation has three parts:
 - **Developer guide** describes the architecture of the application, its APIs (HTTP, Node.js addon and C++) and file
   formats, and the technologies and packages it is built with.
 
-For installing and running the application, see ``README.md`` in the repository root; for server deployment, see
+For a short start, see ``README.md`` in the repository root, and for building, testing and configuring the
+application, ``DEVELOPMENT.md``; for server deployment, see
 ``doc/deployment.md``.
 
 .. toctree::

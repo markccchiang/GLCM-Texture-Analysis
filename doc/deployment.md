@@ -1,6 +1,6 @@
 # Server deployment
 
-This guide runs the Texture Workbench server for several users, as in phase 5 of `doc/ui-design-plan.md`. For personal use on your own computer, `npm start` (local mode) is enough; see the README.
+This guide runs the Texture Workbench server for several users, as in phase 5 of `doc/ui-design-plan.md`. For personal use on your own computer, `npm start` (local mode) is enough; see the README and `DEVELOPMENT.md`.
 
 ## Local mode and server mode
 
@@ -17,7 +17,7 @@ The server decides its mode from `GLCM_HOST`:
 | Pixel cache | 2 GiB | 1 GiB |
 | Retention | keep everything | images and results older than 7 days are deleted |
 
-Every default can be changed with the `GLCM_*` variables listed in the README.
+Every default can be changed with the `GLCM_*` variables listed in `DEVELOPMENT.md`.
 
 ## Run with Docker
 
